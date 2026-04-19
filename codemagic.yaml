@@ -13,6 +13,12 @@ workflows:
       - name: Set up code signing
         script: |
           keychain initialize
+          curl -sL "https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer" -o /tmp/wwdr3.cer
+          keychain add-certificates --certificate /tmp/wwdr3.cer
+          curl -sL "https://www.apple.com/certificateauthority/AppleWWDRCAG4.cer" -o /tmp/wwdr4.cer
+          keychain add-certificates --certificate /tmp/wwdr4.cer
+          curl -sL "https://www.apple.com/certificateauthority/AppleWWDRCAG6.cer" -o /tmp/wwdr6.cer
+          keychain add-certificates --certificate /tmp/wwdr6.cer
           PROFILES_HOME="$HOME/Library/MobileDevice/Provisioning Profiles"
           mkdir -p "$PROFILES_HOME"
           cp ios_signing/gojo_profile.mobileprovision "$PROFILES_HOME"/profile.mobileprovision
@@ -28,7 +34,8 @@ workflows:
           sed -i '' 's/Automatic/Manual/g' ios/Runner.xcodeproj/project.pbxproj
       - name: iOS release build
         script: |
-          flutter build ipa --release --export-options-plist=ios_signing/ExportOptions.plist
+          flutter build xcarchive --release
+          xcodebuild -exportArchive -archivePath build/ios/archive/Runner.xcarchive -exportPath build/ios/ipa -exportOptionsPlist ios_signing/ExportOptions.plist
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
