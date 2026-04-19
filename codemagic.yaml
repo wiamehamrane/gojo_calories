@@ -20,6 +20,10 @@ workflows:
       - name: Install dependencies
         script: |
           flutter packages pub get
+      - name: Force Apple Distribution Identity
+        script: |
+          sed -i '' 's/iPhone Developer/Apple Distribution/g' ios/Runner.xcodeproj/project.pbxproj
+          sed -i '' 's/Automatic/Manual/g' ios/Runner.xcodeproj/project.pbxproj
       - name: iOS release build
         script: |
           flutter build ipa --release \
