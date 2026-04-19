@@ -12,30 +12,20 @@ workflows:
     scripts:
       - name: Set up code signing
         script: |
+          export APP_STORE_CONNECT_ISSUER_ID="ada504ee-3c9d-4491-b7b2-db490afe913a"
+          export APP_STORE_CONNECT_KEY_IDENTIFIER="G4ML936L73"
+          export APP_STORE_CONNECT_PRIVATE_KEY="$(cat ios_signing/AuthKey.p8)"
           keychain initialize
-          curl -sL "https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer" -o /tmp/wwdr3.cer
-          keychain add-certificates --certificate /tmp/wwdr3.cer
-          curl -sL "https://www.apple.com/certificateauthority/AppleWWDRCAG4.cer" -o /tmp/wwdr4.cer
-          keychain add-certificates --certificate /tmp/wwdr4.cer
-          curl -sL "https://www.apple.com/certificateauthority/AppleWWDRCAG6.cer" -o /tmp/wwdr6.cer
-          keychain add-certificates --certificate /tmp/wwdr6.cer
-          PROFILES_HOME="$HOME/Library/MobileDevice/Provisioning Profiles"
-          mkdir -p "$PROFILES_HOME"
-          cp ios_signing/gojo_profile.mobileprovision "$PROFILES_HOME"/profile.mobileprovision
-          keychain add-certificates --certificate ios_signing/gojo_development.p12 --certificate-password ""
-          keychain add-certificates --certificate ios_signing/gojo_distribution.p12 --certificate-password ""
+          app-store-connect fetch-signing-files "com.gojocalories.gojocalories" --type IOS_APP_DEVELOPMENT --create || true
+          app-store-connect fetch-signing-files "com.gojocalories.gojocalories" --type IOS_APP_STORE --create
+          keychain add-certificates
           xcode-project use-profiles
       - name: Install dependencies
         script: |
           flutter packages pub get
-      - name: Force Apple Distribution Identity
-        script: |
-          sed -i '' 's/iPhone Developer/Apple Distribution/g' ios/Runner.xcodeproj/project.pbxproj
-          sed -i '' 's/Automatic/Manual/g' ios/Runner.xcodeproj/project.pbxproj
       - name: iOS release build
         script: |
-          flutter build xcarchive --release
-          xcodebuild -exportArchive -archivePath build/ios/archive/Runner.xcarchive -exportPath build/ios/ipa -exportOptionsPlist ios_signing/ExportOptions.plist
+          flutter build ipa --release --export-method=app-store
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
