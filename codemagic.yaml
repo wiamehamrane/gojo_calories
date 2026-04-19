@@ -7,6 +7,8 @@ workflows:
       flutter: stable
       xcode: latest
       cocoapods: default
+    integrations:
+      app_store_connect: Codemagic CI
     scripts:
       - name: Set up code signing
         script: |
