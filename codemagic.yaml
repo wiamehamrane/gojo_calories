@@ -13,9 +13,10 @@ workflows:
       - name: Set up code signing
         script: |
           keychain initialize
-          app-store-connect fetch-signing-files "com.gojocalories.gojocalories" --type IOS_APP_DEVELOPMENT --create
-          app-store-connect fetch-signing-files "com.gojocalories.gojocalories" --type IOS_APP_STORE --create
-          keychain add-certificates
+          PROFILES_HOME="$HOME/Library/MobileDevice/Provisioning Profiles"
+          mkdir -p "$PROFILES_HOME"
+          cp ios_signing/gojo_profile.mobileprovision "$PROFILES_HOME"/profile.mobileprovision
+          keychain add-certificates --certificate ios_signing/gojo_distribution.p12 --certificate-password ""
           xcode-project use-profiles
       - name: Install dependencies
         script: |
