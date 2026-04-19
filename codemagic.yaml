@@ -7,16 +7,16 @@ workflows:
       flutter: stable
       xcode: latest
       cocoapods: default
-    integrations:
-      app_store_connect: Codemagic CI
     scripts:
       - name: Set up code signing
         script: |
+          export APP_STORE_CONNECT_ISSUER_ID="ada504ee-3c9d-4491-b7b2-db490afe913a"
+          export APP_STORE_CONNECT_KEY_IDENTIFIER="G4ML936L73"
+          export APP_STORE_CONNECT_PRIVATE_KEY="$(cat ios_signing/AuthKey.p8)"
           keychain initialize
-          PROFILES_HOME="$HOME/Library/MobileDevice/Provisioning Profiles"
-          mkdir -p "$PROFILES_HOME"
-          cp ios_signing/gojo_profile.mobileprovision "$PROFILES_HOME"/profile.mobileprovision
-          keychain add-certificates --certificate ios_signing/gojo_distribution.p12 --certificate-password ""
+          app-store-connect fetch-signing-files "com.gojocalories.gojocalories" --type IOS_APP_DEVELOPMENT --create
+          app-store-connect fetch-signing-files "com.gojocalories.gojocalories" --type IOS_APP_STORE --create
+          keychain add-certificates
           xcode-project use-profiles
       - name: Install dependencies
         script: |
