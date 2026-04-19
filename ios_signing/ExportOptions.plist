@@ -11,6 +11,8 @@
         <key>com.gojocalories.gojocalories</key>
         <string>GojoCalories App Store Profile</string>
     </dict>
+    <key>signingCertificate</key>
+    <string>Apple Distribution</string>
     <key>signingStyle</key>
     <string>manual</string>
     <key>compileBitcode</key>
