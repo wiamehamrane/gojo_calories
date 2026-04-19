@@ -26,16 +26,14 @@ workflows:
           flutter packages pub get
       - name: iOS release build
         script: |
-          # 1. Ensure the workspace is clean and project is NOT damaged
+          # 1. Ensure the workspace is clean
           git checkout ios/Runner.xcodeproj/project.pbxproj
           rm -f ios/Podfile
 
           # 2. Compile the Flutter Dart payload natively
-          # This generates the default Podfile and Flutter/podhelper.rb
           flutter build ios --release --no-codesign
 
-          # 3. Dynamic Patch: Force disable code signing for ALL Pods targets
-          # We insert our code INSIDE the existing post_install block to avoid hook conflicts
+          # 3. Dynamic Podfile Patch
           sed -i '' '/flutter_additional_ios_build_settings(target)/a\
                 target.build_configurations.each do |config|\
                   config.build_settings["CODE_SIGNING_ALLOWED"] = "NO"\
@@ -45,8 +43,7 @@ workflows:
           # 4. Integrate the patched Podfile
           cd ios && pod install && cd ..
 
-          # 5. Force Xcode to Archive the payload without signing (bypassing certificate checks)
-          # The REAL signing happens during export using ExportOptions.plist
+          # 5. Archive the payload without signing (Workaround Success!)
           xcodebuild archive \
             -workspace ios/Runner.xcworkspace \
             -scheme Runner \
@@ -56,7 +53,16 @@ workflows:
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO
 
-          # 6. Natively export using our explicit dynamically-bound ExportOptions.plist
+          # 6. Identify the App Store Provisioning Profile and its Name
+          PROFILES_HOME="$HOME/Library/MobileDevice/Provisioning Profiles"
+          PROFILE_PATH=$(ls "$PROFILES_HOME"/*.mobileprovision | head -n 1)
+          PROFILE_NAME=$(grep -aA1 Name "$PROFILE_PATH" | grep string | awk -F '>|<' '{print $3}' | head -n 1)
+          echo "Binding Profile Name: $PROFILE_NAME to ExportOptions"
+
+          # 7. Dynamically update ExportOptions.plist with the correct mapping
+          sed -i '' "s/__PROFILE_NAME__/$PROFILE_NAME/g" ios_signing/ExportOptions.plist
+
+          # 8. Final native export with production signing
           xcodebuild -exportArchive \
             -archivePath build/ios/archive/Runner.xcarchive \
             -exportPath build/ios/ipa \
