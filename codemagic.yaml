@@ -26,17 +26,35 @@ workflows:
           flutter packages pub get
       - name: iOS release build
         script: |
-          # 1. Globally override all signing identities to use Apple Distribution
-          # This satisfies Flutter's internal validation even if a development certificate is missing
-          sed -i '' 's/iPhone Developer/Apple Distribution/g' ios/Runner.xcodeproj/project.pbxproj
-          sed -i '' 's/CODE_SIGN_STYLE = Automatic/CODE_SIGN_STYLE = Manual/g' ios/Runner.xcodeproj/project.pbxproj
+          # 1. Compile the Flutter Dart payload natively, completely ignoring Apple Certificates
+          flutter build ios --release --no-codesign
 
-          # 2. Re-run pod install to ensure the custom Podfile (disabling Pod signing) is in effect
-          cd ios && pod install && cd ..
+          # 2. Identify the App Store Provisioning Profile and its UUID
+          PROFILES_HOME="$HOME/Library/MobileDevice/Provisioning Profiles"
+          PROFILE_PATH=$(ls "$PROFILES_HOME"/*.mobileprovision | head -n 1)
+          PROFILE_UUID=$(grep -aA1 UUID "$PROFILE_PATH" | grep string | awk -F '>|<' '{print $3}' | head -n 1)
+          echo "Injecting Profile UUID: $PROFILE_UUID to project"
 
-          # 3. Build the IPA using the standard Flutter toolset
-          # Now that Pods are unsigned and the project is forced to Apple Distribution, this should succeed.
-          flutter build ipa --release --export-method=app-store --build-number=$BUILD_NUMBER
+          # 3. Deep-inject signing settings into the pbxproj to ensure Xcode respects them
+          # We add the missing settings to the XCBuildConfiguration sections
+          sed -i '' "s/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual; PROVISIONING_PROFILE_SPECIFIER = $PROFILE_UUID; CODE_SIGN_IDENTITY = \"Apple Distribution\";/g" ios/Runner.xcodeproj/project.pbxproj
+          # Also handle the case where it wasn't specified at all
+          sed -i '' "s/PRODUCT_NAME = \"\$(TARGET_NAME)\";/PRODUCT_NAME = \"\$(TARGET_NAME)\"; CODE_SIGN_STYLE = Manual; PROVISIONING_PROFILE_SPECIFIER = $PROFILE_UUID; CODE_SIGN_IDENTITY = \"Apple Distribution\";/g" ios/Runner.xcodeproj/project.pbxproj
+
+          # 4. Force Xcode to Archive the payload. Pods are already disabled for signing via our custom Podfile.
+          xcodebuild archive \
+            -workspace ios/Runner.xcworkspace \
+            -scheme Runner \
+            -archivePath build/ios/archive/Runner.xcarchive \
+            -configuration Release \
+            COMPILER_INDEX_STORE_ENABLE=NO \
+            DEVELOPMENT_TEAM=T8348X4CNY
+
+          # 5. Natively export using our explicit dynamically-bound ExportOptions.plist
+          xcodebuild -exportArchive \
+            -archivePath build/ios/archive/Runner.xcarchive \
+            -exportPath build/ios/ipa \
+            -exportOptionsPlist ios_signing/ExportOptions.plist
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
