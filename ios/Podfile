@@ -1,0 +1,45 @@
+# Uncomment this line to define a global platform for your project
+platform :ios, '13.0'
+
+# CocoaPods analytics sends network stats synchronous to update etc.
+# This can slow down or even cause failures in CI.
+ENV['COCOAPODS_DISABLE_STATS'] = 'true'
+
+project 'Runner', {
+  'Debug' => :debug,
+  'Release' => :release,
+  'Profile' => :release,
+}
+
+def flutter_install_all_ios_pods(main_target_directory)
+  podfile_dir = File.dirname(File.realpath(__FILE__))
+  File.open(File.join(main_target_directory, 'Flutter', 'Generated.xcconfig'), 'r') do |f|
+    f.each_line do |line|
+      line_split = line.split('=')
+      if line_split[0].strip == 'PACKAGE_NAME'
+        ENV['FLUTTER_PACKAGE_NAME'] = line_split[1].strip
+      end
+    end
+  end
+end
+
+target 'Runner' do
+  use_frameworks!
+  use_modular_headers!
+
+  flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
+end
+
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    flutter_additional_ios_build_settings(target) if defined? flutter_additional_ios_build_settings
+    target.build_configurations.each do |config|
+      # Disable code signing for Pods to avoid CI issues with manual signing
+      config.build_settings['CODE_SIGNING_ALLOWED'] = 'NO'
+      config.build_settings['CODE_SIGNING_REQUIRED'] = 'NO'
+      config.build_settings['EXPANDED_CODE_SIGN_IDENTITY'] = ""
+      config.build_settings['CODE_SIGNING_INJECT_BASE_ENTITLEMENTS'] = "NO"
+      config.build_settings['PROVISIONING_PROFILE_SPECIFIER'] = ""
+    end
+  end
+end
