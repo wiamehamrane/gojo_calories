@@ -19,6 +19,7 @@ workflows:
           app-store-connect fetch-signing-files "com.gojocalories.gojocalories" --type IOS_APP_DEVELOPMENT --create || true
           app-store-connect fetch-signing-files "com.gojocalories.gojocalories" --type IOS_APP_STORE --create
           keychain add-certificates
+          keychain add-certificates --certificate ios_signing/gojo_development.p12 --certificate-password "" || true
           xcode-project use-profiles
       - name: Install dependencies
         script: |
