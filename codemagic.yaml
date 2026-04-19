@@ -23,12 +23,14 @@ workflows:
       - name: Install dependencies
         script: |
           flutter packages pub get
+      - name: Force Apple Distribution Identity
+        script: |
+          sed -i '' 's/iPhone Developer/Apple Distribution/g' ios/Runner.xcodeproj/project.pbxproj
+          sed -i '' 's/Automatic/Manual/g' ios/Runner.xcodeproj/project.pbxproj
       - name: iOS release build
         script: |
-          # Flutter native archive command gracefully skips development profile preconditions and handles Swift compilation smoothly
           flutter build xcarchive --release
-          # Natively export using Codemagic's dynamically generated export options plist to guarantee strict profile string matching
-          xcodebuild -exportArchive -archivePath build/ios/archive/Runner.xcarchive -exportPath build/ios/ipa -exportOptionsPlist /Users/builder/export_options.plist
+          xcodebuild -exportArchive -archivePath build/ios/archive/Runner.xcarchive -exportPath build/ios/ipa -exportOptionsPlist ios_signing/ExportOptions.plist
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
