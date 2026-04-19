@@ -30,9 +30,20 @@ workflows:
           flutter build ios --release --no-codesign
 
           # 2. Extract the Provisioning Profile UUID natively fetched by Codemagic app-store-connect API
-          PROFILE_UUID=$(grep -aA1 UUID ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision | grep string | awk -F '>|<' '{print $3}' | head -n 1)
+          PROFILES_HOME="$HOME/Library/MobileDevice/Provisioning Profiles"
+          echo "Listing profiles in $PROFILES_HOME:"
+          ls "$PROFILES_HOME"
+          
+          # Extract the first profile UUID found
+          PROFILE_UUID=$(grep -aA1 UUID "$PROFILES_HOME"/*.mobileprovision | grep string | awk -F '>|<' '{print $3}' | head -n 1)
+          echo "Extracted PROFILE_UUID: $PROFILE_UUID"
 
-          # 3. Force Xcode to Archive the payload. Pods are already disabled for signing via our custom Podfile.
+          # 3. Force Manual Signing in the project file to ensure CLI overrides are respected
+          sed -i '' 's/CODE_SIGN_STYLE = Automatic/CODE_SIGN_STYLE = Manual/g' ios/Runner.xcodeproj/project.pbxproj
+          sed -i '' 's/CODE_SIGN_IDENTITY = "iPhone Developer"/CODE_SIGN_IDENTITY = "Apple Distribution"/g' ios/Runner.xcodeproj/project.pbxproj
+          sed -i '' 's/CODE_SIGN_IDENTITY\[sdk=iphoneos\*\] = "iPhone Developer"/CODE_SIGN_IDENTITY = "Apple Distribution"/g' ios/Runner.xcodeproj/project.pbxproj
+
+          # 4. Force Xcode to Archive the payload.
           xcodebuild archive \
             -workspace ios/Runner.xcworkspace \
             -scheme Runner \
@@ -41,10 +52,10 @@ workflows:
             COMPILER_INDEX_STORE_ENABLE=NO \
             CODE_SIGN_STYLE=Manual \
             CODE_SIGN_IDENTITY="Apple Distribution" \
-            PROVISIONING_PROFILE_SPECIFIER=$PROFILE_UUID \
+            PROVISIONING_PROFILE_SPECIFIER="$PROFILE_UUID" \
             DEVELOPMENT_TEAM=T8348X4CNY
 
-          # 4. Natively export using our explicit dynamically-bound ExportOptions.plist
+          # 5. Natively export using our explicit dynamically-bound ExportOptions.plist
           xcodebuild -exportArchive \
             -archivePath build/ios/archive/Runner.xcarchive \
             -exportPath build/ios/ipa \
