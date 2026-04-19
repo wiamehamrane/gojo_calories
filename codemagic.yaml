@@ -27,7 +27,10 @@ workflows:
           sed -i '' 's/Automatic/Manual/g' ios/Runner.xcodeproj/project.pbxproj
       - name: iOS release build
         script: |
-          flutter build ipa --release --export-options-plist=ios_signing/ExportOptions.plist
+          flutter build ios --release --no-codesign
+          xcode-project build-ipa \
+            --workspace ios/Runner.xcworkspace \
+            --scheme Runner
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
