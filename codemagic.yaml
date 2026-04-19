@@ -34,21 +34,13 @@ workflows:
           # This generates the default Podfile and Flutter/podhelper.rb
           flutter build ios --release --no-codesign
 
-          # 3. Dynamic Patch: Force disable code signing for all Pods targets
-          # This appends our crucial CI override to the generated Podfile
-          cat >> ios/Podfile <<EOF
-
-          post_install do |installer|
-            installer.pods_project.targets.each do |target|
-              flutter_additional_ios_build_settings(target) if defined? flutter_additional_ios_build_settings
-              target.build_configurations.each do |config|
-                config.build_settings['CODE_SIGNING_ALLOWED'] = 'NO'
-                config.build_settings['CODE_SIGNING_REQUIRED'] = 'NO'
-                config.build_settings['PROVISIONING_PROFILE_SPECIFIER'] = ""
-              end
-            end
-          end
-          EOF
+          # 3. Dynamic Patch: Force disable code signing for ALL Pods targets
+          # We insert our code INSIDE the existing post_install block to avoid hook conflicts
+          sed -i '' '/flutter_additional_ios_build_settings(target)/a\
+                target.build_configurations.each do |config|\
+                  config.build_settings["CODE_SIGNING_ALLOWED"] = "NO"\
+                  config.build_settings["CODE_SIGNING_REQUIRED"] = "NO"\
+                end' ios/Podfile
 
           # 4. Integrate the patched Podfile
           cd ios && pod install && cd ..
@@ -68,7 +60,7 @@ workflows:
           xcodebuild -exportArchive \
             -archivePath build/ios/archive/Runner.xcarchive \
             -exportPath build/ios/ipa \
-            -exportOptionsPlist ios_signing/ExportOptions.plist
+            -exportOptionsPlist "$PWD/ios_signing/ExportOptions.plist"
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
