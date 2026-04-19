@@ -1,0 +1,1369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Design System — Health App</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --teal-primary: #00BDBD;
+    --teal-50:    #E0FAFA;
+    --teal-100:   #B8EDED;
+    --teal-200:   #44D4D4;
+    --teal-400:   #00BFBF;
+    --teal-800:   #007070;
+    --teal-900:   #003F3F;
+
+    --orange:     #F4A117;
+    --orange-50:  #FFF8EC;
+    --orange-100: #FEE6B0;
+    --orange-200: #FAD080;
+    --orange-800: #8B5400;
+
+    --purple:     #7B4FBA;
+    --purple-50:  #F2EAFF;
+    --purple-100: #DDD0FF;
+    --purple-200: #C79EF0;
+    --purple-800: #3A1D6E;
+
+    --teal:       #00BDBD; /* primary */
+    --teal-50:    #EAF2FF;
+    --teal-100:   #A5C4FF;
+    --teal-200:   #6AAEF5;
+    --teal-800:   #1A5FC4;
+
+    --black:      #000000;
+    --gray-700:   #2C2C2E;
+    --gray-600:   #3A3A3C;
+    --gray-500:   #636366;
+    --gray-400:   #787878;
+    --gray-300:   #B4B4B1;
+    --gray-100:   #E5E5EA;
+    --gray-50:    #F7F7F2;
+    --white:      #FFFFFF;
+
+    --bg:         #0A0A0F;
+    --surface:    #111118;
+    --card:       #1A1A24;
+    --card-2:     #22222E;
+    --border:     rgba(255,255,255,0.07);
+    --border-2:   rgba(255,255,255,0.12);
+    --text:       #FFFFFF;
+    --text-2:     rgba(255,255,255,0.6);
+    --text-3:     rgba(255,255,255,0.35);
+
+    --radius-xs:  4px;
+    --radius-sm:  6px;
+    --radius-md:  10px;
+    --radius-lg:  14px;
+    --radius-xl:  20px;
+    --radius-2xl: 28px;
+
+    --space-1:  4px;
+    --space-2:  8px;
+    --space-3:  12px;
+    --space-4:  16px;
+    --space-5:  20px;
+    --space-6:  24px;
+    --space-8:  32px;
+    --space-10: 40px;
+    --space-12: 48px;
+
+    --font: 'Plus Jakarta Sans', sans-serif;
+    --shadow-teal: 0 4px 24px rgba(0,189,189,0.35);
+    --shadow-card: 0 2px 20px rgba(0,0,0,0.4);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Layout ── */
+  .page { max-width: 960px; margin: 0 auto; padding: 0 32px 80px; }
+
+  /* ── Hero ── */
+  .hero {
+    padding: 72px 0 56px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -60px; left: -120px;
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(0,189,189,0.15) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero-eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--teal);
+    margin-bottom: 16px;
+  }
+  .hero-title {
+    font-size: clamp(36px, 6vw, 56px);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+    margin-bottom: 16px;
+  }
+  .hero-title span { color: var(--teal); }
+  .hero-sub {
+    font-size: 16px;
+    color: var(--text-2);
+    max-width: 480px;
+    line-height: 1.7;
+  }
+  .hero-meta {
+    display: flex;
+    gap: 24px;
+    margin-top: 32px;
+  }
+  .hero-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .hero-stat-val {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: var(--teal);
+  }
+  .hero-stat-lbl {
+    font-size: 12px;
+    color: var(--text-3);
+    font-weight: 500;
+  }
+  .hero-div { width: 1px; background: var(--border-2); }
+
+  /* ── Section ── */
+  .section { margin-bottom: 64px; }
+  .section-head {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 28px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-title {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-3);
+  }
+  .section-line { flex: 1; height: 1px; background: transparent; }
+  .section-num {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--teal);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── Typography ── */
+  .type-table { width: 100%; }
+  .type-row {
+    display: grid;
+    grid-template-columns: 180px 80px 1fr;
+    align-items: baseline;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+    gap: 24px;
+  }
+  .type-row:last-child { border-bottom: none; }
+  .type-meta { font-size: 12px; color: var(--text-3); }
+  .type-weight { font-size: 12px; color: var(--text-2); }
+  .type-sample { color: var(--text); }
+
+  /* ── Color palette ── */
+  .palette-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .palette-row {
+    display: flex;
+    align-items: center;
+    gap: 0;
+  }
+  .palette-label {
+    width: 120px;
+    flex-shrink: 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-2);
+  }
+  .palette-swatches {
+    display: flex;
+    flex: 1;
+    gap: 3px;
+  }
+  .swatch {
+    flex: 1;
+    height: 48px;
+    border-radius: 0;
+    position: relative;
+    cursor: default;
+    transition: transform 0.15s ease, flex 0.2s ease;
+  }
+  .swatch:first-child { border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
+  .swatch:last-child { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+  .swatch:hover { flex: 2; z-index: 2; }
+  .swatch-tip {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--card-2);
+    border: 1px solid var(--border-2);
+    color: var(--text);
+    font-size: 10px;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s;
+    font-family: 'Courier New', monospace;
+  }
+  .swatch:hover .swatch-tip { opacity: 1; }
+
+  /* gradient row */
+  .grad-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+    margin-top: 24px;
+  }
+  .grad-card {
+    height: 64px;
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: flex-end;
+    padding: 10px 12px;
+    position: relative;
+    overflow: hidden;
+  }
+  .grad-name {
+    font-size: 11px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.9);
+    text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+    letter-spacing: 0.03em;
+  }
+
+  /* ── Spacing ── */
+  .spacing-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 12px;
+  }
+  .space-item {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .space-vis {
+    background: var(--teal-primary);
+    height: 6px;
+    border-radius: 3px;
+    opacity: 0.7;
+  }
+  .space-info { }
+  .space-val {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+  .space-name {
+    font-size: 11px;
+    color: var(--text-3);
+    font-weight: 500;
+    margin-top: 2px;
+  }
+
+  /* ── Border radius ── */
+  .radius-grid {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+  }
+  .radius-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .radius-box {
+    background: var(--card);
+    border: 1px solid var(--border-2);
+    width: 52px;
+    height: 52px;
+  }
+  .radius-lbl {
+    font-size: 11px;
+    color: var(--text-3);
+    text-align: center;
+    font-weight: 500;
+  }
+  .radius-val {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--teal);
+  }
+
+  /* ── Elevation ── */
+  .elevation-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .elev-card {
+    flex: 1;
+    min-width: 120px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .elev-name { font-size: 12px; font-weight: 700; color: var(--text-2); }
+  .elev-val { font-size: 11px; color: var(--text-3); font-family: monospace; }
+
+  /* ── Components ── */
+  .comp-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 10px;
+  }
+  .comp-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 14px 16px;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .comp-card:hover {
+    border-color: rgba(0,189,189,0.4);
+    transform: translateY(-2px);
+  }
+  .comp-icon {
+    width: 28px; height: 28px;
+    border-radius: var(--radius-sm);
+    background: rgba(0,189,189,0.12);
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 10px;
+  }
+  .comp-icon svg { width: 14px; height: 14px; fill: var(--teal-primary); }
+  .comp-name { font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.3; }
+  .comp-variants { font-size: 11px; color: var(--text-3); margin-top: 4px; }
+
+  /* ── Badges / Tags ── */
+  .badge-section {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .badge-group { display: flex; flex-direction: column; gap: 6px; }
+  .badge-label { font-size: 10px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.08em; }
+  .badges { display: flex; gap: 6px; flex-wrap: wrap; }
+  .badge {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 12px;
+    border-radius: 100px;
+    letter-spacing: 0.02em;
+  }
+
+  /* ── Buttons ── */
+  .button-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .btn {
+    font-family: var(--font);
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 12px 24px;
+    border-radius: 100px;
+    transition: opacity 0.15s, transform 0.15s;
+    letter-spacing: 0.01em;
+  }
+  .btn:hover { opacity: 0.85; transform: translateY(-1px); }
+  .btn:active { transform: translateY(0); }
+  .btn-primary { background: var(--teal-primary); color: #fff; box-shadow: var(--shadow-teal); }
+  .btn-secondary { background: var(--card-2); color: var(--text); border: 1px solid var(--border-2); }
+  .btn-outline { background: transparent; color: var(--teal); border: 1.5px solid var(--teal-primary); }
+  .btn-ghost { background: transparent; color: var(--text-2); border: 1px solid var(--border-2); }
+  .btn-sm { font-size: 12px; padding: 8px 16px; }
+  .btn-lg { font-size: 16px; padding: 16px 36px; }
+  .fab-btn {
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    background: var(--teal-primary);
+    color: #fff;
+    font-size: 24px;
+    border: none;
+    cursor: pointer;
+    box-shadow: var(--shadow-teal);
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .fab-btn:hover { transform: scale(1.08); box-shadow: 0 6px 32px rgba(0,189,189,0.4); }
+
+  /* ── Progress / Rings ── */
+  .progress-section { display: flex; flex-direction: column; gap: 12px; }
+  .progress-item { display: flex; flex-direction: column; gap: 6px; }
+  .progress-meta { display: flex; justify-content: space-between; align-items: center; }
+  .progress-name { font-size: 13px; font-weight: 500; color: var(--text-2); }
+  .progress-val { font-size: 13px; font-weight: 600; }
+  .progress-track {
+    width: 100%;
+    height: 8px;
+    background: var(--card-2);
+    border-radius: 100px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: 100px;
+    transition: width 0.8s cubic-bezier(0.4,0,0.2,1);
+  }
+  .rings-row {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    margin-top: 20px;
+  }
+  .ring-item { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .ring-label { font-size: 12px; font-weight: 500; color: var(--text-2); }
+
+  /* ── Theme preview ── */
+  .theme-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .theme-card {
+    border-radius: var(--radius-2xl);
+    overflow: hidden;
+    border: 1px solid var(--border-2);
+  }
+  .theme-label {
+    padding: 10px 16px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+  }
+  .phone-screen { padding: 12px; }
+  /* Light screen */
+  .ls { background: #F2F2F7; }
+  .ls .screen-inner { background: #FFFFFF; border-radius: 16px; overflow: hidden; }
+  .ls .s-nav { background: #FFF; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; border-bottom: 0.5px solid #E5E5EA; }
+  .ls .s-nav-name { font-size: 13px; font-weight: 700; color: #000; }
+  .ls .s-body { padding: 12px; background: #F2F2F7; }
+  .ls .s-stat { background: #FFF; border-radius: 12px; padding: 14px; margin-bottom: 10px; }
+  .ls .s-stat-num { font-size: 28px; font-weight: 800; color: #000; line-height: 1; }
+  .ls .s-stat-lbl { font-size: 11px; color: #787878; margin-top: 2px; }
+  .ls .s-macros { display: flex; gap: 6px; margin-bottom: 10px; }
+  .ls .s-macro { flex: 1; border-radius: 10px; padding: 10px 8px; text-align: center; }
+  .ls .s-macro-val { font-size: 14px; font-weight: 700; }
+  .ls .s-macro-lbl { font-size: 10px; color: #787878; margin-top: 2px; }
+  .ls .s-card { background: #FFF; border-radius: 10px; padding: 10px; display: flex; gap: 10px; align-items: center; }
+  .ls .food-thumb { width: 38px; height: 38px; border-radius: 8px; }
+  .ls .food-name { font-size: 12px; font-weight: 600; color: #000; }
+  .ls .food-cal { font-size: 11px; color: #787878; margin-top: 2px; }
+  .ls .s-nav-bar { display: flex; justify-content: space-around; padding: 10px 0 6px; background: #FFF; border-top: 0.5px solid #E5E5EA; align-items: center; }
+  /* Dark screen */
+  .ds2 { background: #111; }
+  .ds2 .screen-inner { background: #1C1C1E; border-radius: 16px; overflow: hidden; }
+  .ds2 .s-nav { background: #1C1C1E; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; border-bottom: 0.5px solid rgba(255,255,255,0.08); }
+  .ds2 .s-nav-name { font-size: 13px; font-weight: 700; color: #FFF; }
+  .ds2 .s-body { padding: 12px; background: #1C1C1E; }
+  .ds2 .s-stat { background: #2C2C2E; border-radius: 12px; padding: 14px; margin-bottom: 10px; }
+  .ds2 .s-stat-num { font-size: 28px; font-weight: 800; color: #FFF; line-height: 1; }
+  .ds2 .s-stat-lbl { font-size: 11px; color: #9A9A9A; margin-top: 2px; }
+  .ds2 .s-macros { display: flex; gap: 6px; margin-bottom: 10px; }
+  .ds2 .s-macro { flex: 1; border-radius: 10px; padding: 10px 8px; text-align: center; }
+  .ds2 .s-macro-val { font-size: 14px; font-weight: 700; }
+  .ds2 .s-macro-lbl { font-size: 10px; color: #9A9A9A; margin-top: 2px; }
+  .ds2 .s-card { background: #2C2C2E; border-radius: 10px; padding: 10px; display: flex; gap: 10px; align-items: center; }
+  .ds2 .food-thumb { width: 38px; height: 38px; border-radius: 8px; }
+  .ds2 .food-name { font-size: 12px; font-weight: 600; color: #FFF; }
+  .ds2 .food-cal { font-size: 11px; color: #9A9A9A; margin-top: 2px; }
+  .ds2 .s-nav-bar { display: flex; justify-content: space-around; padding: 10px 0 6px; background: #2C2C2E; border-top: 0.5px solid rgba(255,255,255,0.08); align-items: center; }
+  .dot-avatar { width: 26px; height: 26px; border-radius: 50%; background: var(--teal-primary); }
+  .nav-dot { width: 4px; height: 4px; border-radius: 50%; }
+
+  /* ── Inputs ── */
+  .input-grid { display: flex; flex-direction: column; gap: 12px; max-width: 400px; }
+  .inp-wrap { display: flex; flex-direction: column; gap: 4px; }
+  .inp-label { font-size: 12px; font-weight: 600; color: var(--text-3); }
+  .inp {
+    font-family: var(--font);
+    font-size: 14px;
+    background: var(--card);
+    border: 1px solid var(--border-2);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s;
+    width: 100%;
+  }
+  .inp:focus { border-color: var(--teal); }
+  .inp::placeholder { color: var(--text-3); }
+  .inp-teal { border-color: var(--teal); }
+
+  /* ── Tokens table ── */
+  .token-table { width: 100%; border-collapse: collapse; }
+  .token-table th {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    text-align: left;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .token-table td {
+    font-size: 13px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-2);
+    vertical-align: middle;
+  }
+  .token-table td:first-child { color: var(--text); font-weight: 600; font-family: monospace; font-size: 12px; }
+  .token-table td:last-child { color: var(--text-3); font-size: 12px; }
+  .swatch-cell {
+    width: 24px; height: 24px;
+    border-radius: var(--radius-xs);
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 8px;
+  }
+
+  /* ── Divider ── */
+  .divider { height: 1px; background: var(--border); margin: 8px 0; }
+
+  /* ── Footer ── */
+  .footer {
+    border-top: 1px solid var(--border);
+    padding: 32px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .footer-brand { font-size: 13px; font-weight: 700; color: var(--text-2); }
+  .footer-meta { font-size: 12px; color: var(--text-3); }
+  .teal-dot { color: var(--teal); }
+
+  /* ── Nav sidebar ── */
+  .nav-pill {
+    position: fixed;
+    top: 50%;
+    right: 24px;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    z-index: 99;
+  }
+  .nav-pip {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--border-2);
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s;
+  }
+  .nav-pip:hover, .nav-pip.active { background: var(--teal-primary); transform: scale(1.4); }
+
+  @media (max-width: 640px) {
+    .page { padding: 0 20px 60px; }
+    .type-row { grid-template-columns: 1fr; gap: 4px; }
+    .theme-grid { grid-template-columns: 1fr; }
+    .nav-pill { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav-pill" id="navPill">
+  <div class="nav-pip active" onclick="scrollTo(0,'hero')" title="Top"></div>
+  <div class="nav-pip" onclick="scrollTo(0,'typography')" title="Typography"></div>
+  <div class="nav-pip" onclick="scrollTo(0,'colors')" title="Colors"></div>
+  <div class="nav-pip" onclick="scrollTo(0,'spacing')" title="Spacing"></div>
+  <div class="nav-pip" onclick="scrollTo(0,'radius')" title="Radius"></div>
+  <div class="nav-pip" onclick="scrollTo(0,'components')" title="Components"></div>
+  <div class="nav-pip" onclick="scrollTo(0,'buttons')" title="Buttons"></div>
+  <div class="nav-pip" onclick="scrollTo(0,'inputs')" title="Inputs"></div>
+  <div class="nav-pip" onclick="scrollTo(0,'progress')" title="Progress"></div>
+  <div class="nav-pip" onclick="scrollTo(0,'badges')" title="Badges"></div>
+  <div class="nav-pip" onclick="scrollTo(0,'themes')" title="Themes"></div>
+  <div class="nav-pip" onclick="scrollTo(0,'tokens')" title="Tokens"></div>
+</nav>
+
+<div class="page">
+
+  <!-- Hero -->
+  <section class="hero" id="hero">
+    <div class="hero-eyebrow">Health App · UI Kit</div>
+    <h1 class="hero-title">Design<br><span>System</span></h1>
+    <p class="hero-sub">A complete token-based design system for a modern health &amp; nutrition tracking application. Built on Plus Jakarta Sans with a vibrant teal-led palette.</p>
+    <div class="hero-meta">
+      <div class="hero-stat">
+        <span class="hero-stat-val">130+</span>
+        <span class="hero-stat-lbl">Screens</span>
+      </div>
+      <div class="hero-div"></div>
+      <div class="hero-stat">
+        <span class="hero-stat-val">230+</span>
+        <span class="hero-stat-lbl">Components</span>
+      </div>
+      <div class="hero-div"></div>
+      <div class="hero-stat">
+        <span class="hero-stat-val">2</span>
+        <span class="hero-stat-lbl">Themes</span>
+      </div>
+      <div class="hero-div"></div>
+      <div class="hero-stat">
+        <span class="hero-stat-val">1</span>
+        <span class="hero-stat-lbl">Typeface</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Typography -->
+  <section class="section" id="typography">
+    <div class="section-head">
+      <span class="section-title">Typography</span>
+      <span class="section-line"></span>
+      <span class="section-num">01</span>
+    </div>
+    <div class="type-table">
+      <div class="type-row">
+        <span class="type-meta">Display / 800</span>
+        <span class="type-weight" style="color:var(--text-3);">56px</span>
+        <span class="type-sample" style="font-size:48px;font-weight:800;letter-spacing:-0.04em;line-height:1;">Nutrition</span>
+      </div>
+      <div class="type-row">
+        <span class="type-meta">Headline / 700</span>
+        <span class="type-weight" style="color:var(--text-3);">32px</span>
+        <span class="type-sample" style="font-size:32px;font-weight:700;letter-spacing:-0.03em;">Reach your health goals faster</span>
+      </div>
+      <div class="type-row">
+        <span class="type-meta">Title / 600</span>
+        <span class="type-weight" style="color:var(--text-3);">22px</span>
+        <span class="type-sample" style="font-size:22px;font-weight:600;letter-spacing:-0.02em;">1,505 Calories left today</span>
+      </div>
+      <div class="type-row">
+        <span class="type-meta">Subhead / 600</span>
+        <span class="type-weight" style="color:var(--text-3);">17px</span>
+        <span class="type-sample" style="font-size:17px;font-weight:600;">Recently Uploaded Meals</span>
+      </div>
+      <div class="type-row">
+        <span class="type-meta">Body / 400</span>
+        <span class="type-weight" style="color:var(--text-3);">15px</span>
+        <span class="type-sample" style="font-size:15px;font-weight:400;color:rgba(255,255,255,0.8);">Shredded chicken with tomato sauce, bell peppers and roasted vegetables. A high-protein meal perfect for post-workout recovery.</span>
+      </div>
+      <div class="type-row">
+        <span class="type-meta">Caption / 400</span>
+        <span class="type-weight" style="color:var(--text-3);">12px</span>
+        <span class="type-sample" style="font-size:12px;font-weight:400;color:rgba(255,255,255,0.45);">10:10 PM · 988 cal · 54g protein · 31g carbs · 60g fat</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Colors -->
+  <section class="section" id="colors">
+    <div class="section-head">
+      <span class="section-title">Color palette</span>
+      <span class="section-line"></span>
+      <span class="section-num">02</span>
+    </div>
+    <div class="palette-grid">
+      <div class="palette-row">
+        <span class="palette-label">Primary — Teal</span>
+        <div class="palette-swatches">
+          <div class="swatch" style="background:#B8EDED;"><span class="swatch-tip">#B8EDED · 50</span></div>
+          <div class="swatch" style="background:#88E4E4;"><span class="swatch-tip">#88E4E4 · 100</span></div>
+          <div class="swatch" style="background:#44D4D4;"><span class="swatch-tip">#44D4D4 · 200</span></div>
+          <div class="swatch" style="background:#00CECE;"><span class="swatch-tip">#00CECE · 300</span></div>
+          <div class="swatch" style="background:#00BFBF;"><span class="swatch-tip">#00BFBF · 400</span></div>
+          <div class="swatch" style="background:#00BDBD;"><span class="swatch-tip">#00BDBD · 600 ★</span></div>
+          <div class="swatch" style="background:#009494;"><span class="swatch-tip">#009494 · 700</span></div>
+          <div class="swatch" style="background:#007070;"><span class="swatch-tip">#007070 · 800</span></div>
+          <div class="swatch" style="background:#003F3F;"><span class="swatch-tip">#003F3F · 900</span></div>
+        </div>
+      </div>
+      <div class="palette-row">
+        <span class="palette-label">Orange</span>
+        <div class="palette-swatches">
+          <div class="swatch" style="background:#FFF8EC;"><span class="swatch-tip">#FFF8EC · 50</span></div>
+          <div class="swatch" style="background:#FEE6B0;"><span class="swatch-tip">#FEE6B0 · 100</span></div>
+          <div class="swatch" style="background:#FAD080;"><span class="swatch-tip">#FAD080 · 200</span></div>
+          <div class="swatch" style="background:#F7B843;"><span class="swatch-tip">#F7B843 · 300</span></div>
+          <div class="swatch" style="background:#F4A117;"><span class="swatch-tip">#F4A117 · 400 ★</span></div>
+          <div class="swatch" style="background:#D48200;"><span class="swatch-tip">#D48200 · 600</span></div>
+          <div class="swatch" style="background:#AA6600;"><span class="swatch-tip">#AA6600 · 700</span></div>
+          <div class="swatch" style="background:#8B5400;"><span class="swatch-tip">#8B5400 · 800</span></div>
+          <div class="swatch" style="background:#5C3800;"><span class="swatch-tip">#5C3800 · 900</span></div>
+        </div>
+      </div>
+      <div class="palette-row">
+        <span class="palette-label">Purple</span>
+        <div class="palette-swatches">
+          <div class="swatch" style="background:#F2EAFF;"><span class="swatch-tip">#F2EAFF · 50</span></div>
+          <div class="swatch" style="background:#DDD0FF;"><span class="swatch-tip">#DDD0FF · 100</span></div>
+          <div class="swatch" style="background:#C79EF0;"><span class="swatch-tip">#C79EF0 · 200</span></div>
+          <div class="swatch" style="background:#A870DC;"><span class="swatch-tip">#A870DC · 300</span></div>
+          <div class="swatch" style="background:#9157CC;"><span class="swatch-tip">#9157CC · 400</span></div>
+          <div class="swatch" style="background:#7B4FBA;"><span class="swatch-tip">#7B4FBA · 600 ★</span></div>
+          <div class="swatch" style="background:#5E349A;"><span class="swatch-tip">#5E349A · 700</span></div>
+          <div class="swatch" style="background:#3A1D6E;"><span class="swatch-tip">#3A1D6E · 800</span></div>
+          <div class="swatch" style="background:#220E45;"><span class="swatch-tip">#220E45 · 900</span></div>
+        </div>
+      </div>
+      <div class="palette-row">
+        <span class="palette-label">Blue</span>
+        <div class="palette-swatches">
+          <div class="swatch" style="background:#EAF2FF;"><span class="swatch-tip">#EAF2FF · 50</span></div>
+          <div class="swatch" style="background:#A5C4FF;"><span class="swatch-tip">#A5C4FF · 100</span></div>
+          <div class="swatch" style="background:#6AAEF5;"><span class="swatch-tip">#6AAEF5 · 200</span></div>
+          <div class="swatch" style="background:#3D96F0;"><span class="swatch-tip">#3D96F0 · 300</span></div>
+          <div class="swatch" style="background:#00BDBD;"><span class="swatch-tip">#00BDBD · 400 ★</span></div>
+          <div class="swatch" style="background:#009090;"><span class="swatch-tip">#009090 · 600</span></div>
+          <div class="swatch" style="background:#007474;"><span class="swatch-tip">#007474 · 700</span></div>
+          <div class="swatch" style="background:#1A5FC4;"><span class="swatch-tip">#1A5FC4 · 800</span></div>
+          <div class="swatch" style="background:#0A3D8F;"><span class="swatch-tip">#0A3D8F · 900</span></div>
+        </div>
+      </div>
+      <div class="palette-row">
+        <span class="palette-label">Neutral</span>
+        <div class="palette-swatches">
+          <div class="swatch" style="background:#FFFFFF;outline:1px solid rgba(255,255,255,0.15);"><span class="swatch-tip">#FFFFFF · white</span></div>
+          <div class="swatch" style="background:#F7F7F2;"><span class="swatch-tip">#F7F7F2 · pearl</span></div>
+          <div class="swatch" style="background:#E5E5EA;"><span class="swatch-tip">#E5E5EA · 100</span></div>
+          <div class="swatch" style="background:#B4B4B1;"><span class="swatch-tip">#B4B4B1 · 300</span></div>
+          <div class="swatch" style="background:#787878;"><span class="swatch-tip">#787878 · 400</span></div>
+          <div class="swatch" style="background:#3A3A3C;"><span class="swatch-tip">#3A3A3C · 600</span></div>
+          <div class="swatch" style="background:#2C2C2E;"><span class="swatch-tip">#2C2C2E · 700</span></div>
+          <div class="swatch" style="background:#1C1C1E;"><span class="swatch-tip">#1C1C1E · 800</span></div>
+          <div class="swatch" style="background:#000000;"><span class="swatch-tip">#000000 · black</span></div>
+        </div>
+      </div>
+    </div>
+    <!-- Gradients -->
+    <div style="margin-top:32px;">
+      <div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:14px;">Gradients</div>
+      <div class="grad-grid">
+        <div class="grad-card" style="background:linear-gradient(135deg,#FF1493,#FF8C00,#FFD700,#00FA9A,#00BFFF,#9370DB);">
+          <span class="grad-name">Color wheel</span>
+        </div>
+        <div class="grad-card" style="background:linear-gradient(135deg,#00BDBD 0%,#00E8C8 100%);">
+          <span class="grad-name">Radient teal</span>
+        </div>
+        <div class="grad-card" style="background:linear-gradient(135deg,#7B4FBA 0%,#C770F0 100%);">
+          <span class="grad-name">Radient purple</span>
+        </div>
+        <div class="grad-card" style="background:linear-gradient(135deg,#F4A117 0%,#FFD166 100%);">
+          <span class="grad-name">Radient orange</span>
+        </div>
+        <div class="grad-card" style="background:linear-gradient(135deg,#3D96F0 0%,#6AAEF5 100%);">
+          <span class="grad-name">Radient blue</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Spacing -->
+  <section class="section" id="spacing">
+    <div class="section-head">
+      <span class="section-title">Spacing scale</span>
+      <span class="section-line"></span>
+      <span class="section-num">03</span>
+    </div>
+    <div class="spacing-grid">
+      <div class="space-item"><div class="space-vis" style="width:4px;"></div><div class="space-info"><div class="space-val">4px</div><div class="space-name">--space-1 · xs</div></div></div>
+      <div class="space-item"><div class="space-vis" style="width:8px;"></div><div class="space-info"><div class="space-val">8px</div><div class="space-name">--space-2 · sm</div></div></div>
+      <div class="space-item"><div class="space-vis" style="width:12px;"></div><div class="space-info"><div class="space-val">12px</div><div class="space-name">--space-3 · md</div></div></div>
+      <div class="space-item"><div class="space-vis" style="width:16px;"></div><div class="space-info"><div class="space-val">16px</div><div class="space-name">--space-4 · base</div></div></div>
+      <div class="space-item"><div class="space-vis" style="width:20px;"></div><div class="space-info"><div class="space-val">20px</div><div class="space-name">--space-5 · lg</div></div></div>
+      <div class="space-item"><div class="space-vis" style="width:24px;"></div><div class="space-info"><div class="space-val">24px</div><div class="space-name">--space-6 · xl</div></div></div>
+      <div class="space-item"><div class="space-vis" style="width:32px;"></div><div class="space-info"><div class="space-val">32px</div><div class="space-name">--space-8 · 2xl</div></div></div>
+      <div class="space-item"><div class="space-vis" style="width:40px;"></div><div class="space-info"><div class="space-val">40px</div><div class="space-name">--space-10 · 3xl</div></div></div>
+      <div class="space-item"><div class="space-vis" style="width:48px;"></div><div class="space-info"><div class="space-val">48px</div><div class="space-name">--space-12 · 4xl</div></div></div>
+    </div>
+  </section>
+
+  <!-- Border Radius -->
+  <section class="section" id="radius">
+    <div class="section-head">
+      <span class="section-title">Border radius</span>
+      <span class="section-line"></span>
+      <span class="section-num">04</span>
+    </div>
+    <div class="radius-grid">
+      <div class="radius-item">
+        <div class="radius-box" style="border-radius:4px;"></div>
+        <div class="radius-val">4px</div>
+        <div class="radius-lbl">--radius-xs<br>tags, chips</div>
+      </div>
+      <div class="radius-item">
+        <div class="radius-box" style="border-radius:6px;"></div>
+        <div class="radius-val">6px</div>
+        <div class="radius-lbl">--radius-sm<br>icons</div>
+      </div>
+      <div class="radius-item">
+        <div class="radius-box" style="border-radius:10px;"></div>
+        <div class="radius-val">10px</div>
+        <div class="radius-lbl">--radius-md<br>inputs, items</div>
+      </div>
+      <div class="radius-item">
+        <div class="radius-box" style="border-radius:14px;"></div>
+        <div class="radius-val">14px</div>
+        <div class="radius-lbl">--radius-lg<br>cards</div>
+      </div>
+      <div class="radius-item">
+        <div class="radius-box" style="border-radius:20px;"></div>
+        <div class="radius-val">20px</div>
+        <div class="radius-lbl">--radius-xl<br>modals</div>
+      </div>
+      <div class="radius-item">
+        <div class="radius-box" style="border-radius:28px;"></div>
+        <div class="radius-val">28px</div>
+        <div class="radius-lbl">--radius-2xl<br>sheets</div>
+      </div>
+      <div class="radius-item">
+        <div class="radius-box" style="border-radius:100px;"></div>
+        <div class="radius-val">100px</div>
+        <div class="radius-lbl">pill<br>buttons, bars</div>
+      </div>
+      <div class="radius-item">
+        <div class="radius-box" style="border-radius:50%;"></div>
+        <div class="radius-val">50%</div>
+        <div class="radius-lbl">circle<br>avatars, FAB</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Components -->
+  <section class="section" id="components">
+    <div class="section-head">
+      <span class="section-title">Components — 230+</span>
+      <span class="section-line"></span>
+      <span class="section-num">05</span>
+    </div>
+    <div class="comp-grid">
+      <div class="comp-card">
+        <div class="comp-icon"><svg viewBox="0 0 16 16"><rect x="1" y="12" width="14" height="2" rx="1"/><rect x="1" y="7" width="14" height="2" rx="1"/><rect x="1" y="2" width="14" height="2" rx="1"/></svg></div>
+        <div class="comp-name">Navigation bar</div>
+        <div class="comp-variants">3 variants · light / dark</div>
+      </div>
+      <div class="comp-card">
+        <div class="comp-icon"><svg viewBox="0 0 16 16"><path d="M3 12 L8 4 L13 12 Z" fill-rule="evenodd"/></svg></div>
+        <div class="comp-name">Status bar</div>
+        <div class="comp-variants">Light + Dark</div>
+      </div>
+      <div class="comp-card">
+        <div class="comp-icon"><svg viewBox="0 0 16 16"><rect x="1" y="5" width="14" height="6" rx="2"/></svg></div>
+        <div class="comp-name">Tab / bottom nav</div>
+        <div class="comp-variants">Active + default states</div>
+      </div>
+      <div class="comp-card">
+        <div class="comp-icon"><svg viewBox="0 0 16 16"><rect x="1" y="2" width="14" height="12" rx="3"/><rect x="3" y="5" width="4" height="4" rx="1"/></svg></div>
+        <div class="comp-name">Food card</div>
+        <div class="comp-variants">List + grid views</div>
+      </div>
+      <div class="comp-card">
+        <div class="comp-icon"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" fill="none" stroke-width="2.5" style="stroke:var(--teal-primary);fill:none;"/></svg></div>
+        <div class="comp-name">Nutrient ring</div>
+        <div class="comp-variants">Calories, protein, carbs, fat</div>
+      </div>
+      <div class="comp-card">
+        <div class="comp-icon"><svg viewBox="0 0 16 16"><rect x="1" y="6" width="14" height="4" rx="2"/><rect x="1" y="6" width="9" height="4" rx="2" style="fill:var(--teal-primary);opacity:0.8;"/></svg></div>
+        <div class="comp-name">Progress bar</div>
+        <div class="comp-variants">4 color variants</div>
+      </div>
+      <div class="comp-card">
+        <div class="comp-icon"><svg viewBox="0 0 16 16"><rect x="1" y="8" width="2" height="6" rx="1"/><rect x="5" y="5" width="2" height="9" rx="1"/><rect x="9" y="3" width="2" height="11" rx="1"/><rect x="13" y="6" width="2" height="8" rx="1"/></svg></div>
+        <div class="comp-name">Bar chart</div>
+        <div class="comp-variants">Weekly + monthly</div>
+      </div>
+      <div class="comp-card">
+        <div class="comp-icon"><svg viewBox="0 0 16 16"><path d="M1 10 Q4 2 8 10 Q12 18 15 10"/></svg></div>
+        <div class="comp-name">Weight graph</div>
+        <div class="comp-variants">Line + area</div>
+      </div>
+      <div class="comp-card">
+        <div class="comp-icon"><svg viewBox="0 0 16 16"><rect x="1" y="4" width="14" height="8" rx="4"/><rect x="1" y="4" width="8" height="8" rx="4" style="fill:var(--teal-primary);opacity:0.8;"/></svg></div>
+        <div class="comp-name">BMI scale</div>
+        <div class="comp-variants">Underweight → obese</div>
+      </div>
+      <div class="comp-card">
+        <div class="comp-icon"><svg viewBox="0 0 16 16"><circle cx="8" cy="6" r="4"/><path d="M2 14 C2 10 14 10 14 14"/></svg></div>
+        <div class="comp-name">Avatar</div>
+        <div class="comp-variants">Image + initials</div>
+      </div>
+      <div class="comp-card">
+        <div class="comp-icon"><svg viewBox="0 0 16 16"><rect x="1" y="4" width="14" height="8" rx="3"/><circle cx="4" cy="8" r="1.5" style="fill:var(--teal-primary);opacity:0.8;"/></svg></div>
+        <div class="comp-name">Search field</div>
+        <div class="comp-variants">Default + active</div>
+      </div>
+      <div class="comp-card">
+        <div class="comp-icon"><svg viewBox="0 0 16 16"><path d="M3 2 L13 2 L13 11 Q8 15 3 11 Z"/></svg></div>
+        <div class="comp-name">Scan overlay</div>
+        <div class="comp-variants">Camera UI</div>
+      </div>
+      <div class="comp-card">
+        <div class="comp-icon"><svg viewBox="0 0 16 16"><rect x="2" y="2" width="12" height="12" rx="3"/><path d="M5 8 L7.5 10.5 L11 6"/></svg></div>
+        <div class="comp-name">Onboarding step</div>
+        <div class="comp-variants">Progress dots</div>
+      </div>
+      <div class="comp-card">
+        <div class="comp-icon"><svg viewBox="0 0 16 16"><path d="M8 14 L8 2 M5 5 L8 2 L11 5"/></svg></div>
+        <div class="comp-name">Bottom sheet</div>
+        <div class="comp-variants">Modal overlay</div>
+      </div>
+      <div class="comp-card">
+        <div class="comp-icon"><svg viewBox="0 0 16 16"><rect x="1" y="1" width="6" height="6" rx="1.5"/><rect x="9" y="1" width="6" height="6" rx="1.5"/><rect x="1" y="9" width="6" height="6" rx="1.5"/><rect x="9" y="9" width="6" height="6" rx="1.5"/></svg></div>
+        <div class="comp-name">Numeric keyboard</div>
+        <div class="comp-variants">Input entry</div>
+      </div>
+      <div class="comp-card">
+        <div class="comp-icon"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M8 5 L8 8 L11 8" fill="none" stroke="var(--bg)" stroke-width="1.5"/></svg></div>
+        <div class="comp-name">Settings list</div>
+        <div class="comp-variants">Row + toggle</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Buttons -->
+  <section class="section" id="buttons">
+    <div class="section-head">
+      <span class="section-title">Buttons</span>
+      <span class="section-line"></span>
+      <span class="section-num">06</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:20px;">
+      <div>
+        <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px;font-weight:600;">Variants</div>
+        <div class="button-row">
+          <button class="btn btn-primary">Get Started</button>
+          <button class="btn btn-secondary">Continue</button>
+          <button class="btn btn-outline">Add Food</button>
+          <button class="btn btn-ghost">Cancel</button>
+          <button class="fab-btn">+</button>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px;font-weight:600;">Sizes</div>
+        <div class="button-row" style="align-items:center;">
+          <button class="btn btn-primary btn-sm">Small</button>
+          <button class="btn btn-primary">Medium</button>
+          <button class="btn btn-primary btn-lg">Large</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Inputs -->
+  <section class="section" id="inputs">
+    <div class="section-head">
+      <span class="section-title">Form inputs</span>
+      <span class="section-line"></span>
+      <span class="section-num">07</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+      <div class="input-grid">
+        <div class="inp-wrap">
+          <label class="inp-label">Name</label>
+          <input class="inp" type="text" placeholder="Robert Adams">
+        </div>
+        <div class="inp-wrap">
+          <label class="inp-label">Email</label>
+          <input class="inp" type="email" placeholder="robert@example.com">
+        </div>
+        <div class="inp-wrap">
+          <label class="inp-label">Search food</label>
+          <input class="inp inp-teal" type="text" placeholder="Beef noodle soup…" value="Fried Chicken">
+        </div>
+        <div class="inp-wrap">
+          <label class="inp-label">Calories</label>
+          <input class="inp" type="number" placeholder="988">
+        </div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px;font-weight:600;">States</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="position:relative;">
+            <input class="inp" type="text" placeholder="Default state" style="width:100%;">
+          </div>
+          <div style="position:relative;">
+            <input class="inp" type="text" placeholder="" value="Focus / active" style="width:100%;border-color:var(--teal-primary);">
+          </div>
+          <div style="position:relative;">
+            <input class="inp" type="text" placeholder="Error state" style="width:100%;border-color:#E24B4A;">
+          </div>
+          <div style="position:relative;">
+            <input class="inp" type="text" placeholder="Disabled" disabled style="width:100%;opacity:0.4;cursor:not-allowed;">
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Progress / Rings -->
+  <section class="section" id="progress">
+    <div class="section-head">
+      <span class="section-title">Progress &amp; data</span>
+      <span class="section-line"></span>
+      <span class="section-num">08</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;">
+      <div>
+        <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:14px;font-weight:600;">Progress bars</div>
+        <div class="progress-section">
+          <div class="progress-item">
+            <div class="progress-meta">
+              <span class="progress-name">Calories</span>
+              <span class="progress-val" style="color:var(--teal-primary);">1,505 / 2,550</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" style="width:59%;background:var(--teal-primary);"></div>
+            </div>
+          </div>
+          <div class="progress-item">
+            <div class="progress-meta">
+              <span class="progress-name">Protein</span>
+              <span class="progress-val" style="color:var(--orange);">129g / 180g</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" style="width:72%;background:var(--orange);"></div>
+            </div>
+          </div>
+          <div class="progress-item">
+            <div class="progress-meta">
+              <span class="progress-name">Carbohydrates</span>
+              <span class="progress-val" style="color:var(--purple);">247g / 300g</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" style="width:82%;background:var(--purple);"></div>
+            </div>
+          </div>
+          <div class="progress-item">
+            <div class="progress-meta">
+              <span class="progress-name">Fat</span>
+              <span class="progress-val" style="color:#3D96F0;">7g / 71g</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" style="width:10%;background:#3D96F0;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:14px;font-weight:600;">Circular rings</div>
+        <div class="rings-row">
+          <div class="ring-item">
+            <svg width="64" height="64" viewBox="0 0 64 64">
+              <circle cx="32" cy="32" r="26" fill="none" stroke="rgba(0,189,189,0.15)" stroke-width="6"/>
+              <circle cx="32" cy="32" r="26" fill="none" stroke="#00BDBD" stroke-width="6" stroke-dasharray="163" stroke-dashoffset="67" stroke-linecap="round" transform="rotate(-90 32 32)"/>
+            </svg>
+            <div class="ring-label" style="color:var(--teal-primary);">Calories<br><strong>59%</strong></div>
+          </div>
+          <div class="ring-item">
+            <svg width="64" height="64" viewBox="0 0 64 64">
+              <circle cx="32" cy="32" r="26" fill="none" stroke="rgba(244,161,23,0.15)" stroke-width="6"/>
+              <circle cx="32" cy="32" r="26" fill="none" stroke="#F4A117" stroke-width="6" stroke-dasharray="163" stroke-dashoffset="45" stroke-linecap="round" transform="rotate(-90 32 32)"/>
+            </svg>
+            <div class="ring-label" style="color:var(--orange);">Protein<br><strong>72%</strong></div>
+          </div>
+          <div class="ring-item">
+            <svg width="64" height="64" viewBox="0 0 64 64">
+              <circle cx="32" cy="32" r="26" fill="none" stroke="rgba(123,79,186,0.15)" stroke-width="6"/>
+              <circle cx="32" cy="32" r="26" fill="none" stroke="#7B4FBA" stroke-width="6" stroke-dasharray="163" stroke-dashoffset="29" stroke-linecap="round" transform="rotate(-90 32 32)"/>
+            </svg>
+            <div class="ring-label" style="color:var(--purple);">Carbs<br><strong>82%</strong></div>
+          </div>
+          <div class="ring-item">
+            <svg width="64" height="64" viewBox="0 0 64 64">
+              <circle cx="32" cy="32" r="26" fill="none" stroke="rgba(0,189,189,0.15)" stroke-width="6"/>
+              <circle cx="32" cy="32" r="26" fill="none" stroke="#3D96F0" stroke-width="6" stroke-dasharray="163" stroke-dashoffset="147" stroke-linecap="round" transform="rotate(-90 32 32)"/>
+            </svg>
+            <div class="ring-label" style="color:#3D96F0;">Fat<br><strong>10%</strong></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Badges -->
+  <section class="section" id="badges">
+    <div class="section-head">
+      <span class="section-title">Badges &amp; tags</span>
+      <span class="section-line"></span>
+      <span class="section-num">09</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:20px;">
+      <div>
+        <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px;font-weight:600;">Macronutrients</div>
+        <div class="badges">
+          <span class="badge" style="background:rgba(0,189,189,0.15);color:#44D4D4;">Calories</span>
+          <span class="badge" style="background:rgba(244,161,23,0.15);color:#FAD080;">Carbohydrates</span>
+          <span class="badge" style="background:rgba(123,79,186,0.15);color:#C79EF0;">Protein</span>
+          <span class="badge" style="background:rgba(61,150,240,0.15);color:#6AAEF5;">Fat</span>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px;font-weight:600;">BMI status</div>
+        <div class="badges">
+          <span class="badge" style="background:rgba(100,150,255,0.15);color:#8CB4FF;">Underweight</span>
+          <span class="badge" style="background:rgba(80,200,120,0.15);color:#80E0A0;">Healthy</span>
+          <span class="badge" style="background:rgba(244,161,23,0.15);color:#FAC860;">Overweight</span>
+          <span class="badge" style="background:rgba(226,75,74,0.15);color:#F09595;">Obese</span>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px;font-weight:600;">Meal categories</div>
+        <div class="badges">
+          <span class="badge" style="background:var(--card-2);color:var(--text-2);border:1px solid var(--border-2);">Breakfast</span>
+          <span class="badge" style="background:var(--card-2);color:var(--text-2);border:1px solid var(--border-2);">Lunch</span>
+          <span class="badge" style="background:var(--card-2);color:var(--text-2);border:1px solid var(--border-2);">Dinner</span>
+          <span class="badge" style="background:var(--card-2);color:var(--text-2);border:1px solid var(--border-2);">Snack</span>
+          <span class="badge" style="background:rgba(0,189,189,0.15);color:var(--teal-primary);border:1px solid rgba(0,189,189,0.3);">All foods</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Theme Preview -->
+  <section class="section" id="themes">
+    <div class="section-head">
+      <span class="section-title">Light / Dark themes</span>
+      <span class="section-line"></span>
+      <span class="section-num">10</span>
+    </div>
+    <div class="theme-grid">
+      <!-- Light Mode -->
+      <div class="theme-card">
+        <div class="theme-label" style="background:#F2F2F7;color:#000;border-bottom:1px solid #E5E5EA;">
+          ☀ Light mode
+        </div>
+        <div class="phone-screen ls">
+          <div class="screen-inner">
+            <div class="s-nav ls">
+              <div>
+                <div class="s-nav-name">Hi, Roberts 👋</div>
+                <div style="font-size:10px;color:#787878;">Stay healthy today!</div>
+              </div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <div style="width:26px;height:26px;border-radius:50%;background:#00BDBD;"></div>
+              </div>
+            </div>
+            <div class="s-body ls">
+              <div class="s-stat ls">
+                <div class="s-stat-num">1505</div>
+                <div class="s-stat-lbl">Calories left</div>
+              </div>
+              <div class="s-macros ls">
+                <div class="s-macro ls" style="background:#E0FAFA;">
+                  <div class="s-macro-val" style="color:#007878;">129g</div>
+                  <div class="s-macro-lbl">Protein</div>
+                </div>
+                <div class="s-macro ls" style="background:#FFF7E0;">
+                  <div class="s-macro-val" style="color:#8B5400;">247g</div>
+                  <div class="s-macro-lbl">Carbs</div>
+                </div>
+                <div class="s-macro ls" style="background:#EDE0FF;">
+                  <div class="s-macro-val" style="color:#4A1E8C;">7g</div>
+                  <div class="s-macro-lbl">Fat</div>
+                </div>
+              </div>
+              <div style="font-size:11px;font-weight:600;color:#000;margin-bottom:6px;">Recently Uploaded</div>
+              <div class="s-card ls">
+                <div class="food-thumb" style="background:linear-gradient(135deg,#F4A117,#00BDBD);"></div>
+                <div>
+                  <div class="food-name ls">Fried Chicken</div>
+                  <div class="food-cal ls">988 cal · 54g · 31g · 60g</div>
+                </div>
+              </div>
+            </div>
+            <div class="s-nav-bar ls">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+                <div style="width:18px;height:2px;border-radius:1px;background:#00BDBD;"></div>
+                <div style="width:18px;height:2px;border-radius:1px;background:#00BDBD;"></div>
+                <div style="width:4px;height:4px;border-radius:50%;background:#00BDBD;margin-top:1px;"></div>
+              </div>
+              <div style="width:40px;height:40px;border-radius:50%;background:#00BDBD;display:flex;align-items:center;justify-content:center;color:#FFF;font-size:20px;font-weight:300;">+</div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+                <div style="width:18px;height:2px;border-radius:1px;background:#B4B4B1;"></div>
+                <div style="width:18px;height:2px;border-radius:1px;background:#B4B4B1;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Dark Mode -->
+      <div class="theme-card">
+        <div class="theme-label" style="background:#2C2C2E;color:#FFF;border-bottom:1px solid rgba(255,255,255,0.08);">
+          ☾ Dark mode
+        </div>
+        <div class="phone-screen ds2">
+          <div class="screen-inner">
+            <div class="s-nav ds2">
+              <div>
+                <div class="s-nav-name">Hi, Roberts 👋</div>
+                <div style="font-size:10px;color:#9A9A9A;">Stay healthy today!</div>
+              </div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <div style="width:26px;height:26px;border-radius:50%;background:#00BDBD;"></div>
+              </div>
+            </div>
+            <div class="s-body ds2">
+              <div class="s-stat ds2">
+                <div class="s-stat-num">1505</div>
+                <div class="s-stat-lbl">Calories left</div>
+              </div>
+              <div class="s-macros ds2">
+                <div class="s-macro ds2" style="background:#0D2828;">
+                  <div class="s-macro-val" style="color:#44D4D4;">129g</div>
+                  <div class="s-macro-lbl">Protein</div>
+                </div>
+                <div class="s-macro ds2" style="background:#2C2510;">
+                  <div class="s-macro-val" style="color:#FAC860;">247g</div>
+                  <div class="s-macro-lbl">Carbs</div>
+                </div>
+                <div class="s-macro ds2" style="background:#1E1828;">
+                  <div class="s-macro-val" style="color:#C79EF0;">7g</div>
+                  <div class="s-macro-lbl">Fat</div>
+                </div>
+              </div>
+              <div style="font-size:11px;font-weight:600;color:#FFF;margin-bottom:6px;">Recently Uploaded</div>
+              <div class="s-card ds2">
+                <div class="food-thumb" style="background:linear-gradient(135deg,#F4A117,#00BDBD);"></div>
+                <div>
+                  <div class="food-name ds2">Fried Chicken</div>
+                  <div class="food-cal ds2">988 cal · 54g · 31g · 60g</div>
+                </div>
+              </div>
+            </div>
+            <div class="s-nav-bar ds2">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+                <div style="width:18px;height:2px;border-radius:1px;background:#00BDBD;"></div>
+                <div style="width:18px;height:2px;border-radius:1px;background:#00BDBD;"></div>
+                <div style="width:4px;height:4px;border-radius:50%;background:#00BDBD;margin-top:1px;"></div>
+              </div>
+              <div style="width:40px;height:40px;border-radius:50%;background:#00BDBD;display:flex;align-items:center;justify-content:center;color:#FFF;font-size:20px;font-weight:300;">+</div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+                <div style="width:18px;height:2px;border-radius:1px;background:#636366;"></div>
+                <div style="width:18px;height:2px;border-radius:1px;background:#636366;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Design Tokens table -->
+  <section class="section" id="tokens">
+    <div class="section-head">
+      <span class="section-title">Design tokens</span>
+      <span class="section-line"></span>
+      <span class="section-num">11</span>
+    </div>
+    <table class="token-table">
+      <thead>
+        <tr>
+          <th style="width:200px;">Token</th>
+          <th style="width:120px;">Value</th>
+          <th>Usage</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>--teal</td><td><span class="swatch-cell" style="background:#00BDBD;"></span>#00BDBD</td><td>Primary brand, FAB, active states, CTAs</td></tr>
+        <tr><td>--orange</td><td><span class="swatch-cell" style="background:#F4A117;"></span>#F4A117</td><td>Carbohydrates macro, secondary accent</td></tr>
+        <tr><td>--purple</td><td><span class="swatch-cell" style="background:#7B4FBA;"></span>#7B4FBA</td><td>Fat macro, secondary accent</td></tr>
+        <tr><td>--teal</td><td><span class="swatch-cell" style="background:#00BDBD;"></span>#00BDBD</td><td>Primary brand, FAB, active states, CTAs</td></tr>
+        <tr><td>--black</td><td><span class="swatch-cell" style="background:#000000;outline:1px solid rgba(255,255,255,0.2);"></span>#000000</td><td>Neutral darkest, dark text</td></tr>
+        <tr><td>--gray-400</td><td><span class="swatch-cell" style="background:#787878;"></span>#787878</td><td>Secondary text, captions</td></tr>
+        <tr><td>--gray-300</td><td><span class="swatch-cell" style="background:#B4B4B1;"></span>#B4B4B1</td><td>Inactive icons, disabled</td></tr>
+        <tr><td>--gray-50</td><td><span class="swatch-cell" style="background:#F7F7F2;outline:1px solid rgba(0,0,0,0.1);"></span>#F7F7F2</td><td>Light bg, pearl white surface</td></tr>
+        <tr><td>--radius-md</td><td>10px</td><td>Inputs, list items, small cards</td></tr>
+        <tr><td>--radius-lg</td><td>14px</td><td>Cards, content containers</td></tr>
+        <tr><td>--radius-xl</td><td>20px</td><td>Modals, bottom sheets</td></tr>
+        <tr><td>--font</td><td>Plus Jakarta Sans</td><td>All text — single typeface system</td></tr>
+        <tr><td>--shadow-teal</td><td>0 4px 24px rgba(0,189,189,.25)</td><td>FAB button, primary CTA glow</td></tr>
+        <tr><td>--space-4</td><td>16px</td><td>Base unit — component internal padding</td></tr>
+        <tr><td>--space-6</td><td>24px</td><td>Section gaps, card padding</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-brand">Health App <span class="teal-dot">·</span> Design System</div>
+    <div class="footer-meta">Plus Jakarta Sans <span class="teal-dot">·</span> 130+ Screens <span class="teal-dot">·</span> 230+ Components</div>
+  </footer>
+
+</div>
+
+<script>
+  const sections = ['hero','typography','colors','spacing','radius','components','buttons','inputs','progress','badges','themes','tokens'];
+  const pips = document.querySelectorAll('.nav-pip');
+
+  function updatePips() {
+    const scrollY = window.scrollY + window.innerHeight * 0.4;
+    let active = 0;
+    sections.forEach((id, i) => {
+      const el = document.getElementById(id);
+      if (el && el.offsetTop <= scrollY) active = i;
+    });
+    pips.forEach((p, i) => p.classList.toggle('active', i === active));
+  }
+
+  pips.forEach((pip, i) => {
+    pip.addEventListener('click', () => {
+      const el = document.getElementById(sections[i]);
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+    });
+  });
+
+  window.addEventListener('scroll', updatePips, { passive: true });
+  updatePips();
+</script>
+
+</body>
+</html>
