@@ -25,7 +25,10 @@ workflows:
           flutter packages pub get
       - name: iOS release build
         script: |
-          flutter build ipa --release --export-method=app-store
+          # Flutter native archive command gracefully skips development profile preconditions and handles Swift compilation smoothly
+          flutter build xcarchive --release
+          # Natively export using Codemagic's dynamically generated export options plist to guarantee strict profile string matching
+          xcodebuild -exportArchive -archivePath build/ios/archive/Runner.xcarchive -exportPath build/ios/ipa -exportOptionsPlist /Users/builder/export_options.plist
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
