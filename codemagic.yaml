@@ -126,6 +126,17 @@ workflows:
             -exportOptionsPlist "$HOME/export_options.plist" \
             -exportPath build/ios/ipa
 
+      - name: Manual TestFlight Upload
+        script: |
+          # Use the provided App Store Connect API key to upload the binary.
+          # This runs on the Codemagic macOS runner where 'altool' is present.
+          app-store-connect publish \
+            --path "build/ios/ipa/Runner.ipa" \
+            --issuer-id "ada504ee-3c9d-4491-b7b2-db490afe913a" \
+            --key-id "G4ML936L73" \
+            --private-key "@file:ios_signing/AuthKey.p8" \
+            --testflight
+
     artifacts:
       - build/ios/ipa/*.ipa
       - $HOME/export_options.plist
