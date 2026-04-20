@@ -54,7 +54,6 @@ workflows:
           xcode-project build-ipa \
             --workspace "ios/Runner.xcworkspace" \
             --scheme "Runner" \
-            --bundle-id "com.gojocalories.gojocalories" \
             --archive-flags="-configuration Release PROVISIONING_PROFILE=42b7e07c-bff4-4614-ab5e-bf8536e1ea3f"
 
     artifacts:
