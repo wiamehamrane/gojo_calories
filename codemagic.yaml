@@ -50,11 +50,12 @@ workflows:
           flutter build ios --release --no-codesign
 
           # Step 2: Archive + sign + package the IPA using Codemagic's native CLI.
-          # Explicitly passing the scheme and configuration.
+          # Explicitly passing the Provisioning Profile UUID and Bundle ID to resolve Error 65.
           xcode-project build-ipa \
             --workspace "ios/Runner.xcworkspace" \
             --scheme "Runner" \
-            --archive-flags="-configuration Release"
+            --bundle-id "com.gojocalories.gojocalories" \
+            --archive-flags="-configuration Release PROVISIONING_PROFILE=42b7e07c-bff4-4614-ab5e-bf8536e1ea3f"
 
     artifacts:
       - build/ios/ipa/*.ipa
