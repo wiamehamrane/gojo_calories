@@ -10,19 +10,35 @@ workflows:
     integrations:
       app_store_connect: Codemagic CI
     scripts:
-      - name: "Diagnostic - Find signing files"
+      - name: Set up code signing
         script: |
-          echo "--- Environment Variables (Names Only) ---"
-          printenv | cut -d= -f1
-          echo "--- Searching for .p12 files ---"
-          find $HOME -name "*.p12" 2>/dev/null
-          find /Users/builder/clone -name "*.p12" 2>/dev/null
-          echo "--- Searching for .mobileprovision files ---"
-          find $HOME -name "*.mobileprovision" 2>/dev/null
-          find /Users/builder/clone -name "*.mobileprovision" 2>/dev/null
-          echo "--- Checking default locations ---"
-          ls -R ~/Library/MobileDevice/Provisioning\ Profiles 2>/dev/null || echo "Profiles dir not found"
-          ls -R ~/Library/Developer/Xcode/UserData/Certificates 2>/dev/null || echo "Certs dir not found"
+          keychain initialize
+          
+          # Manually install the provisioning profile from the repo
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          cp ios_signing/gojo_profile.mobileprovision "$HOME/Library/MobileDevice/Provisioning Profiles/"
+          
+          # Import certificates. If configured in UI, keychain add-certificates (no args) works.
+          keychain add-certificates || echo "No UI certificates found"
+          
+          # Try to add the local certificate if password is provided or empty
+          # Using a fallback to avoid script failure if password is required but missing.
+          keychain add-certificates --certificate ios_signing/gojo_distribution.p12 --certificate-password "${CERTIFICATE_PASSWORD:-}" || echo "Local certificate import failed (check password)"
+
+          # Diagnostics: Verify identities
+          security find-identity -v -p codesigning
+          
+          # Patch the project
+          xcode-project use-profiles --archive-method app-store
+
+          # Debug: confirm the export_options.plist was generated
+          echo "--- Generated export_options.plist ---"
+          if [ -f "$HOME/export_options.plist" ]; then
+            cat "$HOME/export_options.plist"
+          else
+            echo "ERROR: export_options.plist was not generated!"
+            exit 1
+          fi
 
       - name: Install dependencies
         script: |
