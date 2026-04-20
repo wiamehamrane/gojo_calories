@@ -14,19 +14,19 @@ workflows:
         script: |
           keychain initialize
           
-          # Manually install the provisioning profile from the repo
-          # Note: Using the version confirmed from the user's Downloads
+          # Manually install the provisioning profile
           mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
           cp ios_signing/GojoCalories_App_Store_Profile.mobileprovision "$HOME/Library/MobileDevice/Provisioning Profiles/Profile.mobileprovision"
           
-          # Import the confirmed certificate with the provided password
+          # Import the confirmed certificate
           echo "Importing certificate..."
           keychain add-certificates \
             --certificate ios_signing/Certificates.p12 \
             --certificate-password "GojoCalories@0989"
 
-          # Diagnostics: Verify identities
-          security find-identity -v -p codesigning
+          # IMPORTANT: Authorize the private key for codesigning. 
+          # This prevents "Signing certificate is invalid" (private key access) errors.
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" "$(keychain default)"
           
           # Patch the project to use the manually installed profile
           xcode-project use-profiles --archive-method app-store
@@ -49,9 +49,14 @@ workflows:
           # Step 1: Compile the Flutter/Dart code WITHOUT signing.
           flutter build ios --release --no-codesign
 
-          # Step 2: Archive the project using raw xcodebuild (explicit signing)
-          # We specify the profile only for the main target by using PROVISIONING_PROFILE_SPECIFIER
-          # We also use the generic 'Apple Distribution' identity to match the imported certificate.
+          # Step 2: Forcibly disable signing for all CocoaPods and Test targets.
+          # This resolves Error 65 "image_picker_ios does not support provisioning profiles".
+          # We use -i '' for macOS (Codemagic runner).
+          echo "Patching project to disable signing for third-party libs and tests..."
+          find ios -name "project.pbxproj" -exec sed -i '' 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGNING_ALLOWED = NO;/g' {} +
+          find ios -name "project.pbxproj" -exec sed -i '' 's/CODE_SIGNING_REQUIRED = YES;/CODE_SIGNING_REQUIRED = NO;/g' {} +
+
+          # Step 3: Archive the project using raw xcodebuild (explicit signing for main target)
           mkdir -p build/ios/xcarchive
           xcodebuild \
             -workspace ios/Runner.xcworkspace \
@@ -65,8 +70,7 @@ workflows:
             CODE_SIGN_IDENTITY="Apple Distribution" \
             COMPILER_INDEX_STORE_ENABLE=NO
 
-          # Step 3: Export the IPA using the previously generated export_options.plist
-          # The export_options.plist was saved to $HOME in the previous step.
+          # Step 4: Export the IPA using the previously generated export_options.plist
           mkdir -p build/ios/ipa
           xcodebuild \
             -exportArchive \
