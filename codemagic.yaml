@@ -26,15 +26,16 @@ workflows:
           flutter packages pub get
       - name: iOS release build
         script: |
-          # 1. Clean workspace and unlock keychains
+          # 1. Clean workspace and analyze environment
           git checkout ios/Runner.xcodeproj/project.pbxproj
           rm -f ios/Podfile
-          security unlock-keychain -p "" "$HOME/Library/Keychains/login.keychain-db" || true
           
-          echo "DUMPING KEYCHAIN IDENTITIES FOR AUDIT:"
+          echo "SEARCHING FOR SECURITY ASSETS..."
+          find "$HOME" -name "*.p12" -o -name "*.mobileprovision"
+          security list-keychains -d user
           security find-identity -v -p codesigning
           
-          # 2. Compile and Archive (Unsigned)
+          # 2. Compile and Archive (Unsigned with Team Anchor)
           flutter build ios --release --no-codesign
           sed -i '' '/flutter_additional_ios_build_settings(target)/a\
                 target.build_configurations.each do |config|\
@@ -42,14 +43,18 @@ workflows:
                   config.build_settings["CODE_SIGNING_REQUIRED"] = "NO"\
                 end' ios/Podfile
           cd ios && pod install && cd ..
+          
           xcodebuild archive \
             -workspace ios/Runner.xcworkspace \
             -scheme Runner \
-            -archivePath build/ios/archive/Runner.xcarchive \
+            -archivePath "$PWD/build/ios/archive/Runner.xcarchive" \
             -configuration Release \
             COMPILER_INDEX_STORE_ENABLE=NO \
+            DEVELOPMENT_TEAM=T8348X4CNY \
             CODE_SIGN_ALLOWED=NO \
-            CODE_SIGN_REQUIRED=NO
+            CODE_SIGN_REQUIRED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
 
           # 3. forensic Profile Analysis
           PROFILE_PATH=$(find "$HOME" -name "*.mobileprovision" | head -n 1)
@@ -58,32 +63,28 @@ workflows:
             PROFILE_UUID=$(echo "$PROFILE_INFO" | grep -aA1 UUID | grep string | awk -F '>|<' '{print $3}' | head -n 1)
             PROFILE_NAME=$(echo "$PROFILE_INFO" | sed -n '/<key>Name<\/key>/{n;p;}' | sed -E 's/.*<string>(.*)<\/string>.*/\1/' | head -n 1)
             
-            # Extract the EXACT Certificate Name common name from the profile's embedded certificate data
             FULL_SUBJECT=$(echo "$PROFILE_INFO" | sed -n '/<key>DeveloperCertificates<\/key>/{n;n;s/.*<data>\(.*\)<\/data>.*/\1/p;}' | base64 -D | openssl x509 -inform der -noout -subject)
             EXPECTED_CN=$(echo "$FULL_SUBJECT" | sed -E 's/.*CN[[:space:]]?=[[:space:]]?(.*[A-Z0-9)])/\1/' | awk -F ',' '{print $1}' | head -n 1)
             
             METHOD="app-store"
             if echo "$PROFILE_INFO" | grep -q "ProvisionedDevices"; then METHOD="ad-hoc"; fi
-            
-            echo "Profile Requirement: '$EXPECTED_CN' ($PROFILE_UUID)"
+            echo "Profile: '$PROFILE_NAME' -> expects Certificate CN: '$EXPECTED_CN'"
             
             # 4. Locate matching identity using Team-ID Anchor
-            CERT_INFO=$(security find-identity -v -p codesigning | grep "$EXPECTED_CN" | head -n 1)
+            CERT_INFO=$(security find-identity -v -p codesigning | grep "Distribution" | grep "T8348X4CNY" | head -n 1)
             if [ -z "$CERT_INFO" ]; then
-              echo "SEARCHING BY TEAM ANCHOR (T8348X4CNY)..."
-              CERT_INFO=$(security find-identity -v -p codesigning | grep "Distribution" | grep "T8348X4CNY" | head -n 1)
+                CERT_INFO=$(security find-identity -v -p codesigning | grep "$EXPECTED_CN" | head -n 1)
             fi
             
             CERT_HASH=$(echo "$CERT_INFO" | awk '{print $2}')
             CERT_NAME=$(echo "$CERT_INFO" | awk -F '"' '{print $2}')
             
             if [ -z "$CERT_HASH" ]; then
-              echo "CRITICAL: NO VALID DISTRIBUTION CERTIFICATE FOUND FOR TEAM T8348X4CNY IN KEYCHAIN"
-              echo "Available identities are shown in Step 1. If empty, please upload your .p12 certificate to Codemagic."
-              # We will try to proceed with the profile name match for Xcode auto-discovery
+              echo "!! CRITICAL: NO VALID DISTRIBUTION CERTIFICATE FOUND FOR TEAM T8348X4CNY !!"
+              echo "Ensure you have uploaded a .p12 certificate that matches Team ID T8348X4CNY."
+            else
+              echo "Binding Resolution: $CERT_NAME ($CERT_HASH)"
             fi
-
-            echo "Binding Resolution: $CERT_NAME ($CERT_HASH)"
 
             # 5. Patch and Install
             DEST_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
@@ -96,7 +97,6 @@ workflows:
             plutil -replace teamID -string "T8348X4CNY" "$PLIST"
             plutil -replace provisioningProfiles -json "{\"com.gojocalories.gojocalories\":\"$PROFILE_NAME\"}" "$PLIST"
             
-            # Inject identity IF found, otherwise omit to let Xcode try auto-matching by Team ID
             if [ -n "$CERT_NAME" ]; then
               plutil -replace signingCertificate -string "$CERT_NAME" "$PLIST"
             else
@@ -111,13 +111,12 @@ workflows:
 
           # 6. Final Export
           xcodebuild -exportArchive \
-            -archivePath build/ios/archive/Runner.xcarchive \
-            -exportPath build/ios/ipa \
+            -archivePath "$PWD/build/ios/archive/Runner.xcarchive" \
+            -exportPath "$PWD/build/ios/ipa" \
             -exportOptionsPlist "$PWD/ios_signing/ExportOptions.plist" \
             CODE_SIGN_IDENTITY="${CERT_HASH:-Apple Distribution}" \
             DEVELOPMENT_TEAM=T8348X4CNY \
-            CODE_SIGN_STYLE=Manual \
-            -allowProvisioningUpdates
+            CODE_SIGN_STYLE=Manual
 
     publishing:
       email:
