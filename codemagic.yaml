@@ -26,26 +26,21 @@ workflows:
           flutter packages pub get
       - name: iOS release build
         script: |
-          # 1. Ensure the workspace is clean and identity is detected
+          # 1. Ensure the workspace is clean and extract SHA-1 certificate fingerprint
           git checkout ios/Runner.xcodeproj/project.pbxproj
           rm -f ios/Podfile
+          CERT_HASH=$(security find-identity -v -p codesigning | grep "Distribution" | head -n 1 | awk '{print $2}')
           CERT_NAME=$(security find-identity -v -p codesigning | grep "Distribution" | head -n 1 | awk -F '"' '{print $2}')
-          echo "Detected Identity: $CERT_NAME"
+          echo "Detected Identity: $CERT_NAME ($CERT_HASH)"
 
-          # 2. Compile the Flutter Dart payload natively
+          # 2. Compile and Archive (Unsigned)
           flutter build ios --release --no-codesign
-
-          # 3. Dynamic Podfile Patch
           sed -i '' '/flutter_additional_ios_build_settings(target)/a\
                 target.build_configurations.each do |config|\
                   config.build_settings["CODE_SIGNING_ALLOWED"] = "NO"\
                   config.build_settings["CODE_SIGNING_REQUIRED"] = "NO"\
                 end' ios/Podfile
-
-          # 4. Integrate the patched Podfile
           cd ios && pod install && cd ..
-
-          # 5. Archive (Unsigned)
           xcodebuild archive \
             -workspace ios/Runner.xcworkspace \
             -scheme Runner \
@@ -55,30 +50,38 @@ workflows:
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO
 
-          # 6. Robustly identify and INSTALL the Provisioning Profile
+          # 3. Inspect and Install Provisioning Profile
           PROFILE_PATH=$(find "$HOME" -name "*.mobileprovision" | head -n 1)
           if [ -n "$PROFILE_PATH" ]; then
-            PROFILE_UUID=$(grep -aA1 UUID "$PROFILE_PATH" | grep string | awk -F '>|<' '{print $3}' | head -n 1)
-            PROFILE_NAME=$(grep -aA1 Name "$PROFILE_PATH" | grep string | awk -F '>|<' '{print $3}' | head -n 1)
-            echo "Installing Profile: $PROFILE_NAME ($PROFILE_UUID)"
+            PROFILE_INFO=$(security cms -D -i "$PROFILE_PATH")
+            PROFILE_UUID=$(echo "$PROFILE_INFO" | grep -aA1 UUID | grep string | awk -F '>|<' '{print $3}')
+            PROFILE_NAME=$(echo "$PROFILE_INFO" | grep -aA1 Name | grep string | awk -F '>|<' '{print $3}')
+            METHOD="app-store"
+            if echo "$PROFILE_INFO" | grep -q "ProvisionedDevices"; then 
+              echo "AD HOC or DEV Profile Detected!"
+              METHOD="ad-hoc"
+              if echo "$PROFILE_INFO" | grep -q "get-task-allow" | grep -q "true"; then METHOD="development"; fi
+            fi
+            echo "Using Profile: $PROFILE_NAME ($PROFILE_UUID) with method: $METHOD"
             
             DEST_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
             mkdir -p "$DEST_DIR"
             cp "$PROFILE_PATH" "$DEST_DIR/$PROFILE_UUID.mobileprovision"
             
-            # Inject both Name and Certificate into ExportOptions
+            # 4. Patch ExportOptions with absolute precision
+            sed -i '' "s/app-store/$METHOD/g" ios_signing/ExportOptions.plist
             sed -i '' "s/__PROFILE_NAME__/$PROFILE_NAME/g" ios_signing/ExportOptions.plist
             sed -i '' "s/Apple Distribution/$CERT_NAME/g" ios_signing/ExportOptions.plist
           else
             echo "ERROR: No provisioning profile found" && exit 1
           fi
 
-          # 7. Force Export with dynamically detected production identity
+          # 5. Final Export using SHA-1 Fingerprint (Most reliable method)
           xcodebuild -exportArchive \
             -archivePath build/ios/archive/Runner.xcarchive \
             -exportPath build/ios/ipa \
             -exportOptionsPlist "$PWD/ios_signing/ExportOptions.plist" \
-            CODE_SIGN_IDENTITY="$CERT_NAME" \
+            CODE_SIGN_IDENTITY="$CERT_HASH" \
             DEVELOPMENT_TEAM=T8348X4CNY
     artifacts:
       - build/ios/ipa/*.ipa
