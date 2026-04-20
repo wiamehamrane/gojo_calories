@@ -24,16 +24,32 @@ workflows:
             --certificate ios_signing/Certificates.p12 \
             --certificate-password "GojoCalories@0989"
 
-          # IMPORTANT: Authorize the private key for codesigning. 
-          # We use the SHA1 fingerprint of the certificate to target the specific key.
-          CERT_SHA1=$(openssl x509 -in <(openssl pkcs12 -in ios_signing/Certificates.p12 -passin pass:GojoCalories@0989 -nokeys -clcerts -legacy) -noout -fingerprint | cut -d'=' -f2 | sed 's/://g')
-          echo "Certificate SHA1: $CERT_SHA1"
+          # Authorize the private key for codesigning.
+          # We unlock the specific keychain Codemagic created.
+          BUILD_KEYCHAIN=$(keychain default)
+          security unlock-keychain -p "" "$BUILD_KEYCHAIN"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" "$BUILD_KEYCHAIN"
           
-          # Unlock and partition the keychain properly
-          security unlock-keychain -p "" "$(keychain default)"
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" "$(keychain default)"
-          
-          # Patch the project to use the manually installed profile
+          # Surgical patch of project.pbxproj to hardcode signing for the MAIN target only.
+          # This prevents signing settings from leaking to Pods via the command line.
+          echo "Surgically patching Runner project settings..."
+          python3 -c "
+          import sys
+          path = 'ios/Runner.xcodeproj/project.pbxproj'
+          content = open(path).read()
+          # Target the Release configuration (ID 97C147041CF9000F007C117D)
+          search_str = '97C147041CF9000F007C117D /* Release */ = {\n\t\t\tisa = XCBuildConfiguration;\n\t\t\tbuildSettings = {'
+          replace_str = search_str + '\n\t\t\t\tCODE_SIGN_IDENTITY = \"Apple Distribution: Jad Tneamou (T8348X4CNY)\";\n\t\t\t\tCODE_SIGN_STYLE = Manual;\n\t\t\t\tDEVELOPMENT_TEAM = T8348X4CNY;\n\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = \"GojoCalories App Store Profile\";'
+          if search_str in content:
+              new_content = content.replace(search_str, replace_str)
+              with open(path, 'w') as f:
+                  f.write(new_content)
+              print('Successfully patched pbxproj')
+          else:
+              print('Warning: Release configuration block not found exactly as expected')
+          "
+
+          # Patch the project to generate export_options.plist
           xcode-project use-profiles --archive-method app-store
 
           # Debug: confirm the export_options.plist was generated
@@ -55,19 +71,13 @@ workflows:
           flutter build ios --release --no-codesign
 
           # Step 2: Final Verify identities after partitioning
+          # This confirms the private key is accessible.
           security find-identity -v -p codesigning
           
-          # Step 3: Forcibly disable signing for all non-main targets.
-          # We search for project.pbxproj files in Pods and RunnerTests directories.
-          echo "Patching project to disable signing for third-party libs and tests..."
-          find ios -name "project.pbxproj" -exec sed -i '' 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGNING_ALLOWED = NO;/g' {} +
-          find ios -name "project.pbxproj" -exec sed -i '' 's/CODE_SIGNING_REQUIRED = YES;/CODE_SIGNING_REQUIRED = NO;/g' {} +
-          
-          # Special patch for the main target: ensure it stays Manual and uses our specifier
-          # This helps override any leaking Automatic settings from Pods.
-          sed -i '' 's/CODE_SIGN_STYLE = Automatic/CODE_SIGN_STYLE = Manual/g' ios/Runner.xcodeproj/project.pbxproj
-
-          # Step 4: Archive using raw xcodebuild (explicit signing for main target)
+          # Step 3: Archive using raw xcodebuild
+          # IMPORTANT: We do NOT pass PROVISIONING_PROFILE_SPECIFIER or CODE_SIGN_IDENTITY here.
+          # These are now hardcoded into the Runner.xcodeproj/project.pbxproj for ONLY the main target.
+          # This prevents them from leaking into Pods targets (Error 65).
           mkdir -p build/ios/xcarchive
           xcodebuild \
             -workspace ios/Runner.xcworkspace \
@@ -75,13 +85,9 @@ workflows:
             -configuration Release \
             -archivePath build/ios/xcarchive/Runner.xcarchive \
             archive \
-            CODE_SIGN_STYLE=Manual \
-            DEVELOPMENT_TEAM=T8348X4CNY \
-            PROVISIONING_PROFILE_SPECIFIER="GojoCalories App Store Profile" \
-            CODE_SIGN_IDENTITY="Apple Distribution" \
             COMPILER_INDEX_STORE_ENABLE=NO
 
-          # Step 5: Export the IPA using the previously generated export_options.plist
+          # Step 4: Export the IPA using the previously generated export_options.plist
           mkdir -p build/ios/ipa
           xcodebuild \
             -exportArchive \
