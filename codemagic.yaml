@@ -135,7 +135,8 @@ workflows:
             --issuer-id "ada504ee-3c9d-4491-b7b2-db490afe913a" \
             --key-id "G4ML936L73" \
             --private-key "@file:ios_signing/AuthKey.p8" \
-            --testflight
+            --testflight \
+            --max-find-build-wait 30
 
     artifacts:
       - build/ios/ipa/*.ipa
