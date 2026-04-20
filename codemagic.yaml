@@ -26,22 +26,11 @@ workflows:
           flutter packages pub get
       - name: iOS release build
         script: |
-          # 1. Diagnostic Audit and Identity Discovery
+          # 1. Clean workspace and unlock keychains
           git checkout ios/Runner.xcodeproj/project.pbxproj
           rm -f ios/Podfile
+          security unlock-keychain -p "" "$HOME/Library/Keychains/login.keychain-db" || true
           
-          echo "Listing all keychains..."
-          security list-keychains -d user
-          
-          echo "Scanning all available identities..."
-          security find-identity -v -p codesigning
-          
-          # Attempt to find identity by common Distribution keywords + Team ID
-          CERT_INFO=$(security find-identity -v -p codesigning | grep -iE "Distribution|T8348X4CNY" | grep -v "skipped" | head -n 1)
-          CERT_HASH=$(echo "$CERT_INFO" | awk '{print $2}')
-          CERT_NAME=$(echo "$CERT_INFO" | awk -F '"' '{print $2}')
-          echo "Binding Anchor: $CERT_NAME ($CERT_HASH)"
-
           # 2. Compile and Archive (Unsigned)
           flutter build ios --release --no-codesign
           sed -i '' '/flutter_additional_ios_build_settings(target)/a\
@@ -59,55 +48,68 @@ workflows:
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO
 
-          # 3. Inspect and Install Provisioning Profile
+          # 3. forensic Profile Analysis
           PROFILE_PATH=$(find "$HOME" -name "*.mobileprovision" | head -n 1)
           if [ -n "$PROFILE_PATH" ]; then
             PROFILE_INFO=$(security cms -D -i "$PROFILE_PATH")
             PROFILE_UUID=$(echo "$PROFILE_INFO" | grep -aA1 UUID | grep string | awk -F '>|<' '{print $3}' | head -n 1)
             PROFILE_NAME=$(echo "$PROFILE_INFO" | sed -n '/<key>Name<\/key>/{n;p;}' | sed -E 's/.*<string>(.*)<\/string>.*/\1/' | head -n 1)
             
+            # Extract the EXACT Certificate Name common name from the profile's embedded certificate data
+            EXPECTED_CN=$(echo "$PROFILE_INFO" | sed -n '/<key>DeveloperCertificates<\/key>/{n;n;s/.*<data>\(.*\)<\/data>.*/\1/p;}' | base64 -D | openssl x509 -inform der -noout -subject | sed -E 's/.*CN[[:space:]]?=[[:space:]]?(.*[A-Z0-9)])/\1/' | head -n 1)
+            
             METHOD="app-store"
             if echo "$PROFILE_INFO" | grep -q "ProvisionedDevices"; then 
               METHOD="ad-hoc"
               if echo "$PROFILE_INFO" | grep -q "get-task-allow" | grep -q "true"; then METHOD="development"; fi
             fi
-            echo "Directing Export with: '$PROFILE_NAME' ($PROFILE_UUID) [$METHOD]"
             
+            echo "Profile: '$PROFILE_NAME' ($PROFILE_UUID)"
+            echo "Expected Identity: '$EXPECTED_CN'"
+            
+            # 4. Locate matching identity in any keychain
+            CUSTOM_KEYCHAINS=$(find "$HOME/Library/Keychains" -name "*.keychain*" | xargs)
+            if [ -n "$CUSTOM_KEYCHAINS" ]; then
+              security list-keychains -d user -s $(security list-keychains -d user | xargs) $CUSTOM_KEYCHAINS
+            fi
+            
+            CERT_INFO=$(security find-identity -v -p codesigning | grep "$EXPECTED_CN" | head -n 1)
+            CERT_HASH=$(echo "$CERT_INFO" | awk '{print $2}')
+            
+            if [ -z "$CERT_HASH" ]; then
+              echo "WARNING: Could not find identity '$EXPECTED_CN' by name. Falling back to generic search."
+              CERT_INFO=$(security find-identity -v -p codesigning | grep "Distribution" | grep "T8348X4CNY" | head -n 1)
+              CERT_HASH=$(echo "$CERT_INFO" | awk '{print $2}')
+            fi
+            
+            echo "Binding Anchor: ${EXPECTED_CN:-$CERT_HASH}"
+
+            # 5. Patch and Install
             DEST_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
             mkdir -p "$DEST_DIR"
             cp "$PROFILE_PATH" "$DEST_DIR/$PROFILE_UUID.mobileprovision"
             
-            # 4. Patch ExportOptions (Automated Resolution Strategy)
             PLIST="ios_signing/ExportOptions.plist"
             plutil -replace method -string "$METHOD" "$PLIST"
             plutil -replace signingStyle -string "manual" "$PLIST"
             plutil -replace teamID -string "T8348X4CNY" "$PLIST"
-            
-            # Use JSON for absolute key-path safety
             plutil -replace provisioningProfiles -json "{\"com.gojocalories.gojocalories\":\"$PROFILE_NAME\"}" "$PLIST"
-            
-            # REMOVE explicit signingCertificate to let Xcode's resolver find it based on the profile
-            plutil -remove signingCertificate "$PLIST" || true
+            plutil -replace signingCertificate -string "${EXPECTED_CN:-$CERT_HASH}" "$PLIST"
             
             echo "Verified Production Configuration:"
             cat "$PLIST"
           else
-            echo "FATAL: Provisioning Profile missing from environment" && exit 1
+            echo "FATAL: Provisioning Profile missing" && exit 1
           fi
 
-          # 5. Final Export with Hinted Identity
+          # 6. Final Export
           xcodebuild -exportArchive \
             -archivePath build/ios/archive/Runner.xcarchive \
             -exportPath build/ios/ipa \
             -exportOptionsPlist "$PWD/ios_signing/ExportOptions.plist" \
-            CODE_SIGN_IDENTITY="${CERT_HASH:-Apple Distribution}" \
+            CODE_SIGN_IDENTITY="${CERT_HASH:-$EXPECTED_CN}" \
             DEVELOPMENT_TEAM=T8348X4CNY \
-            CODE_SIGN_STYLE=Manual \
-            -allowProvisioningUpdates
-    artifacts:
-      - build/ios/ipa/*.ipa
-      - /tmp/xcodebuild_logs/*.log
-      - /var/folders/**/*.xcdistributionlogs
+            CODE_SIGN_STYLE=Manual
     publishing:
       email:
         recipients:
