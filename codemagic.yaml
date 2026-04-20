@@ -15,34 +15,20 @@ workflows:
           # Initialize a fresh CI keychain
           keychain initialize
 
-          # Explicitly pass ASC credentials so the CLI authenticates correctly
-          export APP_STORE_CONNECT_ISSUER_ID="ada504ee-3c9d-4491-b7b2-db490afe913a"
-          export APP_STORE_CONNECT_KEY_IDENTIFIER="G4ML936L73"
-          export APP_STORE_CONNECT_PRIVATE_KEY="$(cat ios_signing/AuthKey.p8)"
-
-          # Fetch (or create) the App Store provisioning profile
-          # This ensures we have the latest .mobileprovision file in the default location.
-          app-store-connect fetch-signing-files "com.gojocalories.gojocalories" \
-            --type IOS_APP_STORE \
-            --create
-
-          # Manually import the distribution certificate from the repo.
-          # The password "gojocalories" matches the Android keystore password.
-          keychain add-certificates \
-            --certificate ios_signing/gojo_distribution.p12 \
-            --certificate-password "gojocalories"
+          # Import certificates and provisioning profiles from Codemagic UI settings.
+          # These are automatically available in the environment if configured in the UI.
+          keychain add-certificates
+          
+          # Patch the Xcode project using the profiles found in the environment.
+          xcode-project use-profiles --archive-method app-store
 
           # Diagnostics: Verify certificates and profiles are installed
           security find-identity -v -p codesigning
-          ls -l ~/Library/MobileDevice/Provisioning\ Profiles
-
-          # Patch the Xcode project: sets CODE_SIGN_STYLE=Manual, injects profile,
-          # and generates $HOME/export_options.plist.
-          xcode-project use-profiles --archive-method app-store
+          ls -l "$HOME/Library/MobileDevice/Provisioning Profiles"
 
           # Debug: confirm the export_options.plist was generated
           echo "--- Generated export_options.plist ---"
-          cat "$HOME/export_options.plist"
+          [ -f "$HOME/export_options.plist" ] && cat "$HOME/export_options.plist" || echo "export_options.plist not found"
 
       - name: Install dependencies
         script: |
