@@ -51,18 +51,19 @@ workflows:
           import sys, re
           path = 'ios/Runner.xcodeproj/project.pbxproj'
           content = open(path).read()
-          # Target the Release configuration (ID 97C147041CF9000F007C117D)
-          # We use regex to find the buildSettings block and append our values
-          pattern = r'(97C147041CF9000F007C117D /\* Release \*/ = \{[^{]+?buildSettings = \{)'
-          new_settings = r'\1\n\t\t\t\tCODE_SIGN_IDENTITY = \"Apple Distribution: Jad Tneamou (T8348X4CNY)\";\n\t\t\t\tCODE_SIGN_STYLE = Manual;\n\t\t\t\tDEVELOPMENT_TEAM = T8348X4CNY;\n\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = \"GojoCalories App Store Profile\";'
-          if re.search(pattern, content):
-              new_content = re.sub(pattern, new_settings, content)
-              with open(path, 'w') as f:
-                  f.write(new_content)
-              print('Successfully patched pbxproj with regex')
-          else:
-              print('Warning: Release configuration block not found exactly as expected')
-              sys.exit(1)
+          
+          # We explicitly define the exact string to inject immediately under buildSettings = {
+          additions = r'\1\n\t\t\t\tCODE_SIGN_IDENTITY = \"Apple Distribution: Jad Tneamou (T8348X4CNY)\";\n\t\t\t\t\"CODE_SIGN_IDENTITY[sdk=iphoneos*]\" = \"Apple Distribution: Jad Tneamou (T8348X4CNY)\";\n\t\t\t\tCODE_SIGN_STYLE = Manual;\n\t\t\t\tDEVELOPMENT_TEAM = T8348X4CNY;\n\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = \"GojoCalories App Store Profile\";'
+          
+          # Patch the Native Target Release block (97C147071CF9000F007C117D)
+          content = re.sub(r'(97C147071CF9000F007C117D /\* Release \*/ = \{[^{]+?buildSettings = \{)', additions, content)
+          
+          # Patch the Native Target Profile block (249021D4217E4FDB00AE95B9) just in case
+          content = re.sub(r'(249021D4217E4FDB00AE95B9 /\* Profile \*/ = \{[^{]+?buildSettings = \{)', additions, content)
+
+          with open(path, 'w') as f:
+              f.write(content)
+          print('Successfully patched native target pbxproj blocks')
           "
 
           # Generate a robust, hardcoded export_options.plist to guarantee settings
