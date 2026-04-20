@@ -26,27 +26,26 @@ workflows:
           flutter packages pub get
       - name: iOS release build
         script: |
-          # 1. Ensure the workspace is clean
+          # 1. Ensure the workspace is clean and identity is detected
           git checkout ios/Runner.xcodeproj/project.pbxproj
           rm -f ios/Podfile
+          CERT_NAME=$(security find-identity -v -p codesigning | grep "Distribution" | head -n 1 | awk -F '"' '{print $2}')
+          echo "Detected Identity: $CERT_NAME"
 
-          # 2. Diagnostics: List available signing identities to find the exact match
-          security find-identity -v -p codesigning
-
-          # 3. Compile the Flutter Dart payload natively
+          # 2. Compile the Flutter Dart payload natively
           flutter build ios --release --no-codesign
 
-          # 4. Dynamic Podfile Patch
+          # 3. Dynamic Podfile Patch
           sed -i '' '/flutter_additional_ios_build_settings(target)/a\
                 target.build_configurations.each do |config|\
                   config.build_settings["CODE_SIGNING_ALLOWED"] = "NO"\
                   config.build_settings["CODE_SIGNING_REQUIRED"] = "NO"\
                 end' ios/Podfile
 
-          # 5. Integrate the patched Podfile
+          # 4. Integrate the patched Podfile
           cd ios && pod install && cd ..
 
-          # 6. Archive (Unsigned)
+          # 5. Archive (Unsigned)
           xcodebuild archive \
             -workspace ios/Runner.xcworkspace \
             -scheme Runner \
@@ -56,24 +55,30 @@ workflows:
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO
 
-          # 7. Robustly identify the App Store Provisioning Profile
-          PROFILE_PATH=$(find "$HOME/Library/MobileDevice" -name "*.mobileprovision" | head -n 1)
-          if [ -z "$PROFILE_PATH" ]; then PROFILE_PATH=$(find "$HOME" -name "*.mobileprovision" | head -n 1); fi
-          
+          # 6. Robustly identify and INSTALL the Provisioning Profile
+          PROFILE_PATH=$(find "$HOME" -name "*.mobileprovision" | head -n 1)
           if [ -n "$PROFILE_PATH" ]; then
+            PROFILE_UUID=$(grep -aA1 UUID "$PROFILE_PATH" | grep string | awk -F '>|<' '{print $3}' | head -n 1)
             PROFILE_NAME=$(grep -aA1 Name "$PROFILE_PATH" | grep string | awk -F '>|<' '{print $3}' | head -n 1)
-            echo "Found Profile: $PROFILE_NAME"
+            echo "Installing Profile: $PROFILE_NAME ($PROFILE_UUID)"
+            
+            DEST_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
+            mkdir -p "$DEST_DIR"
+            cp "$PROFILE_PATH" "$DEST_DIR/$PROFILE_UUID.mobileprovision"
+            
+            # Inject both Name and Certificate into ExportOptions
             sed -i '' "s/__PROFILE_NAME__/$PROFILE_NAME/g" ios_signing/ExportOptions.plist
+            sed -i '' "s/Apple Distribution/$CERT_NAME/g" ios_signing/ExportOptions.plist
           else
-            echo "ERROR: No provisioning profile found in $HOME" && exit 1
+            echo "ERROR: No provisioning profile found" && exit 1
           fi
 
-          # 8. Force Export with explicit production identity
+          # 7. Force Export with dynamically detected production identity
           xcodebuild -exportArchive \
             -archivePath build/ios/archive/Runner.xcarchive \
             -exportPath build/ios/ipa \
             -exportOptionsPlist "$PWD/ios_signing/ExportOptions.plist" \
-            CODE_SIGN_IDENTITY="Apple Distribution" \
+            CODE_SIGN_IDENTITY="$CERT_NAME" \
             DEVELOPMENT_TEAM=T8348X4CNY
     artifacts:
       - build/ios/ipa/*.ipa
