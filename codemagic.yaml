@@ -20,13 +20,17 @@ workflows:
           export APP_STORE_CONNECT_KEY_IDENTIFIER="G4ML936L73"
           export APP_STORE_CONNECT_PRIVATE_KEY="$(cat ios_signing/AuthKey.p8)"
 
-          # Fetch (or create) the App Store distribution cert + provisioning profile
+          # Fetch (or create) the App Store provisioning profile
+          # This ensures we have the latest .mobileprovision file in the default location.
           app-store-connect fetch-signing-files "com.gojocalories.gojocalories" \
             --type IOS_APP_STORE \
             --create
 
-          # Import the certificate into the CI keychain
-          keychain add-certificates
+          # Manually import the distribution certificate from the repo.
+          # The password "gojocalories" matches the Android keystore password.
+          keychain add-certificates \
+            --certificate ios_signing/gojo_distribution.p12 \
+            --certificate-password "gojocalories"
 
           # Diagnostics: Verify certificates and profiles are installed
           security find-identity -v -p codesigning
@@ -34,8 +38,7 @@ workflows:
 
           # Patch the Xcode project: sets CODE_SIGN_STYLE=Manual, injects profile,
           # and generates $HOME/export_options.plist.
-          # We explicitly target the main bundle ID to avoid any ambiguity.
-          xcode-project use-profiles --bundle-id "com.gojocalories.gojocalories"
+          xcode-project use-profiles --archive-method app-store
 
           # Debug: confirm the export_options.plist was generated
           echo "--- Generated export_options.plist ---"
