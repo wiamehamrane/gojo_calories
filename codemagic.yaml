@@ -35,14 +35,7 @@ workflows:
           git checkout ios/Runner.xcodeproj/project.pbxproj
           rm -f ios/Podfile
           
-          echo "AUDITING CI VAULT BEFORE IMPORT..."
-          security find-identity -v -p codesigning
-          echo "MANUAL CERT IMPORT IN STEP 5:"
-          security import "$PWD/ios_signing/gojo_distribution.p12" -k ~/Library/Keychains/login.keychain-db -P "" -T /usr/bin/codesign -A || echo "IMPORT FAILED"
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" ~/Library/Keychains/login.keychain-db || echo "PARTITION LIST FAILED"
-          echo "ALL IDENTITIES (INCLUDING INVALID):"
-          security find-identity -p codesigning
-          echo "VALID IDENTITIES:"
+          echo "AUDITING CI VAULT..."
           security find-identity -v -p codesigning
           
           # 2. Flutter Release Build (Unsigned)
@@ -96,8 +89,11 @@ workflows:
               echo "----------------------------------------------------------------"
               echo "!! ACTION REQUIRED: MISSING DISTRIBUTION CERTIFICATE !!         "
               echo "Your Provisioning Profile expects: $EXPECTED_CN               "
-              echo "But your Codemagic keychain is EMPTY.                          "
-              echo "Please upload your .p12 certificate in Codemagic UI.            "
+              echo "But your valid keychain identities are empty.                          "
+              echo "---- DEBUG OUTPUT (ALL IDENTITIES INCLUDING INVALID) -----"
+              security find-identity -p codesigning
+              echo "---- DEBUG OUTPUT (ONLY VALID IDENTITIES) ----------------"
+              security find-identity -v -p codesigning
               echo "----------------------------------------------------------------"
             fi
 
