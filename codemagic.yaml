@@ -63,7 +63,7 @@ workflows:
             CODE_SIGNING_ALLOWED=NO
 
           # 4. Forensic Requirement Extraction
-          PROFILE_PATH=$(find "$HOME" -name "*.mobileprovision" | head -n 1)
+          PROFILE_PATH="$PWD/ios_signing/gojo_profile.mobileprovision"
           if [ -n "$PROFILE_PATH" ]; then
             PROFILE_INFO=$(security cms -D -i "$PROFILE_PATH")
             PROFILE_NAME=$(echo "$PROFILE_INFO" | sed -n '/<key>Name<\/key>/{n;p;}' | sed -E 's/.*<string>(.*)<\/string>.*/\1/' | head -n 1)
