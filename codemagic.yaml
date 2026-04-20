@@ -19,8 +19,12 @@ workflows:
           app-store-connect fetch-signing-files "com.gojocalories.gojocalories" --type IOS_APP_DEVELOPMENT --create || true
           app-store-connect fetch-signing-files "com.gojocalories.gojocalories" --type IOS_APP_STORE --create
           keychain add-certificates
-          keychain add-certificates --certificate ios_signing/gojo_development.p12 --certificate-password "" || true
-          keychain add-certificates --certificate ios_signing/gojo_distribution.p12 --certificate-password "" || true
+          echo "Importing p12 directly to login.keychain-db"
+          security import "$PWD/ios_signing/gojo_development.p12" -k ~/Library/Keychains/login.keychain-db -P "" -T /usr/bin/codesign -A || true
+          security import "$PWD/ios_signing/gojo_distribution.p12" -k ~/Library/Keychains/login.keychain-db -P "" -T /usr/bin/codesign -A || true
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" ~/Library/Keychains/login.keychain-db || true
+          echo "Identities after import:"
+          security find-identity -v -p codesigning
           xcode-project use-profiles
       - name: Install dependencies
         script: |
