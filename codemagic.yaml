@@ -22,7 +22,7 @@ workflows:
           echo "Importing certificate..."
           keychain add-certificates \
             --certificate ios_signing/Certificates.p12 \
-            --certificate-password "GojoCalories@0989"
+            --certificate-password "GojoCalories@2019"
 
           # Authorize the private key for codesigning.
           # We unlock the specific keychain Codemagic created.
