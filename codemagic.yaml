@@ -16,14 +16,13 @@ workflows:
           export APP_STORE_CONNECT_KEY_IDENTIFIER="G4ML936L73"
           export APP_STORE_CONNECT_PRIVATE_KEY="$(cat ios_signing/AuthKey.p8)"
           keychain initialize
-          app-store-connect fetch-signing-files "com.gojocalories.gojocalories" --type IOS_APP_DEVELOPMENT --create || true
-          app-store-connect fetch-signing-files "com.gojocalories.gojocalories" --type IOS_APP_STORE --create
+          export CM_CERTIFICATE=$(base64 -i "$PWD/ios_signing/gojo_distribution.p12" | tr -d '\n')
+          export CM_CERTIFICATE_PASSWORD=""
+          export CM_PROVISIONING_PROFILE=$(base64 -i "$PWD/ios_signing/gojo_profile.mobileprovision" | tr -d '\n')
           keychain add-certificates
-          echo "Importing p12 directly to default keychain natively"
-          security import "$PWD/ios_signing/gojo_development.p12" -P "" -T /usr/bin/codesign -A
-          security import "$PWD/ios_signing/gojo_distribution.p12" -P "" -T /usr/bin/codesign -A
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" $(security default-keychain | awk -F '"' '{print $2}') || true
-          echo "Identities after import in default keychain:"
+          
+          # Natively installed by Codemagic! Let's verify:
+          echo "Identities after Codemagic native import:"
           security find-identity -v -p codesigning
           xcode-project use-profiles
       - name: Install dependencies
