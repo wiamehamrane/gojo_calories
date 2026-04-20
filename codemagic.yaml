@@ -131,7 +131,7 @@ workflows:
           # Use the provided App Store Connect API key to upload the binary.
           # This runs on the Codemagic macOS runner where 'altool' is present.
           app-store-connect publish \
-            --path "build/ios/ipa/Runner.ipa" \
+            --path "build/ios/ipa/*.ipa" \
             --issuer-id "ada504ee-3c9d-4491-b7b2-db490afe913a" \
             --key-id "G4ML936L73" \
             --private-key "@file:ios_signing/AuthKey.p8" \
