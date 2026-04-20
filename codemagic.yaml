@@ -25,7 +25,12 @@ workflows:
             --certificate-password "GojoCalories@0989"
 
           # IMPORTANT: Authorize the private key for codesigning. 
-          # This prevents "Signing certificate is invalid" (private key access) errors.
+          # We use the SHA1 fingerprint of the certificate to target the specific key.
+          CERT_SHA1=$(openssl x509 -in <(openssl pkcs12 -in ios_signing/Certificates.p12 -passin pass:GojoCalories@0989 -nokeys -clcerts -legacy) -noout -fingerprint | cut -d'=' -f2 | sed 's/://g')
+          echo "Certificate SHA1: $CERT_SHA1"
+          
+          # Unlock and partition the keychain properly
+          security unlock-keychain -p "" "$(keychain default)"
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" "$(keychain default)"
           
           # Patch the project to use the manually installed profile
@@ -49,14 +54,20 @@ workflows:
           # Step 1: Compile the Flutter/Dart code WITHOUT signing.
           flutter build ios --release --no-codesign
 
-          # Step 2: Forcibly disable signing for all CocoaPods and Test targets.
-          # This resolves Error 65 "image_picker_ios does not support provisioning profiles".
-          # We use -i '' for macOS (Codemagic runner).
+          # Step 2: Final Verify identities after partitioning
+          security find-identity -v -p codesigning
+          
+          # Step 3: Forcibly disable signing for all non-main targets.
+          # We search for project.pbxproj files in Pods and RunnerTests directories.
           echo "Patching project to disable signing for third-party libs and tests..."
           find ios -name "project.pbxproj" -exec sed -i '' 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGNING_ALLOWED = NO;/g' {} +
           find ios -name "project.pbxproj" -exec sed -i '' 's/CODE_SIGNING_REQUIRED = YES;/CODE_SIGNING_REQUIRED = NO;/g' {} +
+          
+          # Special patch for the main target: ensure it stays Manual and uses our specifier
+          # This helps override any leaking Automatic settings from Pods.
+          sed -i '' 's/CODE_SIGN_STYLE = Automatic/CODE_SIGN_STYLE = Manual/g' ios/Runner.xcodeproj/project.pbxproj
 
-          # Step 3: Archive the project using raw xcodebuild (explicit signing for main target)
+          # Step 4: Archive using raw xcodebuild (explicit signing for main target)
           mkdir -p build/ios/xcarchive
           xcodebuild \
             -workspace ios/Runner.xcworkspace \
@@ -70,7 +81,7 @@ workflows:
             CODE_SIGN_IDENTITY="Apple Distribution" \
             COMPILER_INDEX_STORE_ENABLE=NO
 
-          # Step 4: Export the IPA using the previously generated export_options.plist
+          # Step 5: Export the IPA using the previously generated export_options.plist
           mkdir -p build/ios/ipa
           xcodebuild \
             -exportArchive \
