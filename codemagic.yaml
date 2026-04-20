@@ -49,12 +49,30 @@ workflows:
           # Step 1: Compile the Flutter/Dart code WITHOUT signing.
           flutter build ios --release --no-codesign
 
-          # Step 2: Archive + sign + package the IPA using Codemagic's native CLI.
-          # Explicitly passing the Provisioning Profile UUID and Bundle ID to resolve Error 65.
-          xcode-project build-ipa \
-            --workspace "ios/Runner.xcworkspace" \
-            --scheme "Runner" \
-            --archive-flags="-configuration Release PROVISIONING_PROFILE_SPECIFIER='GojoCalories App Store Profile' CODE_SIGN_IDENTITY='Apple Distribution'"
+          # Step 2: Archive the project using raw xcodebuild (explicit signing)
+          # We specify the profile only for the main target by using PROVISIONING_PROFILE_SPECIFIER
+          # We also use the generic 'Apple Distribution' identity to match the imported certificate.
+          mkdir -p build/ios/xcarchive
+          xcodebuild \
+            -workspace ios/Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Release \
+            -archivePath build/ios/xcarchive/Runner.xcarchive \
+            archive \
+            CODE_SIGN_STYLE=Manual \
+            DEVELOPMENT_TEAM=T8348X4CNY \
+            PROVISIONING_PROFILE_SPECIFIER="GojoCalories App Store Profile" \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            COMPILER_INDEX_STORE_ENABLE=NO
+
+          # Step 3: Export the IPA using the previously generated export_options.plist
+          # The export_options.plist was saved to $HOME in the previous step.
+          mkdir -p build/ios/ipa
+          xcodebuild \
+            -exportArchive \
+            -archivePath build/ios/xcarchive/Runner.xcarchive \
+            -exportOptionsPlist "$HOME/export_options.plist" \
+            -exportPath build/ios/ipa
 
     artifacts:
       - build/ios/ipa/*.ipa
