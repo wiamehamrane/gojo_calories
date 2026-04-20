@@ -26,7 +26,7 @@ workflows:
 
           # Authorize the private key for codesigning.
           # We unlock the specific keychain Codemagic created.
-          BUILD_KEYCHAIN=$(keychain default)
+          BUILD_KEYCHAIN=$(keychain get-default)
           security unlock-keychain -p "" "$BUILD_KEYCHAIN"
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" "$BUILD_KEYCHAIN"
 
