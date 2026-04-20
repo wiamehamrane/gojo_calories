@@ -15,31 +15,20 @@ workflows:
           keychain initialize
           
           # Manually install the provisioning profile from the repo
+          # Note: Using the version confirmed from the user's Downloads
           mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
-          cp ios_signing/gojo_profile.mobileprovision "$HOME/Library/MobileDevice/Provisioning Profiles/"
+          cp ios_signing/GojoCalories_App_Store_Profile.mobileprovision "$HOME/Library/MobileDevice/Provisioning Profiles/Profile.mobileprovision"
           
-          # Proprobe for the correct P12 password
-          P12_PATH="ios_signing/gojo_distribution.p12"
-          CANDIDATES=("gojocalories" "GojoCalories" "gojocalories2026" "GojoCalories2026" "zelghourfi" "zakaria" "123456" "")
-          
-          for PASS in "${CANDIDATES[@]}"; do
-            echo "Testing password: [${PASS}]"
-            if keychain add-certificates --certificate "$P12_PATH" --certificate-password "$PASS" 2>/dev/null; then
-              echo "SUCCESS: Certificate imported with password [${PASS}]"
-              FOUND_PASS="$PASS"
-              break
-            fi
-          done
-
-          if [ -z "$FOUND_PASS" ] && [ -n "$CERTIFICATE_PASSWORD" ]; then
-             echo "Testing password from environment variable..."
-             keychain add-certificates --certificate "$P12_PATH" --certificate-password "$CERTIFICATE_PASSWORD" && FOUND_PASS="$CERTIFICATE_PASSWORD"
-          fi
+          # Import the confirmed certificate with the provided password
+          echo "Importing certificate..."
+          keychain add-certificates \
+            --certificate ios_signing/Certificates.p12 \
+            --certificate-password "GojoCalories@0989"
 
           # Diagnostics: Verify identities
           security find-identity -v -p codesigning
           
-          # Patch the project
+          # Patch the project to use the manually installed profile
           xcode-project use-profiles --archive-method app-store
 
           # Debug: confirm the export_options.plist was generated
