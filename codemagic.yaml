@@ -28,15 +28,6 @@ workflows:
       - name: Install dependencies
         script: |
           flutter packages pub get
-      - name: Patch Pods for Archive Stability
-        script: |
-          # The Stripe pods occasionally mandate signing unless we explicitly 
-          # tell cocoapods to treat them as unsigned frameworks.
-          sed -i '' '/flutter_additional_ios_build_settings(target)/a\
-                target.build_configurations.each do |config|\
-                  config.build_settings["CODE_SIGNING_ALLOWED"] = "NO"\
-                  config.build_settings["CODE_SIGNING_REQUIRED"] = "NO"\
-                end' ios/Podfile
       - name: iOS release build
         script: |
           # Build the flutter AOT and IPA securely using the automatically configured profiles
