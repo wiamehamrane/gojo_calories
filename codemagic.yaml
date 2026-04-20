@@ -26,10 +26,19 @@ workflows:
           flutter packages pub get
       - name: iOS release build
         script: |
-          # 1. Clean workspace and robustly detect identity
+          # 1. Synchronize Keychains and Detect Identity
           git checkout ios/Runner.xcodeproj/project.pbxproj
           rm -f ios/Podfile
-          CERT_INFO=$(security find-identity -v -p codesigning | grep "Distribution" | head -n 1)
+          
+          # Add any custom keychains to the search path (Codemagic fix)
+          CUSTOM_KEYCHAINS=$(find "$HOME/Library/Keychains" -name "*.keychain*" | xargs)
+          if [ -n "$CUSTOM_KEYCHAINS" ]; then
+            security list-keychains -d user -s $(security list-keychains -d user | xargs) $CUSTOM_KEYCHAINS
+          fi
+          
+          CERT_INFO=$(security find-identity -v -p codesigning | grep "Distribution" | grep "T8348X4CNY" | head -n 1)
+          if [ -z "$CERT_INFO" ]; then CERT_INFO=$(security find-identity -v -p codesigning | grep "Distribution" | head -n 1); fi
+          
           CERT_HASH=$(echo "$CERT_INFO" | awk '{print $2}')
           CERT_NAME=$(echo "$CERT_INFO" | awk -F '"' '{print $2}')
           echo "Binding Cluster: $CERT_NAME ($CERT_HASH)"
@@ -73,8 +82,14 @@ workflows:
             PLIST="ios_signing/ExportOptions.plist"
             plutil -replace method -string "$METHOD" "$PLIST"
             plutil -replace signingStyle -string "manual" "$PLIST"
-            plutil -replace signingCertificate -string "$CERT_NAME" "$PLIST"
+            
+            # Use JSON to inject objects with dots in keys safely
             plutil -replace provisioningProfiles -json "{\"com.gojocalories.gojocalories\":\"$PROFILE_NAME\"}" "$PLIST"
+            
+            # Only set signingCertificate if we found one
+            if [ -n "$CERT_NAME" ]; then
+              plutil -replace signingCertificate -string "$CERT_NAME" "$PLIST"
+            fi
             
             echo "Verified Export Configuration:"
             cat "$PLIST"
@@ -87,7 +102,7 @@ workflows:
             -archivePath build/ios/archive/Runner.xcarchive \
             -exportPath build/ios/ipa \
             -exportOptionsPlist "$PWD/ios_signing/ExportOptions.plist" \
-            CODE_SIGN_IDENTITY="$CERT_HASH" \
+            CODE_SIGN_IDENTITY="${CERT_HASH:-$CERT_NAME}" \
             DEVELOPMENT_TEAM=T8348X4CNY \
             CODE_SIGN_STYLE=Manual
     artifacts:
