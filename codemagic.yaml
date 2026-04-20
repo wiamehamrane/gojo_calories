@@ -30,20 +30,23 @@ workflows:
           git checkout ios/Runner.xcodeproj/project.pbxproj
           rm -f ios/Podfile
 
-          # 2. Compile the Flutter Dart payload natively
+          # 2. Diagnostics: List available signing identities to find the exact match
+          security find-identity -v -p codesigning
+
+          # 3. Compile the Flutter Dart payload natively
           flutter build ios --release --no-codesign
 
-          # 3. Dynamic Podfile Patch
+          # 4. Dynamic Podfile Patch
           sed -i '' '/flutter_additional_ios_build_settings(target)/a\
                 target.build_configurations.each do |config|\
                   config.build_settings["CODE_SIGNING_ALLOWED"] = "NO"\
                   config.build_settings["CODE_SIGNING_REQUIRED"] = "NO"\
                 end' ios/Podfile
 
-          # 4. Integrate the patched Podfile
+          # 5. Integrate the patched Podfile
           cd ios && pod install && cd ..
 
-          # 5. Archive the payload without signing (Workaround Success!)
+          # 6. Archive (Unsigned)
           xcodebuild archive \
             -workspace ios/Runner.xcworkspace \
             -scheme Runner \
@@ -53,20 +56,25 @@ workflows:
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO
 
-          # 6. Identify the App Store Provisioning Profile and its Name
-          PROFILES_HOME="$HOME/Library/MobileDevice/Provisioning Profiles"
-          PROFILE_PATH=$(ls "$PROFILES_HOME"/*.mobileprovision | head -n 1)
-          PROFILE_NAME=$(grep -aA1 Name "$PROFILE_PATH" | grep string | awk -F '>|<' '{print $3}' | head -n 1)
-          echo "Binding Profile Name: $PROFILE_NAME to ExportOptions"
+          # 7. Robustly identify the App Store Provisioning Profile
+          PROFILE_PATH=$(find "$HOME/Library/MobileDevice" -name "*.mobileprovision" | head -n 1)
+          if [ -z "$PROFILE_PATH" ]; then PROFILE_PATH=$(find "$HOME" -name "*.mobileprovision" | head -n 1); fi
+          
+          if [ -n "$PROFILE_PATH" ]; then
+            PROFILE_NAME=$(grep -aA1 Name "$PROFILE_PATH" | grep string | awk -F '>|<' '{print $3}' | head -n 1)
+            echo "Found Profile: $PROFILE_NAME"
+            sed -i '' "s/__PROFILE_NAME__/$PROFILE_NAME/g" ios_signing/ExportOptions.plist
+          else
+            echo "ERROR: No provisioning profile found in $HOME" && exit 1
+          fi
 
-          # 7. Dynamically update ExportOptions.plist with the correct mapping
-          sed -i '' "s/__PROFILE_NAME__/$PROFILE_NAME/g" ios_signing/ExportOptions.plist
-
-          # 8. Final native export with production signing
+          # 8. Force Export with explicit production identity
           xcodebuild -exportArchive \
             -archivePath build/ios/archive/Runner.xcarchive \
             -exportPath build/ios/ipa \
-            -exportOptionsPlist "$PWD/ios_signing/ExportOptions.plist"
+            -exportOptionsPlist "$PWD/ios_signing/ExportOptions.plist" \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            DEVELOPMENT_TEAM=T8348X4CNY
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
