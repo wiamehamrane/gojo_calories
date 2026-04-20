@@ -10,25 +10,19 @@ workflows:
     integrations:
       app_store_connect: Codemagic CI
     scripts:
-      - name: Set up code signing
+      - name: Diagnostic: Find signing files
         script: |
-          # Initialize a fresh CI keychain
-          keychain initialize
-
-          # Import certificates and provisioning profiles from Codemagic UI settings.
-          # These are automatically available in the environment if configured in the UI.
-          keychain add-certificates
-          
-          # Patch the Xcode project using the profiles found in the environment.
-          xcode-project use-profiles --archive-method app-store
-
-          # Diagnostics: Verify certificates and profiles are installed
-          security find-identity -v -p codesigning
-          ls -l "$HOME/Library/MobileDevice/Provisioning Profiles"
-
-          # Debug: confirm the export_options.plist was generated
-          echo "--- Generated export_options.plist ---"
-          [ -f "$HOME/export_options.plist" ] && cat "$HOME/export_options.plist" || echo "export_options.plist not found"
+          echo "--- Environment Variables (Names Only) ---"
+          printenv | cut -d= -f1
+          echo "--- Searching for .p12 files ---"
+          find $HOME -name "*.p12" 2>/dev/null
+          find /Users/builder/clone -name "*.p12" 2>/dev/null
+          echo "--- Searching for .mobileprovision files ---"
+          find $HOME -name "*.mobileprovision" 2>/dev/null
+          find /Users/builder/clone -name "*.mobileprovision" 2>/dev/null
+          echo "--- Checking default locations ---"
+          ls -R ~/Library/MobileDevice/Provisioning\ Profiles 2>/dev/null || echo "Profiles dir not found"
+          ls -R ~/Library/Developer/Xcode/UserData/Certificates 2>/dev/null || echo "Certs dir not found"
 
       - name: Install dependencies
         script: |
