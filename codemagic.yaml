@@ -35,7 +35,14 @@ workflows:
           git checkout ios/Runner.xcodeproj/project.pbxproj
           rm -f ios/Podfile
           
-          echo "AUDITING CI VAULT..."
+          echo "AUDITING CI VAULT BEFORE IMPORT..."
+          security find-identity -v -p codesigning
+          echo "MANUAL CERT IMPORT IN STEP 5:"
+          security import "$PWD/ios_signing/gojo_distribution.p12" -k ~/Library/Keychains/login.keychain-db -P "" -T /usr/bin/codesign -A || echo "IMPORT FAILED"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" ~/Library/Keychains/login.keychain-db || echo "PARTITION LIST FAILED"
+          echo "ALL IDENTITIES (INCLUDING INVALID):"
+          security find-identity -p codesigning
+          echo "VALID IDENTITIES:"
           security find-identity -v -p codesigning
           
           # 2. Flutter Release Build (Unsigned)
