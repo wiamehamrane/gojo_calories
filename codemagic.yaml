@@ -10,7 +10,7 @@ workflows:
     integrations:
       app_store_connect: Codemagic CI
     scripts:
-      - name: Diagnostic: Find signing files
+      - name: "Diagnostic - Find signing files"
         script: |
           echo "--- Environment Variables (Names Only) ---"
           printenv | cut -d= -f1
