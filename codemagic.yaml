@@ -26,22 +26,21 @@ workflows:
           flutter packages pub get
       - name: iOS release build
         script: |
-          # 1. Synchronize Keychains and Detect Identity
+          # 1. Diagnostic Audit and Identity Discovery
           git checkout ios/Runner.xcodeproj/project.pbxproj
           rm -f ios/Podfile
           
-          # Add any custom keychains to the search path (Codemagic fix)
-          CUSTOM_KEYCHAINS=$(find "$HOME/Library/Keychains" -name "*.keychain*" | xargs)
-          if [ -n "$CUSTOM_KEYCHAINS" ]; then
-            security list-keychains -d user -s $(security list-keychains -d user | xargs) $CUSTOM_KEYCHAINS
-          fi
+          echo "Listing all keychains..."
+          security list-keychains -d user
           
-          CERT_INFO=$(security find-identity -v -p codesigning | grep "Distribution" | grep "T8348X4CNY" | head -n 1)
-          if [ -z "$CERT_INFO" ]; then CERT_INFO=$(security find-identity -v -p codesigning | grep "Distribution" | head -n 1); fi
+          echo "Scanning all available identities..."
+          security find-identity -v -p codesigning
           
+          # Attempt to find identity by common Distribution keywords + Team ID
+          CERT_INFO=$(security find-identity -v -p codesigning | grep -iE "Distribution|T8348X4CNY" | grep -v "skipped" | head -n 1)
           CERT_HASH=$(echo "$CERT_INFO" | awk '{print $2}')
           CERT_NAME=$(echo "$CERT_INFO" | awk -F '"' '{print $2}')
-          echo "Binding Cluster: $CERT_NAME ($CERT_HASH)"
+          echo "Binding Anchor: $CERT_NAME ($CERT_HASH)"
 
           # 2. Compile and Archive (Unsigned)
           flutter build ios --release --no-codesign
@@ -72,39 +71,44 @@ workflows:
               METHOD="ad-hoc"
               if echo "$PROFILE_INFO" | grep -q "get-task-allow" | grep -q "true"; then METHOD="development"; fi
             fi
-            echo "Signing with Protocol: '$PROFILE_NAME' ($PROFILE_UUID) [$METHOD]"
+            echo "Directing Export with: '$PROFILE_NAME' ($PROFILE_UUID) [$METHOD]"
             
             DEST_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
             mkdir -p "$DEST_DIR"
             cp "$PROFILE_PATH" "$DEST_DIR/$PROFILE_UUID.mobileprovision"
             
-            # 4. Patch ExportOptions using JSON for absolute key-path safety
+            # 4. Patch ExportOptions (Automated Resolution Strategy)
             PLIST="ios_signing/ExportOptions.plist"
             plutil -replace method -string "$METHOD" "$PLIST"
             plutil -replace signingStyle -string "manual" "$PLIST"
+            plutil -replace teamID -string "T8348X4CNY" "$PLIST"
             
-            # Use JSON to inject objects with dots in keys safely
+            # Use JSON for absolute key-path safety
             plutil -replace provisioningProfiles -json "{\"com.gojocalories.gojocalories\":\"$PROFILE_NAME\"}" "$PLIST"
             
-            # Only set signingCertificate if we found one
-            if [ -n "$CERT_NAME" ]; then
-              plutil -replace signingCertificate -string "$CERT_NAME" "$PLIST"
-            fi
+            # REMOVE explicit signingCertificate to let Xcode's resolver find it based on the profile
+            plutil -remove signingCertificate "$PLIST" || true
             
-            echo "Verified Export Configuration:"
+            echo "Verified Production Configuration:"
             cat "$PLIST"
           else
             echo "FATAL: Provisioning Profile missing from environment" && exit 1
           fi
 
-          # 5. Final Production Export
+          # 5. Final Export with Hinted Identity
           xcodebuild -exportArchive \
             -archivePath build/ios/archive/Runner.xcarchive \
             -exportPath build/ios/ipa \
             -exportOptionsPlist "$PWD/ios_signing/ExportOptions.plist" \
-            CODE_SIGN_IDENTITY="${CERT_HASH:-$CERT_NAME}" \
+            CODE_SIGN_IDENTITY="${CERT_HASH:-Apple Distribution}" \
             DEVELOPMENT_TEAM=T8348X4CNY \
-            CODE_SIGN_STYLE=Manual
+            CODE_SIGN_STYLE=Manual \
+            -allowProvisioningUpdates
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - /var/folders/**/*.xcdistributionlogs
+
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
