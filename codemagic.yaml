@@ -29,6 +29,20 @@ workflows:
           BUILD_KEYCHAIN=$(keychain default)
           security unlock-keychain -p "" "$BUILD_KEYCHAIN"
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" "$BUILD_KEYCHAIN"
+
+          # IMPORTANT: Download and inject Apple WWDR intermediate certificates
+          # This establishes trust so Xcode sees the Apple Distribution certificate as "valid"
+          echo "Downloading Apple WWDR certificates..."
+          curl -s -O https://www.apple.com/certificateauthority/AppleWWDRCA.cer
+          curl -s -O https://www.apple.com/certificateauthority/AppleWWDRCAG2.cer
+          curl -s -O https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer
+          curl -s -O https://www.apple.com/certificateauthority/AppleWWDRCAG4.cer
+
+          echo "Importing Apple WWDR certificates into build keychain..."
+          security import AppleWWDRCA.cer -k "$BUILD_KEYCHAIN" -A > /dev/null 2>&1 || true
+          security import AppleWWDRCAG2.cer -k "$BUILD_KEYCHAIN" -A > /dev/null 2>&1 || true
+          security import AppleWWDRCAG3.cer -k "$BUILD_KEYCHAIN" -A > /dev/null 2>&1 || true
+          security import AppleWWDRCAG4.cer -k "$BUILD_KEYCHAIN" -A > /dev/null 2>&1 || true
           
           # Surgical patch of project.pbxproj to hardcode signing for the MAIN target only.
           # This prevents signing settings from leaking to Pods via the command line.
@@ -49,17 +63,31 @@ workflows:
               print('Warning: Release configuration block not found exactly as expected')
           "
 
-          # Patch the project to generate export_options.plist
-          xcode-project use-profiles --archive-method app-store
-
-          # Debug: confirm the export_options.plist was generated
-          echo "--- Generated export_options.plist ---"
-          if [ -f "$HOME/export_options.plist" ]; then
-            cat "$HOME/export_options.plist"
-          else
-            echo "ERROR: export_options.plist was not generated!"
-            exit 1
-          fi
+          # Generate a robust, hardcoded export_options.plist to guarantee settings
+          echo "Generating export_options.plist manually..."
+          cat <<EOF > "$HOME/export_options.plist"
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>method</key>
+              <string>app-store</string>
+              <key>provisioningProfiles</key>
+              <dict>
+                  <key>com.gojocalories.gojocalories</key>
+                  <string>GojoCalories App Store Profile</string>
+              </dict>
+              <key>signingCertificate</key>
+              <string>Apple Distribution</string>
+              <key>signingStyle</key>
+              <string>manual</string>
+              <key>stripSwiftSymbols</key>
+              <true/>
+              <key>teamID</key>
+              <string>T8348X4CNY</string>
+          </dict>
+          </plist>
+          EOF
 
       - name: Install dependencies
         script: |
