@@ -20,7 +20,7 @@ workflows:
           
           # Proprobe for the correct P12 password
           P12_PATH="ios_signing/gojo_distribution.p12"
-          CANDIDATES=("gojocalories" "GojoCalories" "gojocalories2026" "GojoCalories2026" "123456" "")
+          CANDIDATES=("gojocalories" "GojoCalories" "gojocalories2026" "GojoCalories2026" "zelghourfi" "zakaria" "123456" "")
           
           for PASS in "${CANDIDATES[@]}"; do
             echo "Testing password: [${PASS}]"
