@@ -26,12 +26,13 @@ workflows:
           flutter packages pub get
       - name: iOS release build
         script: |
-          # 1. Clean workspace and detect identity
+          # 1. Clean workspace and robustly detect identity
           git checkout ios/Runner.xcodeproj/project.pbxproj
           rm -f ios/Podfile
-          CERT_HASH=$(security find-identity -v -p codesigning | grep "Distribution" | head -n 1 | awk '{print $2}')
-          CERT_NAME=$(security find-identity -v -p codesigning | grep "Distribution" | head -n 1 | awk -F '"' '{print $2}')
-          echo "Detected Identity: $CERT_NAME ($CERT_HASH)"
+          CERT_INFO=$(security find-identity -v -p codesigning | grep "Distribution" | head -n 1)
+          CERT_HASH=$(echo "$CERT_INFO" | awk '{print $2}')
+          CERT_NAME=$(echo "$CERT_INFO" | awk -F '"' '{print $2}')
+          echo "Binding Cluster: $CERT_NAME ($CERT_HASH)"
 
           # 2. Compile and Archive (Unsigned)
           flutter build ios --release --no-codesign
@@ -62,26 +63,26 @@ workflows:
               METHOD="ad-hoc"
               if echo "$PROFILE_INFO" | grep -q "get-task-allow" | grep -q "true"; then METHOD="development"; fi
             fi
-            echo "Using Profile: '$PROFILE_NAME' ($PROFILE_UUID) with method: $METHOD"
+            echo "Signing with Protocol: '$PROFILE_NAME' ($PROFILE_UUID) [$METHOD]"
             
             DEST_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
             mkdir -p "$DEST_DIR"
             cp "$PROFILE_PATH" "$DEST_DIR/$PROFILE_UUID.mobileprovision"
             
-            # 4. Patch ExportOptions using plutil (Robust XML handling)
+            # 4. Patch ExportOptions using JSON for absolute key-path safety
             PLIST="ios_signing/ExportOptions.plist"
             plutil -replace method -string "$METHOD" "$PLIST"
             plutil -replace signingStyle -string "manual" "$PLIST"
             plutil -replace signingCertificate -string "$CERT_NAME" "$PLIST"
-            plutil -replace provisioningProfiles."com.gojocalories.gojocalories" -string "$PROFILE_NAME" "$PLIST"
+            plutil -replace provisioningProfiles -json "{\"com.gojocalories.gojocalories\":\"$PROFILE_NAME\"}" "$PLIST"
             
-            echo "Final ExportOptions.plist:"
+            echo "Verified Export Configuration:"
             cat "$PLIST"
           else
-            echo "ERROR: No provisioning profile found" && exit 1
+            echo "FATAL: Provisioning Profile missing from environment" && exit 1
           fi
 
-          # 5. Final Export using SHA-1 Fingerprint
+          # 5. Final Production Export
           xcodebuild -exportArchive \
             -archivePath build/ios/archive/Runner.xcarchive \
             -exportPath build/ios/ipa \
