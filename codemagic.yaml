@@ -28,9 +28,18 @@ workflows:
           # Import the certificate into the CI keychain
           keychain add-certificates
 
+          # Diagnostics: Verify certificates and profiles are installed
+          security find-identity -v -p codesigning
+          ls -l ~/Library/MobileDevice/Provisioning\ Profiles
+
           # Patch the Xcode project: sets CODE_SIGN_STYLE=Manual, injects profile,
-          # and generates $HOME/export_options.plist
-          xcode-project use-profiles
+          # and generates $HOME/export_options.plist.
+          # We explicitly target the main bundle ID to avoid any ambiguity.
+          xcode-project use-profiles --bundle-id "com.gojocalories.gojocalories"
+
+          # Debug: confirm the export_options.plist was generated
+          echo "--- Generated export_options.plist ---"
+          cat "$HOME/export_options.plist"
 
       - name: Install dependencies
         script: |
@@ -39,12 +48,10 @@ workflows:
       - name: iOS release build
         script: |
           # Step 1: Compile the Flutter/Dart code WITHOUT signing.
-          # This builds the native framework but does not invoke xcodebuild archive.
           flutter build ios --release --no-codesign
 
           # Step 2: Archive + sign + package the IPA using Codemagic's native CLI.
-          # xcode-project build-ipa respects the certificate and profile set up above,
-          # correctly passing CODE_SIGN_STYLE=Manual and using the installed keychain.
+          # Explicitly passing the scheme and configuration.
           xcode-project build-ipa \
             --workspace "ios/Runner.xcworkspace" \
             --scheme "Runner" \
@@ -52,6 +59,7 @@ workflows:
 
     artifacts:
       - build/ios/ipa/*.ipa
+      - $HOME/export_options.plist
       - /tmp/xcodebuild_logs/*.log
 
     publishing:
