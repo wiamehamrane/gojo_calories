@@ -19,11 +19,10 @@ workflows:
           app-store-connect fetch-signing-files "com.gojocalories.gojocalories" --type IOS_APP_DEVELOPMENT --create || true
           app-store-connect fetch-signing-files "com.gojocalories.gojocalories" --type IOS_APP_STORE --create
           keychain add-certificates
-          echo "Importing p12 directly to default keychain"
-          CM_KEYCHAIN=$(security default-keychain | awk -F '"' '{print $2}')
-          security import "$PWD/ios_signing/gojo_development.p12" -k "$CM_KEYCHAIN" -P "" -T /usr/bin/codesign -A || true
-          security import "$PWD/ios_signing/gojo_distribution.p12" -k "$CM_KEYCHAIN" -P "" -T /usr/bin/codesign -A || true
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" "$CM_KEYCHAIN" || true
+          echo "Importing p12 directly to default keychain natively"
+          security import "$PWD/ios_signing/gojo_development.p12" -P "" -T /usr/bin/codesign -A
+          security import "$PWD/ios_signing/gojo_distribution.p12" -P "" -T /usr/bin/codesign -A
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" $(security default-keychain | awk -F '"' '{print $2}') || true
           echo "Identities after import in default keychain:"
           security find-identity -v -p codesigning
           xcode-project use-profiles
