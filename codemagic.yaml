@@ -16,116 +16,32 @@ workflows:
           export APP_STORE_CONNECT_KEY_IDENTIFIER="G4ML936L73"
           export APP_STORE_CONNECT_PRIVATE_KEY="$(cat ios_signing/AuthKey.p8)"
           keychain initialize
-          export CM_CERTIFICATE=$(base64 -i "$PWD/ios_signing/gojo_distribution.p12" | tr -d '\n')
-          export CM_CERTIFICATE_PASSWORD=""
-          export CM_PROVISIONING_PROFILE=$(base64 -i "$PWD/ios_signing/gojo_profile.mobileprovision" | tr -d '\n')
+          
+          # Use Codemagic's native fetch utility. It magically connects to Apple, provisions 
+          # App Store distribution certificates and profiles, and injects them securely.
+          app-store-connect fetch-signing-files "com.gojocalories.gojocalories" --type IOS_APP_STORE --create
           keychain add-certificates
           
-          # Natively installed by Codemagic! Let's verify:
-          echo "Identities after Codemagic native import:"
-          security find-identity -v -p codesigning
+          # Natively edits the XCode project to forcefully bind the freshly downloaded 
+          # certificates (bypassing any corrupted manual configurations in pbxproj)
           xcode-project use-profiles
       - name: Install dependencies
         script: |
           flutter packages pub get
-      - name: iOS release build
+      - name: Patch Pods for Archive Stability
         script: |
-          # 1. Workspace Prep and Identity Audit
-          git checkout ios/Runner.xcodeproj/project.pbxproj
-          rm -f ios/Podfile
-          
-          echo "AUDITING CI VAULT..."
-          security find-identity -v -p codesigning
-          
-          # 2. Flutter Release Build (Unsigned)
-          flutter build ios --release --no-codesign
-          
-          # Patch Pods for Archive Stability
+          # The Stripe pods occasionally mandate signing unless we explicitly 
+          # tell cocoapods to treat them as unsigned frameworks.
           sed -i '' '/flutter_additional_ios_build_settings(target)/a\
                 target.build_configurations.each do |config|\
                   config.build_settings["CODE_SIGNING_ALLOWED"] = "NO"\
                   config.build_settings["CODE_SIGNING_REQUIRED"] = "NO"\
                 end' ios/Podfile
-          cd ios && pod install && cd ..
-          
-          # 3. Secure Archive Generation
-          xcodebuild archive \
-            -workspace ios/Runner.xcworkspace \
-            -scheme Runner \
-            -archivePath "$PWD/build/ios/archive/Runner.xcarchive" \
-            -configuration Release \
-            COMPILER_INDEX_STORE_ENABLE=NO \
-            DEVELOPMENT_TEAM=T8348X4CNY \
-            CODE_SIGN_ALLOWED=NO \
-            CODE_SIGN_REQUIRED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO
-
-          # 4. Forensic Requirement Extraction
-          PROFILE_PATH="$PWD/ios_signing/gojo_profile.mobileprovision"
-          if [ -n "$PROFILE_PATH" ]; then
-            PROFILE_INFO=$(security cms -D -i "$PROFILE_PATH")
-            PROFILE_NAME=$(echo "$PROFILE_INFO" | sed -n '/<key>Name<\/key>/{n;p;}' | sed -E 's/.*<string>(.*)<\/string>.*/\1/' | head -n 1)
-            PROFILE_UUID=$(echo "$PROFILE_INFO" | grep -aA1 UUID | grep string | awk -F '>|<' '{print $3}' | head -n 1)
-            
-            FULL_SUBJECT=$(echo "$PROFILE_INFO" | sed -n '/<key>DeveloperCertificates<\/key>/{n;n;s/.*<data>\(.*\)<\/data>.*/\1/p;}' | base64 -D | openssl x509 -inform der -noout -subject)
-            EXPECTED_CN=$(echo "$FULL_SUBJECT" | sed -E 's/.*CN[[:space:]]?=[[:space:]]?(.*[A-Z0-9)])/\1/' | awk -F ',' '{print $1}' | head -n 1)
-            
-            METHOD="app-store"
-            if echo "$PROFILE_INFO" | grep -q "ProvisionedDevices"; then METHOD="ad-hoc"; fi
-            echo "Profile Identity Required: '$EXPECTED_CN'"
-            
-            # 5. Identity Binding Search
-            CERT_INFO=$(security find-identity -v -p codesigning | grep "Distribution" | grep "T8348X4CNY" | head -n 1)
-            if [ -z "$CERT_INFO" ]; then
-                CERT_INFO=$(security find-identity -v -p codesigning | grep "$EXPECTED_CN" | head -n 1)
-            fi
-            
-            CERT_HASH=$(echo "$CERT_INFO" | awk '{print $2}')
-            CERT_NAME=$(echo "$CERT_INFO" | awk -F '"' '{print $2}')
-            
-            if [ -z "$CERT_HASH" ]; then
-              echo "----------------------------------------------------------------"
-              echo "!! ACTION REQUIRED: MISSING DISTRIBUTION CERTIFICATE !!         "
-              echo "Your Provisioning Profile expects: $EXPECTED_CN               "
-              echo "But your valid keychain identities are empty.                          "
-              echo "---- DEBUG OUTPUT (ALL IDENTITIES INCLUDING INVALID) -----"
-              security find-identity -p codesigning
-              echo "---- DEBUG OUTPUT (ONLY VALID IDENTITIES) ----------------"
-              security find-identity -v -p codesigning
-              echo "----------------------------------------------------------------"
-            fi
-
-            # 6. Export Configuration
-            mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
-            cp "$PROFILE_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_UUID.mobileprovision"
-            
-            PLIST="ios_signing/ExportOptions.plist"
-            plutil -replace method -string "$METHOD" "$PLIST"
-            plutil -replace signingStyle -string "manual" "$PLIST"
-            plutil -replace teamID -string "T8348X4CNY" "$PLIST"
-            plutil -replace provisioningProfiles -json "{\"com.gojocalories.gojocalories\":\"$PROFILE_NAME\"}" "$PLIST"
-            
-            if [ -n "$CERT_NAME" ]; then
-              plutil -replace signingCertificate -string "$CERT_NAME" "$PLIST"
-            else
-              plutil -remove signingCertificate "$PLIST" || true
-            fi
-            cat "$PLIST"
-          else
-            echo "FATAL: Provisioning Profile missing" && exit 1
-          fi
-
-          # 7. Final Attempt at Signed Export
-          xcodebuild -exportArchive \
-            -archivePath "$PWD/build/ios/archive/Runner.xcarchive" \
-            -exportPath "$PWD/build/ios/ipa" \
-            -exportOptionsPlist "$PWD/ios_signing/ExportOptions.plist" \
-            CODE_SIGN_IDENTITY="${CERT_NAME:-$CERT_HASH}" \
-            DEVELOPMENT_TEAM=T8348X4CNY \
-            CODE_SIGN_STYLE=Manual \
-            -allowProvisioningUpdates
-
+      - name: iOS release build
+        script: |
+          # Build the flutter AOT and IPA securely using the automatically configured profiles
+          flutter build ipa --release \
+            --export-options-plist="$HOME/export_options.plist"
 
     publishing:
       email:
