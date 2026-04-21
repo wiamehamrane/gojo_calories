@@ -14,13 +14,15 @@ jobs:
           KEY_ID: D7KK8JRYCC
           ISSUER_ID: ada504ee-3c9d-4491-b7b2-db490afe913a
         run: |
-          # Write the secret from GitHub into a temporary file on the runner
-          echo "$API_KEY" > AuthKey_D7KK8JRYCC.p8
+          # Create the directory altool expects for private keys
+          mkdir -p private_keys
+          
+          # Write the secret from GitHub into the expected file path
+          echo "$API_KEY" > private_keys/AuthKey_${KEY_ID}.p8
           
           # Upload the IPA we committed to the repository
           xcrun altool --upload-app \
             --type ios \
             --file gojocalories.ipa \
             --apiKey $KEY_ID \
-            --apiIssuer $ISSUER_ID \
-            --private-key AuthKey_D7KK8JRYCC.p8
+            --apiIssuer $ISSUER_ID
