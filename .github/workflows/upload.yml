@@ -14,11 +14,13 @@ jobs:
           KEY_ID: D7KK8JRYCC
           ISSUER_ID: ada504ee-3c9d-4491-b7b2-db490afe913a
         run: |
-          # Create the directory altool expects for private keys
-          mkdir -p private_keys
+          # Create the global directory altool explicitly checks for private keys
+          mkdir -p ~/private_keys
           
-          # Write the secret from GitHub into the expected file path
-          echo "$API_KEY" > private_keys/AuthKey_${KEY_ID}.p8
+          # Write the multiline secret from GitHub safely into the file
+          cat << 'EOF' > ~/private_keys/AuthKey_${KEY_ID}.p8
+          ${{ secrets.APP_STORE_API_KEY }}
+          EOF
           
           # Upload the IPA we committed to the repository
           xcrun altool --upload-app \
