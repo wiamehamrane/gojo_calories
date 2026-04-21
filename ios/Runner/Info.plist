@@ -66,5 +66,13 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>This app uses the camera to scan barcodes and food items for calorie tracking.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>This app accesses your photo library to let you log meals from photos.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>This app uses the microphone for voice input.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>This app uses your location to find nearby restaurants and food options.</string>
 </dict>
 </plist>
