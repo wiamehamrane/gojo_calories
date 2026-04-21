@@ -210,47 +210,8 @@ class HomeScreen extends ConsumerWidget {
             ),
           );
         }
-
         return Column(
-          children: logs.map<Widget>((log) {
-            return Container(
-              margin: const EdgeInsets.symmetric(horizontal: AppSpacing.screenPadding, vertical: 6),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Row(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(AppRadius.thumb),
-                    child: Container(
-                      width: 64, height: 64,
-                      color: AppColors.surfaceMuted,
-                      child: const Icon(LucideIcons.image, size: 28, color: AppColors.inactive),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(log['meal_name'] ?? 'Unknown Meal', style: AppTextStyles.bodyBold, maxLines: 2, overflow: TextOverflow.ellipsis),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            const Icon(LucideIcons.flame, size: 14, color: AppColors.fire),
-                            Text(" ${log['calories']} calories", style: AppTextStyles.bodyRegular),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  Text(Translations.t(lang, 'today'), style: const TextStyle(fontSize: 12, color: AppColors.inactive)),
-                ],
-              ),
-            );
-          }).toList(),
+          children: List.generate(logs.length, (i) => _AnimatedMealCard(log: logs[i], index: i, lang: lang)),
         );
       },
       loading: () => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
@@ -258,6 +219,199 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 }
+
+// ─── Animated Meal Card ────────────────────────────────────────────────────
+
+class _AnimatedMealCard extends StatefulWidget {
+  final dynamic log;
+  final int index;
+  final String lang;
+  const _AnimatedMealCard({required this.log, required this.index, required this.lang});
+
+  @override
+  State<_AnimatedMealCard> createState() => _AnimatedMealCardState();
+}
+
+class _AnimatedMealCardState extends State<_AnimatedMealCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<Offset> _slide;
+  late final Animation<double> _fade;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: Duration(milliseconds: 350 + widget.index * 60),
+    );
+    _slide = Tween<Offset>(begin: const Offset(0, 0.15), end: Offset.zero)
+        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
+    _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeIn);
+    _ctrl.forward();
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final log = widget.log;
+    final imageUrl = log['image_url'] as String?;
+    final mealName = (log['meal_name'] ?? 'Unknown Meal') as String;
+    final calories = log['calories']?.toString() ?? '0';
+    final protein = log['protein']?.toString() ?? '';
+    final carbs = log['carbs']?.toString() ?? '';
+    final fat = log['fat']?.toString() ?? '';
+
+    return FadeTransition(
+      opacity: _fade,
+      child: SlideTransition(
+        position: _slide,
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.06),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              // Food thumbnail
+              ClipRRect(
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  bottomLeft: Radius.circular(20),
+                ),
+                child: SizedBox(
+                  width: 76,
+                  height: 76,
+                  child: imageUrl != null && imageUrl.isNotEmpty
+                      ? Image.network(
+                          imageUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => const _FoodPlaceholder(),
+                          loadingBuilder: (ctx, child, progress) {
+                            if (progress == null) return child;
+                            return Container(
+                              color: AppColors.surfaceMuted,
+                              child: const Center(
+                                child: SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        )
+                      : const _FoodPlaceholder(),
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Info
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        mealName,
+                        style: AppTextStyles.bodyBold,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(LucideIcons.flame, size: 14, color: AppColors.fire),
+                          Text(' $calories kcal', style: AppTextStyles.bodyRegular),
+                        ],
+                      ),
+                      if (protein.isNotEmpty || carbs.isNotEmpty || fat.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            if (protein.isNotEmpty)
+                              _MacroChip(label: '${protein}g P', color: AppColors.protein),
+                            if (carbs.isNotEmpty) ...[
+                              const SizedBox(width: 4),
+                              _MacroChip(label: '${carbs}g C', color: AppColors.carbs),
+                            ],
+                            if (fat.isNotEmpty) ...[
+                              const SizedBox(width: 4),
+                              _MacroChip(label: '${fat}g F', color: AppColors.fats),
+                            ],
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: Text(
+                  Translations.t(widget.lang, 'today'),
+                  style: const TextStyle(fontSize: 12, color: AppColors.inactive),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FoodPlaceholder extends StatelessWidget {
+  const _FoodPlaceholder();
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: AppColors.surfaceMuted,
+      child: const Center(
+        child: Icon(LucideIcons.utensils, size: 26, color: AppColors.inactive),
+      ),
+    );
+  }
+}
+
+class _MacroChip extends StatelessWidget {
+  final String label;
+  final Color color;
+  const _MacroChip({required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: color),
+      ),
+    );
+  }
+}
+
+
 
 class _MacroTile extends StatelessWidget {
   final String macroName;

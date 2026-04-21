@@ -18,8 +18,7 @@ class MainScaffold extends ConsumerWidget {
     final String location = GoRouterState.of(context).uri.path;
     if (location.startsWith('/home')) return 0;
     if (location.startsWith('/progress')) return 1;
-    if (location.startsWith('/groups')) return 2;
-    if (location.startsWith('/profile')) return 3;
+    if (location.startsWith('/profile')) return 2;
     return 0;
   }
 
@@ -28,8 +27,7 @@ class MainScaffold extends ConsumerWidget {
     switch (index) {
       case 0: context.go('/home'); break;
       case 1: context.go('/progress'); break;
-      case 2: context.go('/groups'); break;
-      case 3: context.go('/profile'); break;
+      case 2: context.go('/profile'); break;
     }
   }
 
@@ -85,7 +83,7 @@ class MainScaffold extends ConsumerWidget {
             bottom: navBarHeight,
             child: GestureDetector(
               onHorizontalDragEnd: (details) {
-                if (details.primaryVelocity! < -300 && currentIndex < 3) {
+                if (details.primaryVelocity! < -300 && currentIndex < 2) {
                   _onItemTapped(currentIndex + 1, context);
                 } else if (details.primaryVelocity! > 300 && currentIndex > 0) {
                   _onItemTapped(currentIndex - 1, context);
@@ -121,17 +119,11 @@ class MainScaffold extends ConsumerWidget {
                     onTap: () => _onItemTapped(1, context),
                   ),
                   _NavItem(
-                    icon: LucideIcons.users,
-                    label: Translations.t(lang, 'nav_groups'),
-                    isActive: currentIndex == 2,
-                    onTap: () => _onItemTapped(2, context),
-                  ),
-                  _NavItem(
                     icon: LucideIcons.user,
                     label: Translations.t(lang, 'nav_profile'),
-                    isActive: currentIndex == 3,
+                    isActive: currentIndex == 2,
                     isProfileTab: true,
-                    onTap: () => _onItemTapped(3, context),
+                    onTap: () => _onItemTapped(2, context),
                   ),
                 ],
               ),

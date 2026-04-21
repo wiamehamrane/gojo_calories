@@ -91,6 +91,10 @@ def get_user_history(db: Session = Depends(get_db), current_user_id: int = Depen
         res.append({
             "meal_name": log.name,
             "calories": log.calories,
+            "image_url": log.image_url,
+            "protein": log.protein,
+            "carbs": log.carbs,
+            "fat": log.fat,
             "created_at": log.created_at
         })
     return res

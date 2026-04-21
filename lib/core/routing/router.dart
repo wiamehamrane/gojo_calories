@@ -12,7 +12,7 @@ import '../widgets/main_scaffold.dart';
 // Import remaining screens
 import '../../features/food_log/presentation/screens/food_log_screen.dart';
 import '../../features/progress/presentation/screens/progress_screen.dart';
-import '../../features/groups/presentation/screens/groups_screen.dart';
+
 import '../../features/profile/presentation/screens/profile_screen.dart';
 import '../../features/dashboard/presentation/screens/log_exercise_screen.dart';
 import '../../features/dashboard/presentation/screens/run_intensity_screen.dart';
@@ -70,10 +70,7 @@ final GoRouter appRouter = GoRouter(
           path: '/progress',
           builder: (context, state) => const ProgressScreen(),
         ),
-        GoRoute(
-          path: '/groups',
-          builder: (context, state) => const GroupsScreen(),
-        ),
+
         GoRoute(
           path: '/profile',
           builder: (context, state) => const ProfileScreen(),
