@@ -6,6 +6,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:gojocalories/core/theme/app_colors.dart';
 import 'package:gojocalories/core/network/api_client.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:google_sign_in/google_sign_in.dart' as gsi;
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -108,14 +110,57 @@ class _AuthScreenState extends State<AuthScreen>
     );
   }
 
-  void _socialComingSoon(String label) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$label coming soon'),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
+  Future<void> _signInWithGoogle() async {
+    setState(() => _isLoading = true);
+    try {
+      await gsi.GoogleSignIn.instance.initialize(
+        serverClientId: const String.fromEnvironment('GOOGLE_WEB_CLIENT_ID', 
+          defaultValue: '1032926790123-uat3ppsm2fb6oo5h8fi00m5sso4qsc3e.apps.googleusercontent.com'),
+      );
+      final account = await gsi.GoogleSignIn.instance.authenticate();
+      final auth = await account.authentication;
+      final res = await ApiClient.instance.post('auth/google', data: {'id_token': auth.idToken});
+      if (res.statusCode == 200) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('access_token', res.data['access_token']);
+        if (mounted) context.go('/onboarding/weight');
+      } else {
+        _showError('Google Login failed');
+      }
+    } catch (e) {
+      _showError('Failed to sign in with Google: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _signInWithApple() async {
+    setState(() => _isLoading = true);
+    try {
+      final credential = await SignInWithApple.getAppleIDCredential(
+        scopes: [AppleIDAuthorizationScopes.email, AppleIDAuthorizationScopes.fullName],
+      );
+      final res = await ApiClient.instance.post('auth/apple', data: {
+        'identity_token': credential.identityToken,
+        'given_name': credential.givenName,
+        'family_name': credential.familyName,
+      });
+      if (res.statusCode == 200) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('access_token', res.data['access_token']);
+        if (mounted) context.go('/onboarding/weight');
+      } else {
+        _showError('Apple Login failed');
+      }
+    } catch (e) {
+      if (e is AuthorizationErrorCode && e == AuthorizationErrorCode.canceled) {
+        // user cancelled
+      } else {
+        _showError('Failed to sign in with Apple: $e');
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -384,16 +429,17 @@ class _AuthScreenState extends State<AuthScreen>
                           child: _SocialButton(
                             label: 'Google',
                             icon: _googleIcon(),
-                            onTap: () => _socialComingSoon('Google Sign-In'),
+                            onTap: _signInWithGoogle,
                           ),
                         ),
                         const SizedBox(width: 12),
+                        // Apple Sign in ONLY on iOS/macOS typically, but we can leave it for both if testing
                         Expanded(
                           child: _SocialButton(
                             label: 'Apple',
                             icon: const Icon(Icons.apple_rounded,
                                 size: 20, color: AppColors.textPrimary),
-                            onTap: () => _socialComingSoon('Apple Sign-In'),
+                            onTap: _signInWithApple,
                           ),
                         ),
                       ],
