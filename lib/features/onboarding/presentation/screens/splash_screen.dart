@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:gojocalories/core/theme/app_colors.dart';
+import 'package:gojocalories/core/network/api_client.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -23,7 +24,29 @@ class _SplashScreenState extends State<SplashScreen> {
         if (!mounted) return;
         final router = GoRouter.of(context);
         if (token != null && token.isNotEmpty) {
-           router.go('/home');
+           try {
+             final res = await ApiClient.instance.get('auth/me');
+             if (res.statusCode == 200) {
+               final data = res.data;
+               if (data['current_weight'] == null) {
+                 router.go('/onboarding/weight');
+               } else if (data['has_paid'] != true) {
+                 router.go('/onboarding/paywall');
+               } else {
+                 await prefs.setBool('is_onboarded', true);
+                 router.go('/home');
+               }
+             } else {
+               throw Exception("Auth check failed");
+             }
+           } catch (e) {
+             // Offline or API error fallback
+             if (prefs.getBool('is_onboarded') == true) {
+               router.go('/home');
+             } else {
+               router.go('/auth'); // Safe fallback if state is unknown
+             }
+           }
         } else {
            router.go('/auth');
         }

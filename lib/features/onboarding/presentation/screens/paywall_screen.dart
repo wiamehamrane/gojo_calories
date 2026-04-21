@@ -4,6 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:gojocalories/core/theme/app_colors.dart';
 import 'package:gojocalories/core/network/api_client.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class PaywallScreen extends StatefulWidget {
   const PaywallScreen({super.key});
@@ -55,9 +56,13 @@ class _PaywallScreenState extends State<PaywallScreen> {
         throw Exception("Failed to confirm subscription setup.");
       }
 
-      // 5. Success — reset guard and navigate to home.
+      // 5. Success — reset guard, mark onboarded, and navigate to home.
       if (!mounted) return;
       setState(() => _isPaymentSheetInitialized = false);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('is_onboarded', true);
+      
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('🎉 Free trial started! Welcome to Pro.'),

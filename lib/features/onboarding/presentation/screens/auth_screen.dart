@@ -50,6 +50,31 @@ class _AuthScreenState extends State<AuthScreen>
     super.dispose();
   }
 
+  Future<void> _handleLoginSuccess(String token) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('access_token', token);
+    try {
+      final res = await ApiClient.instance.get('auth/me');
+      if (res.statusCode == 200) {
+        final data = res.data;
+        if (!mounted) return;
+        if (data['current_weight'] == null) {
+          context.go('/onboarding/weight');
+        } else if (data['has_paid'] != true) {
+          context.go('/onboarding/paywall');
+        } else {
+          await prefs.setBool('is_onboarded', true);
+          if (!mounted) return;
+          context.go('/home');
+        }
+      } else {
+        if (mounted) context.go('/onboarding/weight');
+      }
+    } catch (e) {
+      if (mounted) context.go('/onboarding/weight'); // fallback 
+    }
+  }
+
   Future<void> _submitEmail() async {
     final email = _emailCtrl.text.trim();
     final password = _passwordCtrl.text;
@@ -84,14 +109,23 @@ class _AuthScreenState extends State<AuthScreen>
 
       if (res.statusCode == 200) {
         final token = res.data['access_token'];
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('access_token', token);
-        if (mounted) context.go('/onboarding/weight');
+        await _handleLoginSuccess(token);
       } else {
         _showError('Login failed. Check your credentials.');
       }
+    } on DioException catch (e) {
+      String errorMessage = 'Something went wrong. Please try again.';
+      if (e.response != null && e.response?.data != null) {
+        final data = e.response!.data;
+        if (data is Map && data.containsKey('detail')) {
+          errorMessage = data['detail'].toString();
+        } else {
+          errorMessage = e.response!.data.toString();
+        }
+      }
+       _showError('API Error: $errorMessage');
     } catch (e) {
-      _showError('Something went wrong. Please try again.');
+      _showError('Something went wrong. Please try again. Error: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -121,9 +155,7 @@ class _AuthScreenState extends State<AuthScreen>
       final auth = account.authentication;
       final res = await ApiClient.instance.post('auth/google', data: {'id_token': auth.idToken});
       if (res.statusCode == 200) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('access_token', res.data['access_token']);
-        if (mounted) context.go('/onboarding/weight');
+        await _handleLoginSuccess(res.data['access_token']);
       } else {
         _showError('Google Login failed');
       }
@@ -146,9 +178,7 @@ class _AuthScreenState extends State<AuthScreen>
         'family_name': credential.familyName,
       });
       if (res.statusCode == 200) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('access_token', res.data['access_token']);
-        if (mounted) context.go('/onboarding/weight');
+        await _handleLoginSuccess(res.data['access_token']);
       } else {
         _showError('Apple Login failed');
       }
