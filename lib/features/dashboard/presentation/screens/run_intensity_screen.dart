@@ -59,19 +59,23 @@ class _RunIntensityScreenState extends State<RunIntensityScreen> {
                   const SizedBox(height: 12),
 
                   // Intensity card
-                  Container(
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceMuted,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Column(
-                      children: [
-                        _buildIntensityRow("High", "Sprinting – 14 mph (4 minute miles)", RunIntensity.high),
-                        const Divider(color: AppColors.border, height: 1, indent: 16, endIndent: 16),
-                        _buildIntensityRow("Medium", "Jogging – 6 mph (10 minute miles)", RunIntensity.medium),
-                        const Divider(color: AppColors.border, height: 1, indent: 16, endIndent: 16),
-                        _buildIntensityRow("Low", "Chill walk – 3 mph (20 minute miles)", RunIntensity.low),
-                      ],
+                  RadioGroup<RunIntensity>(
+                    groupValue: _selectedIntensity,
+                    onChanged: (val) => setState(() => _selectedIntensity = val),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceMuted,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Column(
+                        children: [
+                          _buildIntensityRow("High", "Sprinting – 14 mph (4 minute miles)", RunIntensity.high),
+                          const Divider(color: AppColors.border, height: 1, indent: 16, endIndent: 16),
+                          _buildIntensityRow("Medium", "Jogging – 6 mph (10 minute miles)", RunIntensity.medium),
+                          const Divider(color: AppColors.border, height: 1, indent: 16, endIndent: 16),
+                          _buildIntensityRow("Low", "Chill walk – 3 mph (20 minute miles)", RunIntensity.low),
+                        ],
+                      ),
                     ),
                   ),
 
@@ -182,12 +186,10 @@ class _RunIntensityScreenState extends State<RunIntensityScreen> {
       subtitle: Text(desc, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
       trailing: Radio<RunIntensity>(
         value: option,
-        groupValue: _selectedIntensity,
         fillColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) return AppColors.primaryDark;
           return AppColors.inactive;
         }),
-        onChanged: (val) => setState(() => _selectedIntensity = val),
       ),
       onTap: () => setState(() => _selectedIntensity = option),
     );

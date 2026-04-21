@@ -118,7 +118,7 @@ class _AuthScreenState extends State<AuthScreen>
           defaultValue: '1032926790123-uat3ppsm2fb6oo5h8fi00m5sso4qsc3e.apps.googleusercontent.com'),
       );
       final account = await gsi.GoogleSignIn.instance.authenticate();
-      final auth = await account.authentication;
+      final auth = account.authentication;
       final res = await ApiClient.instance.post('auth/google', data: {'id_token': auth.idToken});
       if (res.statusCode == 200) {
         final prefs = await SharedPreferences.getInstance();
