@@ -152,3 +152,43 @@ workflows:
         auth: integration
         submit_to_app_store: false
         submit_to_testflight: true
+
+  android-release:
+    name: GojoCalories Android Build
+    instance_type: linux
+    max_build_duration: 60
+    environment:
+      flutter: stable
+      groups:
+        - android_keystore
+    scripts:
+      - name: Set up keystore
+        script: |
+          # If Codemagic Environment Variables are set, override the local key.properties
+          if [ -n "$CM_KEYSTORE" ]; then
+            echo "Setting up keystore from environment variables..."
+            echo $CM_KEYSTORE | base64 --decode > /tmp/keystore.jks
+            cat <<EOF > android/key.properties
+          storePassword=$CM_STORE_PASSWORD
+          keyPassword=$CM_KEY_PASSWORD
+          keyAlias=$CM_KEY_ALIAS
+          storeFile=/tmp/keystore.jks
+          EOF
+          else
+            echo "Using keystore from repository..."
+          fi
+      - name: Install dependencies
+        script: |
+          flutter packages pub get
+      - name: Android release build
+        script: |
+          flutter build appbundle --release
+          flutter build apk --release
+    artifacts:
+      - build/app/outputs/bundle/release/**/*.aab
+      - build/app/outputs/flutter-apk/**/*.apk
+    publishing:
+      email:
+        recipients:
+          - jadtneamou@proton.me
+          - zelghourfi@gmail.com
