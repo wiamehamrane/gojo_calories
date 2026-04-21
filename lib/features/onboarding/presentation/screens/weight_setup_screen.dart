@@ -13,17 +13,20 @@ class WeightSetupScreen extends StatefulWidget {
 
 class _WeightSetupScreenState extends State<WeightSetupScreen> {
   bool _isLoading = false;
-  bool _isKg = true; // true = kg, false = lbs
+  bool _isKg = true;   // true = kg, false = lbs
+  bool _isCm = true;   // true = cm, false = ft
 
   final _currentWeightCtrl = TextEditingController();
   final _goalWeightCtrl = TextEditingController();
   final _ageCtrl = TextEditingController();
+  final _heightCtrl = TextEditingController();
 
   @override
   void dispose() {
     _currentWeightCtrl.dispose();
     _goalWeightCtrl.dispose();
     _ageCtrl.dispose();
+    _heightCtrl.dispose();
     super.dispose();
   }
 
@@ -31,8 +34,9 @@ class _WeightSetupScreenState extends State<WeightSetupScreen> {
     final currentStr = _currentWeightCtrl.text.trim();
     final goalStr = _goalWeightCtrl.text.trim();
     final ageStr = _ageCtrl.text.trim();
+    final heightStr = _heightCtrl.text.trim();
 
-    if (currentStr.isEmpty || goalStr.isEmpty || ageStr.isEmpty) {
+    if (currentStr.isEmpty || goalStr.isEmpty || ageStr.isEmpty || heightStr.isEmpty) {
       _showError('Please fill out all fields.');
       return;
     }
@@ -40,8 +44,9 @@ class _WeightSetupScreenState extends State<WeightSetupScreen> {
     final currentWt = double.tryParse(currentStr);
     final goalWt = double.tryParse(goalStr);
     final age = int.tryParse(ageStr);
+    final height = double.tryParse(heightStr);
 
-    if (currentWt == null || goalWt == null || age == null) {
+    if (currentWt == null || goalWt == null || age == null || height == null) {
       _showError('Please enter valid numbers.');
       return;
     }
@@ -50,11 +55,14 @@ class _WeightSetupScreenState extends State<WeightSetupScreen> {
 
     try {
       final unit = _isKg ? 'kg' : 'lbs';
-      
+      final heightUnit = _isCm ? 'cm' : 'ft';
+
       final res = await ApiClient.instance.put('auth/me/weight', data: {
         'current_weight': currentWt,
         'goal_weight': goalWt,
         'weight_unit': unit,
+        'height': height,
+        'height_unit': heightUnit,
         'age': age,
       });
 
@@ -127,7 +135,7 @@ class _WeightSetupScreenState extends State<WeightSetupScreen> {
 
                 const SizedBox(height: 40),
 
-                // Unit Toggle
+                // Unit Toggle - Weight
                 Center(
                   child: Container(
                     padding: const EdgeInsets.all(4),
@@ -154,6 +162,35 @@ class _WeightSetupScreenState extends State<WeightSetupScreen> {
                   ),
                 ).animate().slideY(begin: 0.1, delay: 200.ms).fadeIn(),
 
+                const SizedBox(height: 28),
+
+                // Unit Toggle - Height
+                Center(
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceMuted,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _UnitToggleBtn(
+                          title: 'Centimeters (cm)',
+                          isSelected: _isCm,
+                          onTap: () => setState(() => _isCm = true),
+                        ),
+                        _UnitToggleBtn(
+                          title: 'Feet (ft)',
+                          isSelected: !_isCm,
+                          onTap: () => setState(() => _isCm = false),
+                        ),
+                      ],
+                    ),
+                  ),
+                ).animate().slideY(begin: 0.1, delay: 220.ms).fadeIn(),
+
                 const SizedBox(height: 40),
 
                 // Age Input
@@ -162,6 +199,16 @@ class _WeightSetupScreenState extends State<WeightSetupScreen> {
                   controller: _ageCtrl,
                   hintText: '25',
                 ).animate().slideX(begin: -0.05, delay: 250.ms).fadeIn(),
+
+                const SizedBox(height: 24),
+
+                // Height Input
+                _WeightInput(
+                  label: 'Height',
+                  controller: _heightCtrl,
+                  unitLabel: _isCm ? 'cm' : 'ft',
+                  hintText: _isCm ? '175' : '5.9',
+                ).animate().slideX(begin: -0.05, delay: 280.ms).fadeIn(),
 
                 const SizedBox(height: 24),
 

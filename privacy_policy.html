@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy - GojoCalories</title>
+    <meta name="description" content="Privacy Policy for GojoCalories: AI-Powered Nutrition Tracking Platform">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            /* Color Palette */
+            --bg-base: #0B0F19;
+            --text-primary: #F3F4F6;
+            --text-secondary: #9CA3AF;
+            --accent-primary: #7C3AED; /* Vibrant Violet */
+            --accent-secondary: #3B82F6; /* Bright Blue */
+            --card-bg: rgba(255, 255, 255, 0.03);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --gradient-text: linear-gradient(135deg, #A78BFA, #60A5FA);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(124, 58, 237, 0.08), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(59, 130, 246, 0.08), transparent 25%);
+            background-attachment: fixed;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Container */
+        .container {
+            width: 100%;
+            max-width: 800px;
+            padding: 4rem 2rem;
+            position: relative;
+            z-index: 10;
+        }
+
+        /* Headers */
+        header {
+            text-align: center;
+            margin-bottom: 4rem;
+            animation: fadeInDown 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            opacity: 0;
+        }
+
+        h1 {
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-weight: 700;
+            margin-bottom: 1rem;
+            background: var(--gradient-text);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.02em;
+        }
+
+        .last-updated {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            font-weight: 400;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .intro {
+            text-align: center;
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            margin-bottom: 3rem;
+            animation: fadeIn 1.2s ease-out forwards;
+            animation-delay: 0.3s;
+            opacity: 0;
+        }
+
+        /* Glassmorphic Sections */
+        section {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 2.5rem;
+            margin-bottom: 2rem;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        /* Staggered Animations */
+        section:nth-child(2) { animation-delay: 0.4s; }
+        section:nth-child(3) { animation-delay: 0.5s; }
+        section:nth-child(4) { animation-delay: 0.6s; }
+        section:nth-child(5) { animation-delay: 0.7s; }
+        section:nth-child(6) { animation-delay: 0.8s; }
+
+        section:hover {
+            transform: translateY(-5px);
+            border-color: rgba(124, 58, 237, 0.3);
+            box-shadow: 0 10px 40px rgba(124, 58, 237, 0.1);
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1.2rem;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        h2::before {
+            content: '';
+            display: block;
+            width: 8px;
+            height: 24px;
+            background: var(--gradient-text);
+            border-radius: 4px;
+        }
+
+        h3 {
+            font-size: 1.2rem;
+            font-weight: 500;
+            margin: 1.5rem 0 0.8rem;
+            color: #e5e7eb;
+        }
+
+        p {
+            margin-bottom: 1rem;
+            color: var(--text-secondary);
+        }
+
+        ul {
+            list-style-type: none;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            position: relative;
+            padding-left: 1.5rem;
+            margin-bottom: 0.5rem;
+            color: var(--text-secondary);
+        }
+
+        li::before {
+            content: '→';
+            position: absolute;
+            left: 0;
+            color: var(--accent-secondary);
+            font-weight: bold;
+        }
+
+        strong {
+            color: #fff;
+            font-weight: 500;
+        }
+
+        a {
+            color: var(--accent-secondary);
+            text-decoration: none;
+            transition: color 0.2s ease;
+            position: relative;
+        }
+
+        a::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            transform: scaleX(0);
+            height: 1px;
+            bottom: 0;
+            left: 0;
+            background-color: var(--accent-primary);
+            transform-origin: bottom right;
+            transition: transform 0.25s ease-out;
+        }
+
+        a:hover {
+            color: var(--accent-primary);
+        }
+
+        a:hover::after {
+            transform: scaleX(1);
+            transform-origin: bottom left;
+        }
+
+        .contact-box {
+            text-align: center;
+            padding: 3rem;
+            background: linear-gradient(145deg, rgba(124, 58, 237, 0.1), rgba(59, 130, 246, 0.05));
+            border: 1px solid rgba(124, 58, 237, 0.2);
+        }
+
+        .contact-box a {
+            display: inline-block;
+            margin-top: 1rem;
+            font-size: 1.2rem;
+            font-weight: 500;
+        }
+
+        footer {
+            margin-top: 4rem;
+            padding: 2rem 0;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.2);
+            font-size: 0.9rem;
+            width: 100%;
+            border-top: 1px solid var(--card-border);
+        }
+
+        /* Animations */
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Responsive */
+        @media (max-width: 640px) {
+            .container { padding: 3rem 1.5rem; }
+            section { padding: 1.8rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Privacy Policy</h1>
+            <div class="last-updated">Last updated: April 19, 2026</div>
+        </header>
+
+        <p class="intro">
+            GojoCalories ("we", "our", or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, and disclose your personal information.
+        </p>
+
+        <main>
+            <section>
+                <h2>Information We Collect</h2>
+                
+                <h3>1. Camera and Image Data</h3>
+                <p>GojoCalories requires access to your device's camera to enable the AI food logging feature.</p>
+                <ul>
+                    <li><strong>Usage:</strong> When you take a photo of your food, the image is processed using our AI models to detect nutritional information (calories, macronutrients).</li>
+                    <li><strong>Processing:</strong> Images may be sent to our secure backend servers or third-party AI services (such as Google Gemini) for analysis.</li>
+                    <li><strong>Storage:</strong> We may store images to improve our AI models and provide you with a history of your food logs.</li>
+                </ul>
+
+                <h3>2. Personal Data</h3>
+                <p>We collect information you provide during onboarding, such as:</p>
+                <ul>
+                    <li>Age, gender, height, and weight</li>
+                    <li>Activity levels and dietary preferences</li>
+                    <li>Email address (for account creation)</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>How We Use Your Information</h2>
+                <p>We utilize the data we collect for the following purposes:</p>
+                <ul>
+                    <li>To generate personalized nutrition plans.</li>
+                    <li>To provide accurate calorie and macro tracking.</li>
+                    <li>To improve our AI food recognition technology.</li>
+                    <li>To sync with Apple Health or Google Fit (if enabled).</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>Data Sharing</h2>
+                <p>We <strong>do not sell</strong> your personal data. We only share data with carefully vetted third-party services (like AI providers or Stripe for payments) that are strictly necessary to provide the app's core features.</p>
+            </section>
+
+            <section>
+                <h2>Your Rights</h2>
+                <p>You have full control over your data. You can delete your account, wipe all associated history, and remove your personal information at any time directly through the app settings.</p>
+            </section>
+
+            <section class="contact-box">
+                <h2>Contact Us</h2>
+                <p>If you have any questions or concerns about this Privacy Policy, please don't hesitate to reach out.</p>
+                <a href="mailto:support@gojocalories.com">support@gojocalories.com</a>
+            </section>
+        </main>
+    </div>
+
+    <footer>
+        &copy; 2026 GojoCalories. All rights reserved.
+    </footer>
+
+    <!-- Simple interaction script for subtle ambient effects -->
+    <script>
+        document.addEventListener('mousemove', (e) => {
+            const x = e.clientX / window.innerWidth;
+            const y = e.clientY / window.innerHeight;
+            
+            document.body.style.backgroundImage = `
+                radial-gradient(circle at ${x * 30 + 10}% ${y * 30 + 30}%, rgba(124, 58, 237, 0.08), transparent 25%),
+                radial-gradient(circle at ${80 - x * 20}% ${80 - y * 20}%, rgba(59, 130, 246, 0.08), transparent 25%)
+            `;
+        });
+    </script>
+</body>
+</html>

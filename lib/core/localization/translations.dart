@@ -128,6 +128,41 @@ class Translations {
       'manual': 'Manual',
       'calories_burned': 'Calories Burned',
       'describe_hint': 'e.g. Played basketball for 2 hours',
+
+      // Height & BMI
+      'height': 'Height',
+      'height_cm': 'Centimeters (cm)',
+      'height_ft': 'Feet (ft)',
+      'bmi': 'BMI',
+      'bmi_underweight': 'Underweight',
+      'bmi_normal': 'Normal',
+      'bmi_overweight': 'Overweight',
+      'bmi_obese': 'Obese',
+
+      // Subscription
+      'subscription': 'Subscription',
+      'no_subscription': 'No active subscription',
+      'trial_ends': 'Trial ends on',
+      'renews_on': 'Renews on',
+      'cancels_on': 'Cancels on',
+      'manage_subscription': 'Manage',
+      'cancel_subscription': 'Cancel Plan',
+      'cancel_sub_title': 'Cancel Subscription?',
+      'cancel_sub_body': 'Your subscription will remain active until the end of the billing period.',
+      'keep': 'Keep',
+      'per_month_after_trial': 'per month after trial',
+      'cancel_anytime': 'Cancel anytime in Settings before trial ends.',
+
+      // Errors
+      'error_generic': 'Something went wrong. Please try again.',
+      'error_network': 'No internet connection. Check your network settings.',
+      'error_auth': 'Session expired. Please sign in again.',
+
+      // Profile update sheet
+      'update_profile': 'Update Profile',
+      'delete_account': 'Delete Account',
+      'delete_account_confirm': 'This action is permanent and will completely erase all your data and cancel any active subscription. Do you wish to proceed?',
+      'delete_permanently': 'Delete Permanently',
     },
 
     // ── French ────────────────────────────────────────────────────────────────
@@ -248,6 +283,41 @@ class Translations {
       'manual': 'Manuel',
       'calories_burned': 'Calories Brûlées',
       'describe_hint': 'ex. J\'ai joué au basket pendant 2 heures',
+
+      // Height & BMI
+      'height': 'Taille',
+      'height_cm': 'Centimètres (cm)',
+      'height_ft': 'Pieds (ft)',
+      'bmi': 'IMC',
+      'bmi_underweight': 'Sous-poids',
+      'bmi_normal': 'Normal',
+      'bmi_overweight': 'Surpoids',
+      'bmi_obese': 'Obèse',
+
+      // Subscription
+      'subscription': 'Abonnement',
+      'no_subscription': 'Aucun abonnement actif',
+      'trial_ends': 'Essai se termine le',
+      'renews_on': 'Renouvellement le',
+      'cancels_on': 'Annulation le',
+      'manage_subscription': 'Gérer',
+      'cancel_subscription': 'Annuler le plan',
+      'cancel_sub_title': 'Annuler l\'abonnement ?',
+      'cancel_sub_body': 'Votre abonnement restera actif jusqu\'à la fin de la période de facturation.',
+      'keep': 'Conserver',
+      'per_month_after_trial': 'par mois après l\'essai',
+      'cancel_anytime': 'Annulez à tout moment dans les paramètres avant la fin de l\'essai.',
+
+      // Errors
+      'error_generic': 'Quelque chose s\'est mal passé. Veuillez réessayer.',
+      'error_network': 'Pas de connexion Internet. Vérifiez vos paramètres réseau.',
+      'error_auth': 'Session expirée. Veuillez vous reconnecter.',
+
+      // Profile update sheet
+      'update_profile': 'Mettre à jour le profil',
+      'delete_account': 'Supprimer le compte',
+      'delete_account_confirm': 'Cette action est permanente et effacera toutes vos données et annulera tout abonnement actif. Souhaitez-vous continuer ?',
+      'delete_permanently': 'Supprimer définitivement',
     },
 
     // ── Arabic (Darija) ───────────────────────────────────────────────────────
@@ -368,6 +438,41 @@ class Translations {
       'manual': 'يدوي',
       'calories_burned': 'السعرات المحروقة',
       'describe_hint': 'مثال: لعبت كرة السلة لمدة ساعتين',
+
+      // Height & BMI
+      'height': 'الطول',
+      'height_cm': 'سنتيمترات (cm)',
+      'height_ft': 'أقدام (ft)',
+      'bmi': 'مؤشر كتلة الجسم',
+      'bmi_underweight': 'نقص الوزن',
+      'bmi_normal': 'طبيعي',
+      'bmi_overweight': 'زيادة الوزن',
+      'bmi_obese': 'سمنة',
+
+      // Subscription
+      'subscription': 'الاشتراك',
+      'no_subscription': 'لا يوجد اشتراك نشط',
+      'trial_ends': 'تنتهي التجربة في',
+      'renews_on': 'يتجدد في',
+      'cancels_on': 'يُلغى في',
+      'manage_subscription': 'إدارة',
+      'cancel_subscription': 'إلغاء الخطة',
+      'cancel_sub_title': 'إلغاء الاشتراك؟',
+      'cancel_sub_body': 'سيظل اشتراكك نشطاً حتى نهاية فترة الفوترة.',
+      'keep': 'الاحتفاظ',
+      'per_month_after_trial': 'شهريًا بعد التجربة',
+      'cancel_anytime': 'يمكنك الإلغاء في أي وقت من الإعدادات قبل انتهاء الفترة التجريبية.',
+
+      // Errors
+      'error_generic': 'حدث خطأ ما. الرجاء المحاولة مرة أخرى.',
+      'error_network': 'لا يوجد اتصال بالإنترنت. تحقق من إعدادات الشبكة.',
+      'error_auth': 'انتهت الجلسة. يرجى تسجيل الدخول مرة أخرى.',
+
+      // Profile update sheet
+      'update_profile': 'تحديث الملف الشخصي',
+      'delete_account': 'حذف الحساب',
+      'delete_account_confirm': 'هذا الإجراء دائم وسيمحو جميع بياناتك ويلغي أي اشتراك نشط. هل تريد المتابعة؟',
+      'delete_permanently': 'حذف نهائياً',
     },
   };
 

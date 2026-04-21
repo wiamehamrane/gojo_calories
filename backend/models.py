@@ -15,6 +15,8 @@ class User(Base):
     current_weight = Column(Float, nullable=True)
     goal_weight = Column(Float, nullable=True)
     weight_unit = Column(String, default="kg")
+    height = Column(Float, nullable=True)         # in cm internally
+    height_unit = Column(String, default="cm")   # "cm" or "ft"
     age = Column(Integer, nullable=True)
 
     # Stripe Payments

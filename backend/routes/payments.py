@@ -64,6 +64,19 @@ def confirm_setup(db: Session = Depends(get_db), current_user_id: int = Depends(
 
     try:
         price_id = os.getenv("STRIPE_PRICE_ID", "price_1TNI87GkYdm9mdqzKlsMmOqt")
+
+        # --- Idempotency guard: skip if subscription already exists ---
+        if user.stripe_customer_id:
+            existing_subs = stripe.Subscription.list(customer=user.stripe_customer_id, limit=1)
+            if existing_subs.data:
+                existing_status = existing_subs.data[0].get("status")
+                if existing_status in ["trialing", "active"]:
+                    logger.info(f"User {user.email} already has a {existing_status} subscription — skipping creation.")
+                    if not user.has_paid:
+                        user.has_paid = True
+                        db.commit()
+                    return {"status": "success", "message": "Subscription already active."}
+
         setup_intents = stripe.SetupIntent.list(customer=user.stripe_customer_id, limit=5)
         latest_si = next((si for si in setup_intents.data if si.status == 'succeeded'), None)
 

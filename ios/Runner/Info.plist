@@ -74,5 +74,7 @@
 	<string>This app uses the microphone for voice input.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>This app uses your location to find nearby restaurants and food options.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>This app saves meal photos to your photo library.</string>
 </dict>
 </plist>

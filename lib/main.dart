@@ -11,6 +11,37 @@ import 'core/localization/translations.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Global Flutter error handler — prevents raw red crash screens
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.presentError(details);
+    debugPrint('FlutterError: ${details.exceptionAsString()}');
+  };
+
+  // Override in-widget error display with a clean card
+  ErrorWidget.builder = (FlutterErrorDetails details) {
+    return Material(
+      color: Colors.transparent,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.error_outline, size: 48, color: Colors.redAccent),
+              const SizedBox(height: 12),
+              const Text(
+                'Something went wrong.',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  };
+
   try {
     await dotenv.load(fileName: ".env");
   } catch (e) {

@@ -1,10 +1,14 @@
 import os
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from database import engine, Base
 import models
+import logging
 
+logger = logging.getLogger(__name__)
 load_dotenv()
 
 from routes import vision, auth, stats, groups, referrals, payments
@@ -21,6 +25,9 @@ try:
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS goal_weight FLOAT;"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS weight_unit VARCHAR DEFAULT 'kg';"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS age INTEGER DEFAULT 25;"))
+        # Height columns (added for accurate BMR calculation)
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS height FLOAT;"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS height_unit VARCHAR DEFAULT 'cm';"))
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS weigh_ins (
                 id SERIAL PRIMARY KEY,
@@ -48,6 +55,26 @@ except Exception as e:
 
 app = FastAPI(title="GojoCalories Backend API")
 
+# ── Global Exception Handlers ──────────────────────────────────────────────────
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Unhandled exception on {request.url}: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "An internal server error occurred. Please try again later."},
+    )
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    errors = [f"{' → '.join(str(l) for l in e['loc'])}: {e['msg']}" for e in exc.errors()]
+    return JSONResponse(
+        status_code=422,
+        content={"detail": "; ".join(errors)},
+    )
+
+# ──────────────────────────────────────────────────────────────────────────────
+
 allowed_origins = os.getenv("ALLOWED_ORIGINS", "*").split(",")
 
 app.add_middleware(
@@ -70,3 +97,4 @@ app.include_router(vision.router, prefix="/api/food", tags=["Food Vision AI"])
 app.include_router(stats.router, prefix="/api/stats", tags=["Daily Stats"])
 app.include_router(groups.router, prefix="/api/groups", tags=["Social Groups"])
 app.include_router(referrals.router, prefix="/api/referrals", tags=["Referrals"])
+

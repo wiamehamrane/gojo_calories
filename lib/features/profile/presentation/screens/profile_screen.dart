@@ -100,7 +100,7 @@ class ProfileScreen extends ConsumerWidget {
               _SectionLabel('Subscription'),
 
               subAsync.when(
-                data: (sub) => _buildSubscriptionCard(context, sub, t),
+                data: (sub) => _buildSubscriptionCard(context, ref, sub, t),
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (e, st) => const Text("Failed to load subscription"),
               ),
@@ -143,6 +143,30 @@ class ProfileScreen extends ConsumerWidget {
   }
 
   Widget _buildUserCard(BuildContext context, WidgetRef ref, Map<String, dynamic> data, String Function(String) t) {
+    // Compute BMI if we have both height and weight
+    final double? weightKg = (data['current_weight'] as num?)?.toDouble();
+    final double? heightCm = (data['height'] as num?)?.toDouble();
+    double? bmi;
+    String bmiLabel = '';
+    Color bmiColor = AppColors.primary;
+    if (weightKg != null && heightCm != null && heightCm > 0) {
+      final heightM = heightCm / 100.0;
+      bmi = weightKg / (heightM * heightM);
+      if (bmi < 18.5) {
+        bmiLabel = t('bmi_underweight');
+        bmiColor = Colors.blue;
+      } else if (bmi < 25) {
+        bmiLabel = t('bmi_normal');
+        bmiColor = Colors.green;
+      } else if (bmi < 30) {
+        bmiLabel = t('bmi_overweight');
+        bmiColor = Colors.orange;
+      } else {
+        bmiLabel = t('bmi_obese');
+        bmiColor = AppColors.danger;
+      }
+    }
+
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -173,6 +197,24 @@ class ProfileScreen extends ConsumerWidget {
                   ],
                 ),
                 Text("${data['age'] ?? 30} ${t('profile_years_old')}", style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                if (bmi != null) ...
+                  [
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Text('${t('bmi')}: ${bmi.toStringAsFixed(1)}', style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: bmiColor.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(bmiLabel, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: bmiColor)),
+                        )
+                      ],
+                    ),
+                  ],
               ],
             ),
           ),
@@ -181,14 +223,20 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSubscriptionCard(BuildContext context, Map<String, dynamic> sub, String Function(String) t) {
+  Widget _buildSubscriptionCard(BuildContext context, WidgetRef ref, Map<String, dynamic> sub, String Function(String) t) {
     if (sub.isEmpty || sub['has_subscription'] != true) {
       return Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(20)),
-        child: const Text("No active subscription", style: TextStyle(color: AppColors.textSecondary)),
+        child: Text(t('no_subscription'), style: const TextStyle(color: AppColors.textSecondary)),
       );
     }
+    final isCancelling = sub['cancel_at_period_end'] == true;
+    final statusLabel = sub['status'] == 'trialing' ? 'Trial' : (sub['status'] ?? 'Active');
+    final billingLabel = isCancelling
+        ? '${t('cancels_on')} ${sub['next_billing_date']}'
+        : '${t('renews_on')} ${sub['next_billing_date']}';
+
     return Container(
       decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(20), boxShadow: AppShadows.cardShadow),
       padding: const EdgeInsets.all(16),
@@ -202,30 +250,38 @@ class ProfileScreen extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(8)),
-                child: Text(sub['status'] ?? 'Active', style: const TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.bold)),
+                child: Text(statusLabel, style: const TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.bold)),
               )
             ],
           ),
           const SizedBox(height: 8),
           if (sub['next_billing_date'] != null)
-             Text(sub['cancel_at_period_end'] == true ? "Cancels on ${sub['next_billing_date']}" : "Renews on ${sub['next_billing_date']}", style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+             Text(billingLabel, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
           const SizedBox(height: 16),
           Row(
             children: [
               Expanded(
                 child: ElevatedButton(
                   onPressed: () async {
-                    final res = await ApiClient.instance.post('payments/create-portal-session', data: {});
-                    if (res.statusCode == 200 && res.data['url'] != null) {
-                      final uri = Uri.parse(res.data['url']);
-                      if (await canLaunchUrl(uri)) await launchUrl(uri);
+                    try {
+                      final res = await ApiClient.instance.post('payments/create-portal-session', data: {});
+                      if (res.statusCode == 200 && res.data['url'] != null) {
+                        final uri = Uri.parse(res.data['url']);
+                        if (await canLaunchUrl(uri)) await launchUrl(uri);
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(t('error_generic')), backgroundColor: AppColors.danger),
+                        );
+                      }
                     }
                   },
                   style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
-                  child: const Text('Manage'),
+                  child: Text(t('manage_subscription')),
                 ),
               ),
-              if (sub['cancel_at_period_end'] != true) ...[
+              if (!isCancelling) ...[
                 const SizedBox(width: 8),
                 Expanded(
                   child: OutlinedButton(
@@ -234,23 +290,29 @@ class ProfileScreen extends ConsumerWidget {
                       final confirm = await showDialog<bool>(
                         context: context,
                         builder: (ctx) => AlertDialog(
-                          title: const Text("Cancel Subscription?"),
-                          content: const Text("Your subscription will remain active until the end of the billing period."),
+                          title: Text(t('cancel_sub_title')),
+                          content: Text(t('cancel_sub_body')),
                           actions: [
-                            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("Keep")),
-                            TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text("Cancel", style: TextStyle(color: AppColors.danger))),
+                            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(t('keep'))),
+                            TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text(t('cancel_subscription'), style: const TextStyle(color: AppColors.danger))),
                           ],
                         ),
                       );
                       if (confirm == true) {
                         try {
                           await ApiClient.instance.post('payments/cancel-subscription', data: {});
-                          messenger.showSnackBar(const SnackBar(content: Text("Subscription cancelled.")));
-                        } catch (_) {}
+                          messenger.showSnackBar(SnackBar(content: Text(t('cancel_anytime'))));
+                          // Refresh subscription card
+                          ref.invalidate(subscriptionProvider);
+                        } catch (e) {
+                          messenger.showSnackBar(
+                            SnackBar(content: Text(t('error_generic')), backgroundColor: AppColors.danger),
+                          );
+                        }
                       }
                     },
                     style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger, side: const BorderSide(color: AppColors.danger)),
-                    child: const Text('Cancel'),
+                    child: Text(t('cancel_subscription')),
                   ),
                 ),
               ]

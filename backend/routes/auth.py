@@ -9,9 +9,14 @@ from pydantic import BaseModel
 from typing import Optional
 from security import get_password_hash, verify_password, create_access_token, get_current_user_id
 import datetime
+from google.oauth2 import id_token
+from google.auth.transport import requests as g_requests
+import jwt
+import httpx
 
 router = APIRouter()
 
+GOOGLE_WEB_CLIENT_ID = os.getenv("GOOGLE_WEB_CLIENT_ID", "dummy_if_not_set")
 
 def _generate_code(length: int = 6) -> str:
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
@@ -27,6 +32,8 @@ class UserWeightUpdate(BaseModel):
     current_weight: float
     goal_weight: float
     weight_unit: str
+    height: Optional[float] = None      # always stored internally in cm
+    height_unit: Optional[str] = None   # "cm" or "ft"
     age: Optional[int] = None
 
 class UserProfileUpdate(BaseModel):
@@ -106,6 +113,101 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
         "name": db_user.name
     }
 
+# ── SOCIAL LOGIN ─────────────────────────────────────────────────────────────
+
+class SocialLogin(BaseModel):
+    id_token: str
+    identity_token: Optional[str] = None
+    given_name: Optional[str] = None
+    family_name: Optional[str] = None
+    
+@router.post("/google")
+def google_login(body: SocialLogin, db: Session = Depends(get_db)):
+    try:
+        info = id_token.verify_oauth2_token(body.id_token, g_requests.Request(), GOOGLE_WEB_CLIENT_ID)
+    except ValueError:
+        raise HTTPException(status_code=401, detail="Invalid Google token")
+
+    email = info["email"]
+    name = info.get("name", email.split("@")[0])
+
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        while True:
+            new_code = _generate_code()
+            if not db.query(User).filter(User.referral_code == new_code).first():
+                break
+
+        user = User(
+            email=email, 
+            name=name, 
+            hashed_password="", # No password for social login
+            referral_code=new_code,
+            referral_balance=0.0
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+    access_token = create_access_token(data={"sub": str(user.id)})
+    return {"access_token": access_token, "token_type": "bearer", "name": user.name}
+
+@router.post("/apple")
+async def apple_login(body: dict, db: Session = Depends(get_db)):
+    identity_token = body.get("identity_token")
+    if not identity_token:
+        raise HTTPException(status_code=400, detail="Missing identity token")
+        
+    async with httpx.AsyncClient() as client:
+        keys_response = await client.get("https://appleid.apple.com/auth/keys")
+    jwks = keys_response.json()
+
+    try:
+        header = jwt.get_unverified_header(identity_token)
+        matching_key = next(k for k in jwks["keys"] if k["kid"] == header["kid"])
+        public_key = jwt.algorithms.RSAAlgorithm.from_jwk(matching_key)
+        claims = jwt.decode(
+            identity_token, 
+            public_key,
+            algorithms=["RS256"],
+            audience="com.gojocalories.gojocalories"
+        )
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=f"Invalid Apple token: {str(e)}")
+
+    email = claims.get("email")
+    if not email:
+        email = f"apple_{claims['sub']}@privaterelay.appleid.com"
+        
+    given_name = body.get("given_name") or ""
+    family_name = body.get("family_name") or ""
+    name = f"{given_name} {family_name}".strip()
+    if not name:
+        name = email.split("@")[0]
+
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        while True:
+            new_code = _generate_code()
+            if not db.query(User).filter(User.referral_code == new_code).first():
+                break
+
+        user = User(
+            email=email, 
+            name=name, 
+            hashed_password="",
+            referral_code=new_code,
+            referral_balance=0.0
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+    access_token = create_access_token(data={"sub": str(user.id)})
+    return {"access_token": access_token, "token_type": "bearer", "name": user.name}
+
+# ─────────────────────────────────────────────────────────────────────────────
+
 @router.get("/me")
 def get_me(db: Session = Depends(get_db), current_user_id: int = Depends(get_current_user_id)):
     user = db.query(User).filter(User.id == current_user_id).first()
@@ -120,6 +222,8 @@ def get_me(db: Session = Depends(get_db), current_user_id: int = Depends(get_cur
         "current_weight": user.current_weight,
         "goal_weight": user.goal_weight,
         "weight_unit": user.weight_unit,
+        "height": user.height,
+        "height_unit": user.height_unit,
         "stripe_customer_id": user.stripe_customer_id,
         "referral_code": user.referral_code,
     }
@@ -188,6 +292,14 @@ def update_weight(
     user.weight_unit = weight_data.weight_unit
     if weight_data.age is not None:
         user.age = weight_data.age
+
+    # Convert and store height in cm
+    if weight_data.height is not None:
+        height_cm = weight_data.height
+        if weight_data.height_unit and weight_data.height_unit.lower() == 'ft':
+            height_cm = weight_data.height * 30.48  # 1 foot = 30.48 cm
+        user.height = round(height_cm, 1)
+        user.height_unit = weight_data.height_unit or 'cm'
     
     # Log Weigh In
     weigh_in_weight = weight_data.current_weight
@@ -197,9 +309,10 @@ def update_weight(
     weigh_in_record = WeighIn(user_id=current_user_id, weight=weigh_in_weight, date=datetime.datetime.utcnow())
     db.add(weigh_in_record)
     
-    # Recalculate BMR / TDEE using real age (Mifflin-St Jeor)
+    # Recalculate BMR / TDEE using Mifflin-St Jeor with real height
     age = weight_data.age or user.age or 30
-    bmr = (10 * weigh_in_weight) + (6.25 * 170) - (5 * age) + 5
+    height_cm = user.height or 170  # fallback to 170cm if not provided yet
+    bmr = (10 * weigh_in_weight) + (6.25 * height_cm) - (5 * age) + 5
     tdee = bmr * 1.2  # Sedentary multiplier
     
     goal_kg = weight_data.goal_weight

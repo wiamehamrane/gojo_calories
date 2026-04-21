@@ -14,13 +14,19 @@ class PaywallScreen extends StatefulWidget {
 
 class _PaywallScreenState extends State<PaywallScreen> {
   bool _isLoading = false;
+  // Guard: tracks if the sheet was initialized but not completed.
+  // Prevents bypassing payment when user re-opens the app after dismissing.
+  bool _isPaymentSheetInitialized = false;
 
   void _startTrial() async {
     setState(() => _isLoading = true);
     try {
-      // 1. Fetch the Payment Intent from our backend route
-      final paymentRes = await ApiClient.instance.post('payments/create-checkout-session', data: {});
-      if (paymentRes.statusCode == 200) {
+      // 1. Only fetch a new SetupIntent if we don't have one pending already.
+      if (!_isPaymentSheetInitialized) {
+        final paymentRes = await ApiClient.instance.post('payments/create-checkout-session', data: {});
+        if (paymentRes.statusCode != 200) {
+          throw Exception("Payment Initialization Failed");
+        }
         final data = paymentRes.data;
 
         // 2. Initialize Stripe Payment Sheet for a SetupIntent (Free Trial)
@@ -34,39 +40,66 @@ class _PaywallScreenState extends State<PaywallScreen> {
             style: ThemeMode.light,
           ),
         );
-
-        // 3. Present the Payment Sheet UI
         if (!mounted) return;
-        setState(() => _isLoading = true); // Keep loading while sheet opens
-        await Stripe.instance.presentPaymentSheet();
-
-        // 4. Card saved — call backend to create the trial subscription
-        if (!mounted) return;
-        final confirmRes = await ApiClient.instance.post('payments/confirm-setup', data: {});
-        if (confirmRes.statusCode != 200) {
-          throw Exception("Failed to confirm subscription setup.");
-        }
-
-        // 5. Success! Navigate to home.
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('🎉 Free trial started! Welcome to Pro.')));
-        context.go('/home');
-      } else {
-        throw Exception("Payment Initialization Failed");
+        setState(() => _isPaymentSheetInitialized = true);
       }
+
+      // 3. Present the Payment Sheet UI
+      if (!mounted) return;
+      await Stripe.instance.presentPaymentSheet();
+
+      // 4. Card saved — call backend to create the trial subscription
+      if (!mounted) return;
+      final confirmRes = await ApiClient.instance.post('payments/confirm-setup', data: {});
+      if (confirmRes.statusCode != 200) {
+        throw Exception("Failed to confirm subscription setup.");
+      }
+
+      // 5. Success — reset guard and navigate to home.
+      if (!mounted) return;
+      setState(() => _isPaymentSheetInitialized = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('🎉 Free trial started! Welcome to Pro.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      context.go('/home');
     } on StripeException catch (e) {
+      // User dismissed the sheet or card failed — reset so they can try again.
+      if (mounted) {
+        setState(() => _isPaymentSheetInitialized = false);
+        final msg = e.error.localizedMessage ?? 'Payment cancelled.';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(msg), backgroundColor: Colors.orange),
+        );
+      }
       debugPrint('Stripe error: ${e.error.localizedMessage}');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Payment Cancelled/Failed: ${e.error.localizedMessage}')));
-      }
     } catch (e) {
-      debugPrint('Registration/Payment error: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Error processing subscription.')));
+        setState(() => _isPaymentSheetInitialized = false);
+        _showErrorDialog('Something went wrong. Please check your connection and try again.');
       }
+      debugPrint('Payment error: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Error'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
