@@ -32,7 +32,7 @@ class ApiClient {
   }
 
   static String _getBaseUrl() {
-    return dotenv.env['API_URL'] ?? 'http://192.168.1.122:5000/api/';
+    return dotenv.env['API_URL'] ?? 'https://api.gojocalories.com/api/';
   }
 
   static Dio get instance => _dio;
