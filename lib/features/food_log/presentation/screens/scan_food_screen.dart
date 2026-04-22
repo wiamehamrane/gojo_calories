@@ -215,15 +215,16 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
 
       if (!mounted) return;
 
-      // Post to backend so it appears in history
+      // Post to backend as a FoodLog entry so it appears in stats/history
       try {
-        await ApiClient.instance.post('stats/log', queryParameters: {
+        await ApiClient.instance.post('food/analyze/log', data: {
+          'name': productName,
           'calories': calories,
           'protein': protein,
           'carbs': carbs,
           'fat': fat,
         });
-      } catch (_) { /* non-fatal */ }
+      } catch (_) { /* non-fatal — macros already from OpenFoodFacts */ }
 
       ref.read(dashboardProvider.notifier).logFood(
             calories: calories,

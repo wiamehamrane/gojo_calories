@@ -183,3 +183,46 @@ async def analyze_food_text(body: TextQuery, current_user_id: int = Depends(get_
     except Exception as e:
         print(f"Error analyzing text: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+class LogItemModel(BaseModel):
+    name: str
+    calories: int
+    protein: int
+    carbs: int
+    fat: int
+
+@router.post("/analyze/log")
+async def log_food_item(body: LogItemModel, current_user_id: int = Depends(get_current_user_id)):
+    """Saves a food log and updates daily stats using exact pre-determined macros (e.g. from a barcode scan)."""
+    from models import FoodLog
+    from database import get_db
+    from routes.stats import log_macro
+    
+    try:
+        with next(get_db()) as db:
+            log = FoodLog(
+                user_id=current_user_id, 
+                name=body.name, 
+                image_url=None, 
+                calories=body.calories, 
+                protein=body.protein, 
+                carbs=body.carbs, 
+                fat=body.fat
+            )
+            db.add(log)
+            db.commit()
+            
+            # Automatically update the user's daily progress
+            log_macro(
+                calories=log.calories, 
+                protein=log.protein, 
+                carbs=log.carbs, 
+                fat=log.fat, 
+                db=db, 
+                current_user_id=current_user_id
+            )
+
+        return {"status": "success", "message": "Log created successfully"}
+    except Exception as e:
+        print(f"Error logging explicit item: {e}")
+        raise HTTPException(status_code=500, detail="Failed to log the item to history.")
