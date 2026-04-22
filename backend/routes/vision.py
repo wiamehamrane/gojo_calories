@@ -7,15 +7,31 @@ from PIL import Image
 import io
 from security import get_current_user_id
 from pydantic import BaseModel
+import logging
+
+logger = logging.getLogger(__name__)
 
 load_dotenv()
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+
+_GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+if not _GEMINI_API_KEY:
+    logger.error("GEMINI_API_KEY is not set! Vision AI endpoints will fail.")
+
+try:
+    client = genai.Client(api_key=_GEMINI_API_KEY)
+    logger.info("Gemini client initialised successfully.")
+except Exception as _e:
+    logger.error(f"Failed to initialise Gemini client: {_e}")
+    client = None
 
 router = APIRouter()
 
 @router.post("/analyze")
 async def analyze_food_image(file: UploadFile = File(...), current_user_id: int = Depends(get_current_user_id)):
     try:
+        if client is None:
+            raise HTTPException(status_code=503, detail="Vision AI is unavailable: GEMINI_API_KEY is not configured on the server.")
+
         # Read image
         contents = await file.read()
         image = Image.open(io.BytesIO(contents))
@@ -28,6 +44,7 @@ async def analyze_food_image(file: UploadFile = File(...), current_user_id: int 
         {"name": "Food Name", "calories": 500, "protein": 20, "carbs": 50, "fat": 15}
         """
         
+        logger.info(f"Calling Gemini vision for user {current_user_id}")
         response = client.models.generate_content(
             model='gemini-2.0-flash',
             contents=[prompt, image]
@@ -139,6 +156,9 @@ class TextQuery(BaseModel):
 @router.post("/analyze/text")
 async def analyze_food_text(body: TextQuery, current_user_id: int = Depends(get_current_user_id)):
     try:
+        if client is None:
+            raise HTTPException(status_code=503, detail="Vision AI is unavailable: GEMINI_API_KEY is not configured on the server.")
+
         prompt = f"""
         Estimate the nutritional macros for the following food item or meal description: "{body.query}"
         Respond ONLY with a JSON object. No markdown formatting, no backticks, no explanations. 
@@ -146,6 +166,7 @@ async def analyze_food_text(body: TextQuery, current_user_id: int = Depends(get_
         {{"name": "Food Name", "calories": 500, "protein": 20, "carbs": 50, "fat": 15}}
         """
         
+        logger.info(f"Calling Gemini text analysis for user {current_user_id}: {body.query!r}")
         response = client.models.generate_content(
             model='gemini-2.0-flash',
             contents=prompt

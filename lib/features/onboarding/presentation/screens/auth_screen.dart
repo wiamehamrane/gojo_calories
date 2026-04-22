@@ -1,4 +1,4 @@
-import 'package:dio/dio.dart';
+import 'package:dio/dio.dart' show Dio, DioException, DioExceptionType, FormData, MultipartFile;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -97,15 +97,9 @@ class _AuthScreenState extends State<AuthScreen>
               if (_referralCtrl.text.trim().isNotEmpty)
                 'referral_code': _referralCtrl.text.trim().toUpperCase(),
             }
-          : {'username': email, 'password': password};
+          : {'email': email, 'password': password};
 
-      final res = _tab.index == 0
-          ? await ApiClient.instance.post(endpoint, data: body)
-          : await ApiClient.instance.post(
-              endpoint,
-              data: 'username=${Uri.encodeComponent(email)}&password=${Uri.encodeComponent(password)}',
-              options: Options(contentType: 'application/x-www-form-urlencoded'),
-            );
+      final res = await ApiClient.instance.post(endpoint, data: body);
 
       if (res.statusCode == 200) {
         final token = res.data['access_token'];
