@@ -409,7 +409,86 @@ class _AuthScreenState extends State<AuthScreen>
                             ),
                           ],
 
-                          const SizedBox(height: 20),
+                          if (_tab.index == 0)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 6, bottom: 20),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: Checkbox(
+                                      value: _agreedToPrivacy,
+                                      onChanged: (val) {
+                                        setState(() {
+                                          _agreedToPrivacy = val ?? false;
+                                        });
+                                      },
+                                      activeColor: AppColors.primary,
+                                      side: const BorderSide(color: AppColors.textPlaceholder, width: 1.5),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: GestureDetector(
+                                      onTap: () => launchUrl(Uri.parse('https://gojocalories.com/privacy-policy')),
+                                      child: const Text.rich(
+                                        TextSpan(
+                                          text: 'I agree to the Terms of Use & ',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: AppColors.textSecondary,
+                                            height: 1.4,
+                                          ),
+                                          children: [
+                                            TextSpan(
+                                              text: 'Privacy Policy.',
+                                              style: TextStyle(
+                                                color: AppColors.primaryDark,
+                                                decoration: TextDecoration.underline,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          else
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 20),
+                              child: Center(
+                                child: GestureDetector(
+                                  onTap: () => launchUrl(Uri.parse('https://gojocalories.com/privacy-policy')),
+                                  child: const Text.rich(
+                                    TextSpan(
+                                      text: 'By logging in you agree to our Terms & ',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: AppColors.textSecondary,
+                                        height: 1.4,
+                                      ),
+                                      children: [
+                                        TextSpan(
+                                          text: 'Privacy Policy.',
+                                          style: TextStyle(
+                                            color: AppColors.primaryDark,
+                                            decoration: TextDecoration.underline,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ),
+                            ),
 
                           // Primary CTA
                           _PrimaryButton(
@@ -474,79 +553,6 @@ class _AuthScreenState extends State<AuthScreen>
                         ),
                       ],
                     ).animate().fadeIn(delay: 350.ms),
-
-                    const SizedBox(height: 24),
-
-                    if (_tab.index == 0)
-                      Center(
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Checkbox(
-                              value: _agreedToPrivacy,
-                              onChanged: (val) {
-                                setState(() {
-                                  _agreedToPrivacy = val ?? false;
-                                });
-                              },
-                              activeColor: AppColors.primary,
-                              side: const BorderSide(color: AppColors.textSecondary, width: 1.5),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                            ),
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: () => launchUrl(Uri.parse('https://gojocalories.com/privacy-policy')),
-                                child: Text.rich(
-                                  TextSpan(
-                                    text: 'I agree to the Terms of Use & ',
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: AppColors.textSecondary,
-                                      height: 1.5,
-                                    ),
-                                    children: [
-                                      TextSpan(
-                                        text: 'Privacy Policy.',
-                                        style: TextStyle(
-                                          color: AppColors.primary,
-                                          decoration: TextDecoration.underline,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ).animate().fadeIn(delay: 400.ms)
-                    else
-                      Center(
-                        child: GestureDetector(
-                          onTap: () => launchUrl(Uri.parse('https://gojocalories.com/privacy-policy')),
-                          child: Text.rich(
-                            TextSpan(
-                              text: 'By logging in you agree to our Terms & ',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: AppColors.textSecondary,
-                                height: 1.5,
-                              ),
-                              children: [
-                                TextSpan(
-                                  text: 'Privacy Policy.',
-                                  style: TextStyle(
-                                    color: AppColors.primary,
-                                    decoration: TextDecoration.underline,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ).animate().fadeIn(delay: 400.ms),
                   ],
                 ),
               ),
