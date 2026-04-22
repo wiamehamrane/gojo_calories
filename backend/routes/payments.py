@@ -42,6 +42,7 @@ def create_checkout_session(db: Session = Depends(get_db), current_user_id: int 
             items=[{'price': price_id}],
             trial_period_days=3,
             payment_behavior='default_incomplete',
+            payment_settings={'save_default_payment_method': 'on_subscription'},
             expand=['pending_setup_intent'],
             metadata={'user_id': str(user.id)}
         )
