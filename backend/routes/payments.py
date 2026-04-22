@@ -47,8 +47,23 @@ def create_checkout_session(db: Session = Depends(get_db), current_user_id: int 
             metadata={'user_id': str(user.id)}
         )
 
+        # If trial starts immediately (e.g. valid default card already exists)
+        if subscription.status == 'trialing':
+            if not user.has_paid:
+                user.has_paid = True
+                db.commit()
+            return {
+                "status": "success",
+                "setupIntent": None,
+                "ephemeralKey": ephemeral_key.secret,
+                "customer": user.stripe_customer_id,
+                "publishableKey": os.getenv("STRIPE_PUBLISHABLE_KEY"),
+                "subscriptionId": subscription.id,
+                "message": "Trial already started using existing payment method."
+            }
+
         setup_intent_secret = None
-        if subscription.pending_setup_intent:
+        if getattr(subscription, "pending_setup_intent", None):
             setup_intent_secret = subscription.pending_setup_intent.client_secret
 
         if not setup_intent_secret:

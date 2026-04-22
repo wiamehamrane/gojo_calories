@@ -31,6 +31,24 @@ class _PaywallScreenState extends State<PaywallScreen> {
         }
         final data = paymentRes.data;
 
+        if (data['setupIntent'] == null && data['status'] == 'success') {
+          // Trial started cleanly without needing a PaymentSheet! (card already bound)
+          if (!mounted) return;
+          setState(() => _isPaymentSheetInitialized = false);
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setBool('is_onboarded', true);
+          
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('🎉 Free trial started! Welcome to Pro.'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          context.go('/home');
+          return;
+        }
+
         // 2. Initialize Stripe Payment Sheet for a SetupIntent (Free Trial)
         Stripe.publishableKey = data['publishableKey'];
         await Stripe.instance.initPaymentSheet(
