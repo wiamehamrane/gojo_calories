@@ -125,6 +125,10 @@ async def analyze_food_image(file: UploadFile = File(...), current_user_id: int 
     except HTTPException:
         raise
     except Exception as e:
+        err_str = str(e).lower()
+        if 'quota' in err_str or 'resource_exhausted' in err_str or '429' in err_str:
+            print(f"Gemini quota exceeded: {e}")
+            raise HTTPException(status_code=503, detail="AI service is temporarily unavailable due to high demand. Please try again in a few minutes.")
         print(f"Error analyzing image: {e}")
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
 

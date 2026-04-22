@@ -60,7 +60,7 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
       }
       _controller = CameraController(
         cameras.first,
-        ResolutionPreset.medium,
+        ResolutionPreset.high,
         enableAudio: false,
       );
       await _controller!.initialize();
@@ -214,6 +214,17 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
       final fat = getNum('fat').round();
 
       if (!mounted) return;
+
+      // Post to backend so it appears in history
+      try {
+        await ApiClient.instance.post('stats/log', queryParameters: {
+          'calories': calories,
+          'protein': protein,
+          'carbs': carbs,
+          'fat': fat,
+        });
+      } catch (_) { /* non-fatal */ }
+
       ref.read(dashboardProvider.notifier).logFood(
             calories: calories,
             protein: protein,
@@ -295,6 +306,20 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
     }
   }
 
+  /// Builds a properly-sized camera preview that prevents stretching/distortion.
+  Widget _buildCameraPreview() {
+    return SizedBox.expand(
+      child: FittedBox(
+        fit: BoxFit.cover,
+        child: SizedBox(
+          width: _controller!.value.previewSize!.height,
+          height: _controller!.value.previewSize!.width,
+          child: CameraPreview(_controller!),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // Full-screen loading / init
@@ -350,7 +375,7 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
           Positioned.fill(
             child: _currentMode == 'Scan Food' || _currentMode == 'Food label'
                 ? (_controller != null && _controller!.value.isInitialized
-                    ? CameraPreview(_controller!)
+                    ? _buildCameraPreview()
                     : const Center(
                         child: CircularProgressIndicator(
                             color: AppColors.primaryDark),

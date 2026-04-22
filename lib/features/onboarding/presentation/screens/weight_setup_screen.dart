@@ -141,6 +141,7 @@ class _WeightSetupScreenState extends State<WeightSetupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -256,8 +257,13 @@ class _WeightSetupScreenState extends State<WeightSetupScreen> {
               ),
             ),
             // Bottom Action Area
-            Padding(
-              padding: EdgeInsets.fromLTRB(24, 0, 24, 24 + MediaQuery.of(context).viewInsets.bottom),
+            AnimatedPadding(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOut,
+              padding: EdgeInsets.fromLTRB(
+                24, 0, 24,
+                24 + MediaQuery.of(context).viewInsets.bottom,
+              ),
               child: GestureDetector(
                 onTap: _nextPage,
                 child: AnimatedContainer(
@@ -305,11 +311,12 @@ class _WeightSetupScreenState extends State<WeightSetupScreen> {
     required IconData icon,
     required Widget inputChild,
   }) {
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 32),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
+          const SizedBox(height: 40),
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -342,6 +349,7 @@ class _WeightSetupScreenState extends State<WeightSetupScreen> {
           ).animate().fadeIn(delay: 150.ms),
           const SizedBox(height: 50),
           inputChild.animate().slideY(begin: 0.1, delay: 200.ms).fadeIn(),
+          const SizedBox(height: 20),
         ],
       ),
     );
