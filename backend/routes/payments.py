@@ -34,21 +34,31 @@ def create_checkout_session(db: Session = Depends(get_db), current_user_id: int 
             stripe_version='2024-06-20',
         )
 
-        setup_intent = stripe.SetupIntent.create(
+        price_id = os.getenv("STRIPE_PRICE_ID", "price_1TNI87GkYdm9mdqzKlsMmOqt")
+        
+        # Create Subscription first with default_incomplete
+        subscription = stripe.Subscription.create(
             customer=user.stripe_customer_id,
-            payment_method_types=['card'],
-            usage='off_session',
-            metadata={
-                'user_id': str(user.id),
-                'price_id': os.getenv("STRIPE_PRICE_ID", "price_1TNI87GkYdm9mdqzKlsMmOqt"),
-            }
+            items=[{'price': price_id}],
+            trial_period_days=3,
+            payment_behavior='default_incomplete',
+            expand=['pending_setup_intent'],
+            metadata={'user_id': str(user.id)}
         )
 
+        setup_intent_secret = None
+        if subscription.pending_setup_intent:
+            setup_intent_secret = subscription.pending_setup_intent.client_secret
+
+        if not setup_intent_secret:
+            raise HTTPException(status_code=400, detail="Failed to initialize setup intent for trial")
+
         return {
-            "setupIntent": setup_intent.client_secret,
+            "setupIntent": setup_intent_secret,
             "ephemeralKey": ephemeral_key.secret,
             "customer": user.stripe_customer_id,
-            "publishableKey": os.getenv("STRIPE_PUBLISHABLE_KEY")
+            "publishableKey": os.getenv("STRIPE_PUBLISHABLE_KEY"),
+            "subscriptionId": subscription.id
         }
 
     except Exception as e:
@@ -77,31 +87,17 @@ def confirm_setup(db: Session = Depends(get_db), current_user_id: int = Depends(
                         db.commit()
                     return {"status": "success", "message": "Subscription already active."}
 
-        setup_intents = stripe.SetupIntent.list(customer=user.stripe_customer_id, limit=5)
-        latest_si = next((si for si in setup_intents.data if si.status == 'succeeded'), None)
+        subscriptions = stripe.Subscription.list(customer=user.stripe_customer_id, status="all", limit=5)
+        active_sub = next((sub for sub in subscriptions.data if sub.status in ['trialing', 'active']), None)
 
-        if not latest_si or not latest_si.payment_method:
-            raise HTTPException(status_code=400, detail="No completed SetupIntent found for this customer.")
-
-        payment_method_id = latest_si.payment_method
-        stripe.PaymentMethod.attach(payment_method_id, customer=user.stripe_customer_id)
-        stripe.Customer.modify(
-            user.stripe_customer_id,
-            invoice_settings={'default_payment_method': payment_method_id}
-        )
-
-        stripe.Subscription.create(
-            customer=user.stripe_customer_id,
-            items=[{'price': price_id}],
-            trial_period_days=3,
-            default_payment_method=payment_method_id,
-        )
+        if not active_sub:
+            raise HTTPException(status_code=400, detail="Subscription is not active yet. Please try again or check your payment method.")
 
         if not user.has_paid:
             user.has_paid = True
             db.commit()
 
-        logger.info(f"User {user.email} trial subscription created via confirm-setup.")
+        logger.info(f"User {user.email} trial subscription verified via confirm-setup.")
         return {"status": "success", "message": "Free trial started!"}
 
     except HTTPException:

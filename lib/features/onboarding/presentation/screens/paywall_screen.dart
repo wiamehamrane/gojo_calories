@@ -5,6 +5,7 @@ import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:gojocalories/core/theme/app_colors.dart';
 import 'package:gojocalories/core/network/api_client.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:dio/dio.dart';
 
 class PaywallScreen extends StatefulWidget {
   const PaywallScreen({super.key});
@@ -39,6 +40,10 @@ class _PaywallScreenState extends State<PaywallScreen> {
             customerId: data['customer'],
             customerEphemeralKeySecret: data['ephemeralKey'],
             style: ThemeMode.light,
+            billingDetailsCollectionConfiguration: const BillingDetailsCollectionConfiguration(
+              address: AddressCollectionMode.full,
+              name: CollectionMode.always,
+            ),
           ),
         );
         if (!mounted) return;
@@ -83,7 +88,14 @@ class _PaywallScreenState extends State<PaywallScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _isPaymentSheetInitialized = false);
-        _showErrorDialog('Something went wrong. Please check your connection and try again.');
+        String errMsg = 'Something went wrong. Please check your connection and try again.';
+        if (e is DioException && e.response?.data != null) {
+          final errData = e.response!.data;
+          if (errData is Map && errData.containsKey('detail')) {
+            errMsg = errData['detail'].toString();
+          }
+        }
+        _showErrorDialog(errMsg);
       }
       debugPrint('Payment error: $e');
     } finally {
