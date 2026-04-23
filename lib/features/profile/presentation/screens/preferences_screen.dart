@@ -11,7 +11,6 @@ class PreferencesScreen extends StatefulWidget {
 
 class _PreferencesScreenState extends State<PreferencesScreen> {
   bool _notifications = true;
-  bool _appleHealth = false;
 
   @override
   Widget build(BuildContext context) {
@@ -41,21 +40,6 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                   value: _notifications,
                   activeThumbColor: AppColors.primaryDark,
                   onChanged: (val) => setState(() => _notifications = val),
-                ),
-                const Divider(
-                  height: 1,
-                  indent: 16,
-                  endIndent: 16,
-                  color: AppColors.border,
-                ),
-                SwitchListTile(
-                  title: const Text(
-                    "Sync with Apple Health",
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  value: _appleHealth,
-                  activeThumbColor: AppColors.primaryDark,
-                  onChanged: (val) => setState(() => _appleHealth = val),
                 ),
               ],
             ),

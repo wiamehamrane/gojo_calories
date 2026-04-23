@@ -57,10 +57,6 @@ class _SwipableStatCardState extends State<SwipableStatCard> {
                   padding: const EdgeInsets.all(16.0),
                   child: _buildMiniChart(),
                 ),
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: _buildHealthSync(),
-                ),
               ],
             ),
           ),
@@ -71,7 +67,7 @@ class _SwipableStatCardState extends State<SwipableStatCard> {
             right: 0,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(3, (index) {
+              children: List.generate(2, (index) {
                 return AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   margin: const EdgeInsets.symmetric(horizontal: 2),
@@ -135,25 +131,6 @@ class _SwipableStatCardState extends State<SwipableStatCard> {
               ],
             ),
           ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildHealthSync() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(LucideIcons.activity, color: widget.themeColor, size: 24),
-        const SizedBox(height: 8),
-        const Text(
-          "Sync Health",
-          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 4),
-        const Text(
-          "Apple / Google",
-          style: TextStyle(fontSize: 10, color: AppColors.textSecondary),
         ),
       ],
     );
