@@ -144,7 +144,7 @@ class _AuthScreenState extends State<AuthScreen>
       await GoogleSignIn.instance.initialize(
         clientId: Platform.isIOS
             ? '980076580409-4d78u72lc8o7aqfuoinvd72dk2tr27co.apps.googleusercontent.com'
-            : '980076580409-7pn1b1hutjmg2djobi3o5f7c7l4jkb74.apps.googleusercontent.com',
+            : '980076580409-rgqujk89m5lhvsr3nfg24hhodk08uoeh.apps.googleusercontent.com',
         serverClientId: const String.fromEnvironment(
           'GOOGLE_WEB_CLIENT_ID',
           defaultValue:
