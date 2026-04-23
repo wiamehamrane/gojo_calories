@@ -8,12 +8,17 @@ class SwipableStatCard extends StatefulWidget {
   final Widget primaryView;
   final String title;
   final Color themeColor;
+  final List<FlSpot>? chartData;
+  /// If non-null, a 3rd page with this widget will be shown (e.g. BMI panel)
+  final Widget? extraPage;
 
   const SwipableStatCard({
     super.key,
     required this.primaryView,
     required this.title,
     required this.themeColor,
+    this.chartData,
+    this.extraPage,
   });
 
   @override
@@ -24,6 +29,8 @@ class _SwipableStatCardState extends State<SwipableStatCard> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
+  int get _pageCount => widget.extraPage != null ? 3 : 2;
+
   @override
   void dispose() {
     _pageController.dispose();
@@ -32,7 +39,6 @@ class _SwipableStatCardState extends State<SwipableStatCard> {
 
   @override
   Widget build(BuildContext context) {
-    // Add extra padding requested: "more space in inside that means smallers content to be beautifully appear"
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -43,7 +49,7 @@ class _SwipableStatCardState extends State<SwipableStatCard> {
       child: Stack(
         children: [
           SizedBox(
-            height: 140, // Fixed height for the swipable content
+            height: 140,
             child: PageView(
               controller: _pageController,
               onPageChanged: (i) => setState(() => _currentPage = i),
@@ -53,20 +59,25 @@ class _SwipableStatCardState extends State<SwipableStatCard> {
                   child: widget.primaryView,
                 ),
                 Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
                   child: _buildMiniChart(),
                 ),
+                if (widget.extraPage != null)
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: widget.extraPage!,
+                  ),
               ],
             ),
           ),
-          // Page indicators
+          // Page indicator dots
           Positioned(
             bottom: 6,
             left: 0,
             right: 0,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(2, (index) {
+              children: List.generate(_pageCount, (index) {
                 return AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   margin: const EdgeInsets.symmetric(horizontal: 2),
@@ -88,38 +99,92 @@ class _SwipableStatCardState extends State<SwipableStatCard> {
   }
 
   Widget _buildMiniChart() {
+    final spots = widget.chartData;
+    final hasRealData = spots != null && spots.length >= 2;
+
+    // Use real data or a placeholder flat line
+    final displaySpots = hasRealData
+        ? spots
+        : [const FlSpot(0, 0), const FlSpot(1, 0), const FlSpot(2, 0)];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          "${widget.title} Trend",
-          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              "${widget.title} Trend",
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+                letterSpacing: 0.3,
+              ),
+            ),
+            Text(
+              "7 days",
+              style: TextStyle(
+                fontSize: 10,
+                color: AppColors.textSecondary.withValues(alpha: 0.7),
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         Expanded(
           child: LineChart(
             LineChartData(
-              gridData: const FlGridData(show: false),
+              gridData: FlGridData(
+                show: true,
+                drawHorizontalLine: true,
+                drawVerticalLine: false,
+                horizontalInterval: _computeInterval(displaySpots),
+                getDrawingHorizontalLine: (_) => FlLine(
+                  color: AppColors.border.withValues(alpha: 0.5),
+                  strokeWidth: 0.6,
+                ),
+              ),
               titlesData: const FlTitlesData(show: false),
               borderData: FlBorderData(show: false),
+              minY: 0,
+              lineTouchData: LineTouchData(
+                touchTooltipData: LineTouchTooltipData(
+                  getTooltipColor: (_) => AppColors.textPrimary,
+                  getTooltipItems: (spots) => spots
+                      .map((s) => LineTooltipItem(
+                            s.y.toInt().toString(),
+                            const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ))
+                      .toList(),
+                ),
+              ),
               lineBarsData: [
                 LineChartBarData(
-                  spots: const [
-                    FlSpot(0, 10),
-                    FlSpot(1, 15),
-                    FlSpot(2, 8),
-                    FlSpot(3, 20),
-                    FlSpot(4, 18),
-                  ], // Mocked for minichart view visual presentation
+                  spots: displaySpots,
                   isCurved: true,
+                  curveSmoothness: 0.35,
                   color: widget.themeColor,
-                  barWidth: 2,
-                  dotData: const FlDotData(show: false),
+                  barWidth: 2.5,
+                  dotData: FlDotData(
+                    show: true,
+                    getDotPainter: (spot, percent, bar, index) =>
+                        FlDotCirclePainter(
+                      radius: hasRealData ? 2.5 : 0,
+                      color: widget.themeColor,
+                      strokeWidth: 0,
+                      strokeColor: Colors.transparent,
+                    ),
+                  ),
                   belowBarData: BarAreaData(
                     show: true,
                     gradient: LinearGradient(
                       colors: [
-                        widget.themeColor.withValues(alpha: 0.3),
+                        widget.themeColor.withValues(alpha: 0.22),
                         Colors.transparent,
                       ],
                       begin: Alignment.topCenter,
@@ -133,5 +198,12 @@ class _SwipableStatCardState extends State<SwipableStatCard> {
         ),
       ],
     );
+  }
+
+  double _computeInterval(List<FlSpot> spots) {
+    if (spots.isEmpty) return 10;
+    final maxY = spots.map((s) => s.y).reduce((a, b) => a > b ? a : b);
+    if (maxY <= 0) return 10;
+    return (maxY / 3).ceilToDouble();
   }
 }

@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../theme/app_colors.dart';
-import '../theme/app_text_styles.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_shadows.dart';
 import '../providers/locale_provider.dart';
@@ -19,6 +18,10 @@ class MainScaffold extends ConsumerWidget {
     if (location.startsWith('/home')) return 0;
     if (location.startsWith('/profile')) return 1;
     return 0;
+  }
+
+  static bool _isScanRoute(BuildContext context) {
+    return GoRouterState.of(context).uri.path.startsWith('/scan');
   }
 
   void _onItemTapped(int index, BuildContext context) {
@@ -66,8 +69,7 @@ class MainScaffold extends ConsumerWidget {
                     child: FadeTransition(
                       opacity: anim1,
                       child: GestureDetector(
-                        onTap:
-                            () {}, // Blocks taps from closing the modal when clicking on the action grid itself
+                        onTap: () {},
                         child: _ActionGrid(),
                       ),
                     ),
@@ -85,15 +87,19 @@ class MainScaffold extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final lang = ref.watch(localeProvider);
     final int currentIndex = _calculateSelectedIndex(context);
+    final bool isScan = _isScanRoute(context);
     final bottomPadding = MediaQuery.of(context).padding.bottom;
-    final navBarHeight = AppSpacing.navHeight + bottomPadding;
+
+    // Nav pill height: 58 fixed + safe area
+    const pillHeight = 58.0;
+    const pillHMargin = 20.0;
+    final bottomOffset = bottomPadding + 14.0;
 
     return Scaffold(
       body: Stack(
         children: [
-          // Content
+          // ── Content fills whole screen ──────────────────────────────
           Positioned.fill(
-            bottom: navBarHeight,
             child: GestureDetector(
               onHorizontalDragEnd: (details) {
                 if (details.primaryVelocity! < -300 && currentIndex < 1) {
@@ -105,63 +111,47 @@ class MainScaffold extends ConsumerWidget {
               child: child,
             ),
           ),
-          // Nav Bar
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            height: navBarHeight,
-            child: Container(
-              decoration: const BoxDecoration(
-                color: AppColors.surface,
-                boxShadow: AppShadows.navShadow,
-              ),
-              padding: EdgeInsets.only(bottom: bottomPadding),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _NavItem(
-                    icon: LucideIcons.house,
-                    label: Translations.t(lang, 'nav_home'),
-                    isActive: currentIndex == 0,
-                    isHomeTab: true,
-                    onTap: () => _onItemTapped(0, context),
-                  ),
-                  _NavItem(
-                    icon: LucideIcons.user,
-                    label: Translations.t(lang, 'nav_profile'),
-                    isActive: currentIndex == 1,
-                    isProfileTab: true,
-                    onTap: () => _onItemTapped(1, context),
-                  ),
-                ],
+
+          // ── Floating Pill Navbar ────────────────────────────────────
+          if (!isScan)
+            Positioned(
+              bottom: bottomOffset,
+              left: pillHMargin,
+              right: pillHMargin,
+              height: pillHeight,
+              child: _FloatingNavBar(
+                currentIndex: currentIndex,
+                lang: lang,
+                onTap: (i) => _onItemTapped(i, context),
               ),
             ),
-          ),
-          // FAB
-          if (currentIndex == 0)
+
+          // ── FAB (only on home, not on scan) ────────────────────────
+          if (currentIndex == 0 && !isScan)
             Positioned(
-              bottom: navBarHeight + AppSpacing.fabMargin,
-              right: Directionality.of(context) == TextDirection.rtl
-                  ? null
-                  : AppSpacing.fabMargin,
-              left: Directionality.of(context) == TextDirection.rtl
-                  ? AppSpacing.fabMargin
-                  : null,
-              child: GestureDetector(
-                onTap: () => _showActionGrid(context),
-                child: Container(
-                  width: AppSpacing.fabSize,
-                  height: AppSpacing.fabSize,
-                  decoration: const BoxDecoration(
-                    color: AppColors.primaryDark,
-                    shape: BoxShape.circle,
-                    boxShadow: AppShadows.fabShadow,
-                  ),
-                  child: const Icon(
-                    LucideIcons.plus,
-                    size: 28,
-                    color: Colors.white,
+              bottom: bottomOffset + pillHeight / 2 - AppSpacing.fabSize / 2,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: GestureDetector(
+                  onTap: () => _showActionGrid(context),
+                  child: Container(
+                    width: AppSpacing.fabSize,
+                    height: AppSpacing.fabSize,
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryDark,
+                      shape: BoxShape.circle,
+                      boxShadow: AppShadows.fabShadow,
+                      border: Border.all(
+                        color: Colors.white,
+                        width: 3,
+                      ),
+                    ),
+                    child: const Icon(
+                      LucideIcons.plus,
+                      size: 26,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),
@@ -172,74 +162,124 @@ class MainScaffold extends ConsumerWidget {
   }
 }
 
-class _NavItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool isActive;
-  final bool isHomeTab;
-  final bool isProfileTab;
-  final VoidCallback onTap;
+// ─── Floating Nav Bar Widget ──────────────────────────────────────────────
 
-  const _NavItem({
-    required this.icon,
-    required this.label,
-    required this.isActive,
-    this.isHomeTab = false,
-    this.isProfileTab = false,
+class _FloatingNavBar extends StatelessWidget {
+  final int currentIndex;
+  final String lang;
+  final void Function(int) onTap;
+
+  const _FloatingNavBar({
+    required this.currentIndex,
+    required this.lang,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    Widget iconWidget;
-
-    if (isProfileTab && isActive) {
-      iconWidget = Container(
-        width: 28,
-        height: 28,
-        decoration: const BoxDecoration(
-          shape: BoxShape.circle,
-          color: AppColors.primary,
-        ),
-      );
-    } else {
-      iconWidget = Icon(
-        icon,
-        size: 24,
-        color: isActive ? AppColors.textPrimary : AppColors.inactive,
-      );
-    }
-
-    if (isHomeTab && isActive) {
-      iconWidget = Container(
-        decoration: BoxDecoration(
-          color: AppColors.surfaceMuted,
-          borderRadius: BorderRadius.circular(999),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        child: iconWidget,
-      );
-    }
-
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(999),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.10),
+            blurRadius: 20,
+            spreadRadius: 0,
+            offset: const Offset(0, 4),
+          ),
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          iconWidget,
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: isActive
-                ? AppTextStyles.navLabelActive
-                : AppTextStyles.navLabelInactive,
+          _PillNavItem(
+            icon: LucideIcons.house,
+            label: Translations.t(lang, 'nav_home'),
+            isActive: currentIndex == 0,
+            onTap: () => onTap(0),
+          ),
+          _PillNavItem(
+            icon: LucideIcons.user,
+            label: Translations.t(lang, 'nav_profile'),
+            isActive: currentIndex == 1,
+            onTap: () => onTap(1),
           ),
         ],
       ),
     );
   }
 }
+
+class _PillNavItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  const _PillNavItem({
+    required this.icon,
+    required this.label,
+    required this.isActive,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeInOut,
+          margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: isActive ? AppColors.primary.withValues(alpha: 0.1) : Colors.transparent,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: 20,
+                color: isActive ? AppColors.primaryDark : AppColors.inactive,
+              ),
+              AnimatedSize(
+                duration: const Duration(milliseconds: 200),
+                child: isActive
+                    ? Row(
+                        children: [
+                          const SizedBox(width: 6),
+                          Text(
+                            label,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primaryDark,
+                            ),
+                          ),
+                        ],
+                      )
+                    : const SizedBox.shrink(),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Action Grid ─────────────────────────────────────────────────────────
 
 class _ActionGrid extends ConsumerWidget {
   @override
@@ -314,26 +354,40 @@ class _ActionCell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: width,
-      height: 140,
+      height: 130,
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: AppShadows.cardShadow,
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.07),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(20),
           onTap: onTap,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 36, color: AppColors.textPrimary),
-              const SizedBox(height: 10),
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: AppColors.primaryLight,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, size: 22, color: AppColors.primaryDark),
+              ),
+              const SizedBox(height: 8),
               Text(
                 label,
                 style: const TextStyle(
-                  fontSize: 15,
+                  fontSize: 13,
                   fontWeight: FontWeight.w600,
                   color: AppColors.textPrimary,
                 ),

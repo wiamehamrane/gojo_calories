@@ -148,14 +148,36 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
       if (res.statusCode == 200 && res.data != null) {
         if (!mounted) return;
         final data = res.data as Map<String, dynamic>;
+        final calories = int.tryParse(data['calories']?.toString() ?? '0') ?? 0;
+        final protein = int.tryParse(data['protein']?.toString() ?? '0') ?? 0;
+        final carbs = int.tryParse(data['carbs']?.toString() ?? '0') ?? 0;
+        final fat = int.tryParse(data['fat']?.toString() ?? '0') ?? 0;
+        final mealName = data['name_en']?.toString() ?? data['name']?.toString() ?? 'Analyzed Food';
+
+        // Post to backend as a FoodLog so it shows in Recently Uploaded history
+        try {
+          await ApiClient.instance.post(
+            'food/analyze/log',
+            data: {
+              'name': mealName,
+              'calories': calories,
+              'protein': protein,
+              'carbs': carbs,
+              'fat': fat,
+            },
+          );
+        } catch (_) {
+          // Non-fatal — macros are still logged locally
+        }
+
         ref
             .read(dashboardProvider.notifier)
             .logFood(
-              calories: int.tryParse(data['calories']?.toString() ?? '0') ?? 0,
-              protein: int.tryParse(data['protein']?.toString() ?? '0') ?? 0,
-              carbs: int.tryParse(data['carbs']?.toString() ?? '0') ?? 0,
-              fat: int.tryParse(data['fat']?.toString() ?? '0') ?? 0,
-              name: data['name_en']?.toString() ?? data['name']?.toString() ?? 'Analyzed Food',
+              calories: calories,
+              protein: protein,
+              carbs: carbs,
+              fat: fat,
+              name: mealName,
               nameEn: data['name_en']?.toString(),
               nameFr: data['name_fr']?.toString(),
               nameAr: data['name_ar']?.toString(),
@@ -632,26 +654,35 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
             },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         decoration: BoxDecoration(
-          color: isActive ? Colors.white : Colors.white.withValues(alpha: 0.25),
-          borderRadius: BorderRadius.circular(14),
+          color: isActive ? Colors.white : Colors.white.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(999),
+          boxShadow: isActive
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.10),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : [],
         ),
-        child: Column(
+        child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               icon,
-              size: 22,
-              color: isActive ? AppColors.textPrimary : Colors.white,
+              size: 18,
+              color: isActive ? const Color(0xFF0A0A0A) : Colors.white,
             ),
-            const SizedBox(height: 4),
+            const SizedBox(width: 6),
             Text(
               modeString,
               style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: isActive ? AppColors.textPrimary : Colors.white,
+                fontSize: 13,
+                fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                color: isActive ? const Color(0xFF0A0A0A) : Colors.white,
               ),
             ),
           ],

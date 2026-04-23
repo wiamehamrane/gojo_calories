@@ -10,11 +10,13 @@ import '../../../../core/providers/selected_date_provider.dart';
 import '../../../../core/localization/translations.dart';
 import '../../providers/dashboard_provider.dart';
 import '../../providers/history_provider.dart';
+import '../../providers/weekly_stats_provider.dart';
 import 'package:intl/intl.dart';
 import '../widgets/swipable_stat_card.dart';
 import '../widgets/calorie_ring_inner.dart';
 import '../widgets/macro_tile_inner.dart';
 import '../widgets/weekly_calendar.dart';
+import '../widgets/bmi_widget.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -23,6 +25,10 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final stats = ref.watch(dashboardProvider);
     final lang = ref.watch(localeProvider);
+    final weeklyAsync = ref.watch(weeklyStatsProvider);
+
+    // Extract chart data if available
+    final weeklyData = weeklyAsync.value;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -31,10 +37,7 @@ class HomeScreen extends ConsumerWidget {
         height: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [
-              Color(0xFFE5E5E8),
-              AppColors.background,
-            ],
+            colors: [Color(0xFFE8E8EC), AppColors.background],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
@@ -42,34 +45,104 @@ class HomeScreen extends ConsumerWidget {
         child: SafeArea(
           bottom: false,
           child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildHeader(context, ref),
-                const SizedBox(height: 8),
+                const SizedBox(height: 4),
                 const WeeklyCalendar(),
-                const SizedBox(height: 18),
+                const SizedBox(height: 20),
+                // ─── Calorie Card (3 pages: Stats | Chart | BMI) ─────────
                 Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppSpacing.screenPadding,
                   ),
-                  child: _buildCalorieRingCard(context, stats, lang),
+                  child: SizedBox(
+                    height: 160,
+                    child: SwipableStatCard(
+                      title: 'Calories',
+                      themeColor: AppColors.primaryMid,
+                      chartData: weeklyData?.calorieSpots,
+                      extraPage: const BmiWidget(),
+                      primaryView: CalorieRingInner(stats: stats, lang: lang),
+                    ),
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.cardGap),
+                // ─── Macro Tiles Row ──────────────────────────────────────
                 Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppSpacing.screenPadding,
                   ),
-                  child: _buildMacroTilesRow(context, stats, lang),
+                  child: SizedBox(
+                    height: 160,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(
+                          child: SwipableStatCard(
+                            title: 'Protein',
+                            themeColor: AppColors.protein,
+                            chartData: weeklyData?.proteinSpots,
+                            primaryView: MacroTileInner(
+                              macroName: Translations.t(lang, 'macro_protein'),
+                              total: stats.proteinTarget,
+                              consumed: stats.proteinConsumed,
+                              macroColor: AppColors.protein,
+                              macroIcon: LucideIcons.beef,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.macroTileGap),
+                        Expanded(
+                          child: SwipableStatCard(
+                            title: 'Carbs',
+                            themeColor: AppColors.carbs,
+                            chartData: weeklyData?.carbsSpots,
+                            primaryView: MacroTileInner(
+                              macroName: Translations.t(lang, 'macro_carbs'),
+                              total: stats.carbsTarget,
+                              consumed: stats.carbsConsumed,
+                              macroColor: AppColors.carbs,
+                              macroIcon: LucideIcons.wheat,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.macroTileGap),
+                        Expanded(
+                          child: SwipableStatCard(
+                            title: 'Fats',
+                            themeColor: AppColors.fats,
+                            chartData: weeklyData?.fatSpots,
+                            primaryView: MacroTileInner(
+                              macroName: Translations.t(lang, 'macro_fats'),
+                              total: stats.fatTarget,
+                              consumed: stats.fatConsumed,
+                              macroColor: AppColors.fats,
+                              macroIcon: LucideIcons.droplets,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 28),
+                // ─── Section Header ───────────────────────────────────────
                 Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppSpacing.screenPadding,
                   ),
-                  child: Text(
-                    Translations.t(lang, 'recently_uploaded'),
-                    style: AppTextStyles.sectionHeader.copyWith(color: Colors.black),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        Translations.t(lang, 'recently_uploaded'),
+                        style: AppTextStyles.sectionHeader
+                            .copyWith(color: Colors.black),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -87,9 +160,9 @@ class HomeScreen extends ConsumerWidget {
     final streakAsync = ref.watch(streakProvider);
     final streakValue = streakAsync.maybeWhen(
       data: (val) => val.toString(),
-      orElse: () => "0",
+      orElse: () => '0',
     );
-    return Container(
+    return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.screenPadding,
         vertical: 12,
@@ -102,7 +175,7 @@ class HomeScreen extends ConsumerWidget {
               const Text('🥑', style: TextStyle(fontSize: 26)),
               const SizedBox(width: 6),
               const Text(
-                "GojoCalories",
+                'GojoCalories',
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w700,
@@ -112,7 +185,7 @@ class HomeScreen extends ConsumerWidget {
             ],
           ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
             decoration: BoxDecoration(
               color: AppColors.surface,
               borderRadius: BorderRadius.circular(999),
@@ -128,82 +201,19 @@ class HomeScreen extends ConsumerWidget {
               children: [
                 SvgPicture.asset(
                   'assets/icons/flame_gradient.svg',
-                  width: 20,
-                  height: 20,
+                  width: 18,
+                  height: 18,
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: 5),
                 Text(
                   streakValue,
-                  style: TextStyle(
-                    fontSize: 16,
+                  style: const TextStyle(
+                    fontSize: 15,
                     fontWeight: FontWeight.w700,
                     color: AppColors.textPrimary,
                   ),
                 ),
               ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCalorieRingCard(BuildContext context, dynamic stats, String lang) {
-    return SizedBox(
-      height: 160,
-      child: SwipableStatCard(
-        title: 'Calories',
-        themeColor: AppColors.primaryMid,
-        primaryView: CalorieRingInner(stats: stats, lang: lang),
-      ),
-    );
-  }
-
-  Widget _buildMacroTilesRow(BuildContext context, dynamic stats, String lang) {
-    return SizedBox(
-      height: 160,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: SwipableStatCard(
-              title: 'Protein',
-              themeColor: AppColors.protein,
-              primaryView: MacroTileInner(
-                macroName: Translations.t(lang, 'macro_protein'),
-                total: stats.proteinTarget,
-                consumed: stats.proteinConsumed,
-                macroColor: AppColors.protein,
-                macroIcon: LucideIcons.beef,
-              ),
-            ),
-          ),
-          const SizedBox(width: AppSpacing.macroTileGap),
-          Expanded(
-            child: SwipableStatCard(
-              title: 'Carbs',
-              themeColor: AppColors.carbs,
-              primaryView: MacroTileInner(
-                macroName: Translations.t(lang, 'macro_carbs'),
-                total: stats.carbsTarget,
-                consumed: stats.carbsConsumed,
-                macroColor: AppColors.carbs,
-                macroIcon: LucideIcons.wheat,
-              ),
-            ),
-          ),
-          const SizedBox(width: AppSpacing.macroTileGap),
-          Expanded(
-            child: SwipableStatCard(
-              title: 'Fats',
-              themeColor: AppColors.fats,
-              primaryView: MacroTileInner(
-                macroName: Translations.t(lang, 'macro_fats'),
-                total: stats.fatTarget,
-                consumed: stats.fatConsumed,
-                macroColor: AppColors.fats,
-                macroIcon: LucideIcons.droplets,
-              ),
             ),
           ),
         ],
@@ -219,23 +229,25 @@ class HomeScreen extends ConsumerWidget {
       data: (logs) {
         if (logs.isEmpty) {
           return Center(
-            child: Column(
-              children: [
-                const SizedBox(height: 10),
-                const Icon(
-                  LucideIcons.utensilsCrossed,
-                  size: 48,
-                  color: AppColors.inactive,
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  Translations.t(lang, 'no_food_logged'),
-                  style: const TextStyle(
-                    fontSize: 15,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Column(
+                children: [
+                  const Icon(
+                    LucideIcons.utensilsCrossed,
+                    size: 48,
                     color: AppColors.inactive,
                   ),
-                ),
-              ],
+                  const SizedBox(height: 12),
+                  Text(
+                    Translations.t(lang, 'no_food_logged'),
+                    style: const TextStyle(
+                      fontSize: 15,
+                      color: AppColors.inactive,
+                    ),
+                  ),
+                ],
+              ),
             ),
           );
         }
@@ -289,10 +301,10 @@ class _AnimatedMealCardState extends State<_AnimatedMealCard>
     super.initState();
     _ctrl = AnimationController(
       vsync: this,
-      duration: Duration(milliseconds: 350 + widget.index * 60),
+      duration: Duration(milliseconds: 320 + widget.index * 50),
     );
     _slide = Tween<Offset>(
-      begin: const Offset(0, 0.15),
+      begin: const Offset(0, 0.12),
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
     _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeIn);
@@ -309,7 +321,7 @@ class _AnimatedMealCardState extends State<_AnimatedMealCard>
   Widget build(BuildContext context) {
     final log = widget.log;
     final imageUrl = log['image_url'] as String?;
-    
+
     String mealName = (log['meal_name'] ?? 'Unknown Meal') as String;
     if (widget.lang == 'ar' || widget.lang == 'Darija') {
       if (log['name_ar'] != null) mealName = log['name_ar'] as String;
@@ -329,42 +341,42 @@ class _AnimatedMealCardState extends State<_AnimatedMealCard>
       child: SlideTransition(
         position: _slide,
         child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
           decoration: BoxDecoration(
             color: AppColors.surface,
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.06),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
+                color: Colors.black.withValues(alpha: 0.055),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
               ),
             ],
           ),
           child: Row(
             children: [
+              // Thumbnail
               ClipRRect(
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(20),
                   bottomLeft: Radius.circular(20),
                 ),
                 child: SizedBox(
-                  width: 76,
-                  height: 76,
+                  width: 72,
+                  height: 72,
                   child: imageUrl != null && imageUrl.isNotEmpty
                       ? Image.network(
                           imageUrl,
                           fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
-                              const _FoodPlaceholder(),
+                          errorBuilder: (_, e, s) => const _FoodPlaceholder(),
                           loadingBuilder: (ctx, child, progress) {
                             if (progress == null) return child;
                             return Container(
                               color: AppColors.surfaceMuted,
                               child: const Center(
                                 child: SizedBox(
-                                  width: 18,
-                                  height: 18,
+                                  width: 16,
+                                  height: 16,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
                                     color: AppColors.primary,
@@ -380,7 +392,7 @@ class _AnimatedMealCardState extends State<_AnimatedMealCard>
               const SizedBox(width: 12),
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  padding: const EdgeInsets.symmetric(vertical: 11),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -390,14 +402,10 @@ class _AnimatedMealCardState extends State<_AnimatedMealCard>
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 3),
                       Row(
                         children: [
-                          const Icon(
-                            LucideIcons.flame,
-                            size: 14,
-                            color: AppColors.fire,
-                          ),
+                          const Icon(LucideIcons.flame, size: 13, color: AppColors.fire),
                           Text(
                             ' $calories kcal',
                             style: AppTextStyles.bodyRegular,
@@ -405,27 +413,18 @@ class _AnimatedMealCardState extends State<_AnimatedMealCard>
                         ],
                       ),
                       if (protein.isNotEmpty || carbs.isNotEmpty || fat.isNotEmpty) ...[
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 5),
                         Row(
                           children: [
                             if (protein.isNotEmpty)
-                              _MacroChip(
-                                label: '${protein}g P',
-                                color: AppColors.protein,
-                              ),
+                              _MacroChip(label: '${protein}g P', color: AppColors.protein),
                             if (carbs.isNotEmpty) ...[
                               const SizedBox(width: 4),
-                              _MacroChip(
-                                label: '${carbs}g C',
-                                color: AppColors.carbs,
-                              ),
+                              _MacroChip(label: '${carbs}g C', color: AppColors.carbs),
                             ],
                             if (fat.isNotEmpty) ...[
                               const SizedBox(width: 4),
-                              _MacroChip(
-                                label: '${fat}g F',
-                                color: AppColors.fats,
-                              ),
+                              _MacroChip(label: '${fat}g F', color: AppColors.fats),
                             ],
                           ],
                         ),
@@ -438,10 +437,7 @@ class _AnimatedMealCardState extends State<_AnimatedMealCard>
                 padding: const EdgeInsets.only(right: 12),
                 child: Text(
                   _getRelativeDate(log['created_at']?.toString(), widget.lang),
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.inactive,
-                  ),
+                  style: const TextStyle(fontSize: 11, color: AppColors.inactive),
                 ),
               ),
             ],
@@ -459,14 +455,9 @@ class _AnimatedMealCardState extends State<_AnimatedMealCard>
       final today = DateTime(now.year, now.month, now.day);
       final yesterday = today.subtract(const Duration(days: 1));
       final logDate = DateTime(date.year, date.month, date.day);
-
-      if (logDate == today) {
-        return Translations.t(lang, 'today');
-      } else if (logDate == yesterday) {
-        return 'Yesterday';
-      } else {
-        return DateFormat('MMM d').format(date);
-      }
+      if (logDate == today) return Translations.t(lang, 'today');
+      if (logDate == yesterday) return 'Yesterday';
+      return DateFormat('MMM d').format(date);
     } catch (_) {
       return '';
     }
@@ -480,7 +471,7 @@ class _FoodPlaceholder extends StatelessWidget {
     return Container(
       color: AppColors.surfaceMuted,
       child: const Center(
-        child: Icon(LucideIcons.utensils, size: 26, color: AppColors.inactive),
+        child: Icon(LucideIcons.utensils, size: 24, color: AppColors.inactive),
       ),
     );
   }
