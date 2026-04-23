@@ -51,6 +51,59 @@ def get_user_stats(
             pass
             
     stats = query.order_by(DailyStats.date.desc()).limit(7).all()
+    
+    if not stats and date:
+        # If no record exists for this specific date, synthesize one using user goals
+        user = db.query(User).filter(User.id == current_user_id).first()
+        if user:
+            from utils.nutrition import calculate_daily_targets
+            targets = calculate_daily_targets(
+                weight_kg=user.current_weight or 70.0,
+                height_cm=user.height or 170,
+                age=user.age or 30,
+                gender=user.gender or "male",
+                activity_level=user.activity_level or "sedentary",
+                goal_weight_kg=user.goal_weight or 70.0
+            )
+            
+            # If it's today, we might want to persist it so it shows up in future queries
+            # but for now, returning a virtual record is enough to fix the UI.
+            virtual_stat = {
+                "user_id": current_user_id,
+                "calorie_budget": targets["calorie_budget"],
+                "calories_consumed": 0,
+                "protein_consumed": 0,
+                "carbs_consumed": 0,
+                "fat_consumed": 0,
+                "protein_target": targets["protein_target"],
+                "carbs_target": targets["carbs_target"],
+                "fat_target": targets["fat_target"]
+            }
+            
+            # If the requested date is today (UTC), let's actually create it 
+            # to be consistent with how the app expects a record to exist.
+            try:
+                today_utc = dt.datetime.utcnow().date()
+                requested_date = dt.datetime.strptime(date, "%Y-%m-%d").date()
+                if requested_date == today_utc:
+                    new_stat = DailyStats(
+                        user_id=current_user_id,
+                        date=dt.datetime.combine(requested_date, dt.time.min),
+                        calorie_budget=targets["calorie_budget"],
+                        protein_target=targets["protein_target"],
+                        carbs_target=targets["carbs_target"],
+                        fat_target=targets["fat_target"],
+                        calories_consumed=0, protein_consumed=0, carbs_consumed=0, fat_consumed=0
+                    )
+                    db.add(new_stat)
+                    db.commit()
+                    db.refresh(new_stat)
+                    return [virtual_stat]
+            except Exception:
+                pass
+                
+            return [virtual_stat]
+
     if not stats:
         return []
     
