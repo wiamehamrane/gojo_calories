@@ -155,7 +155,10 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
               protein: int.tryParse(data['protein']?.toString() ?? '0') ?? 0,
               carbs: int.tryParse(data['carbs']?.toString() ?? '0') ?? 0,
               fat: int.tryParse(data['fat']?.toString() ?? '0') ?? 0,
-              name: data['name']?.toString() ?? 'Analyzed Food',
+              name: data['name_en']?.toString() ?? data['name']?.toString() ?? 'Analyzed Food',
+              nameEn: data['name_en']?.toString(),
+              nameFr: data['name_fr']?.toString(),
+              nameAr: data['name_ar']?.toString(),
             );
         await _redirectToHome();
       } else {
@@ -350,7 +353,7 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
 
     // Camera error — show full screen friendly message
     if (_cameraError != null &&
-        (_currentMode == 'Scan Food' || _currentMode == 'Food label')) {
+        (_currentMode == 'Scan Food' || _currentMode == 'Barcode')) {
       return Scaffold(
         backgroundColor: Colors.black,
         body: SafeArea(
@@ -400,7 +403,7 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
         children: [
           // ─── Background layer ───────────────────────────────────────────
           Positioned.fill(
-            child: _currentMode == 'Scan Food' || _currentMode == 'Food label'
+            child: _currentMode == 'Scan Food'
                 ? (_controller != null && _controller!.value.isInitialized
                       ? _buildCameraPreview()
                       : const Center(
@@ -535,62 +538,76 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
             bottom: safeBottom > 0 ? safeBottom + 100 : 100,
             left: 0,
             right: 0,
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  _buildModeCard(LucideIcons.scanLine, 'Scan Food'),
-                  const SizedBox(width: 8),
-                  _buildModeCard(LucideIcons.barcode, 'Barcode'),
-                  const SizedBox(width: 8),
-                  _buildModeCard(LucideIcons.tag, 'Food label'),
-                  const SizedBox(width: 8),
-                  _buildModeCard(LucideIcons.image, 'Gallery'),
-                ],
+            child: Center(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildModeCard(LucideIcons.scanLine, 'Scan Food'),
+                    const SizedBox(width: 12),
+                    _buildModeCard(LucideIcons.barcode, 'Barcode'),
+                    const SizedBox(width: 12),
+                    _buildModeCard(LucideIcons.image, 'Gallery'),
+                  ],
+                ),
               ),
             ),
           ),
 
           // ─── Shutter row ────────────────────────────────────────────────
           if (_currentMode == 'Scan Food' ||
-              _currentMode == 'Gallery' ||
-              _currentMode == 'Food label')
+              _currentMode == 'Gallery')
             Positioned(
               bottom: safeBottom > 0 ? safeBottom + 28 : 28,
+              left: 0,
+              right: 0,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const _CameraRoundButton(icon: LucideIcons.zapOff),
-                  const SizedBox(width: 70),
+                  const SizedBox(width: 48),
                   GestureDetector(
                     onTap: _isProcessing
                         ? null
                         : (_currentMode == 'Gallery'
                               ? _pickFromGallery
                               : _takePicture),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: 72,
-                      height: 72,
+                    child: Container(
+                      width: 80,
+                      height: 80,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: _isProcessing
-                            ? Colors.white.withValues(alpha: 0.4)
-                            : Colors.white.withValues(alpha: 0.9),
+                        border: Border.all(color: Colors.white, width: 4),
+                        color: Colors.transparent,
                       ),
                       child: Center(
-                        child: Icon(
-                          _currentMode == 'Gallery'
-                              ? LucideIcons.image
-                              : LucideIcons.camera,
-                          size: 28,
-                          color: AppColors.textPrimary,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          width: 64,
+                          height: 64,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: _isProcessing
+                                ? Colors.white.withValues(alpha: 0.4)
+                                : Colors.white.withValues(alpha: 0.9),
+                          ),
+                          child: Center(
+                            child: Icon(
+                              _currentMode == 'Gallery'
+                                  ? LucideIcons.image
+                                  : LucideIcons.camera,
+                              size: 28,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 114),
+                  const SizedBox(width: 48),
+                  const _CameraRoundButton(icon: LucideIcons.info),
                 ],
               ),
             ),

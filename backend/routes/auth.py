@@ -35,11 +35,15 @@ class UserWeightUpdate(BaseModel):
     height: Optional[float] = None      # always stored internally in cm
     height_unit: Optional[str] = None   # "cm" or "ft"
     age: Optional[int] = None
+    gender: Optional[str] = None
+    activity_level: Optional[str] = None
 
 class UserProfileUpdate(BaseModel):
     name: Optional[str] = None
     email: Optional[str] = None
     age: Optional[int] = None
+    gender: Optional[str] = None
+    activity_level: Optional[str] = None
     current_password: Optional[str] = None
     new_password: Optional[str] = None
 
@@ -234,6 +238,8 @@ def get_me(db: Session = Depends(get_db), current_user_id: int = Depends(get_cur
         "weight_unit": user.weight_unit,
         "height": user.height,
         "height_unit": user.height_unit,
+        "gender": user.gender,
+        "activity_level": user.activity_level,
         "stripe_customer_id": user.stripe_customer_id,
         "referral_code": user.referral_code,
     }
@@ -252,6 +258,10 @@ def update_profile(
         user.name = profile_data.name
     if profile_data.age is not None:
         user.age = profile_data.age
+    if profile_data.gender:
+        user.gender = profile_data.gender.lower()
+    if profile_data.activity_level:
+        user.activity_level = profile_data.activity_level.lower()
     if profile_data.email:
         existing = db.query(User).filter(User.email == profile_data.email, User.id != current_user_id).first()
         if existing:
@@ -302,6 +312,10 @@ def update_weight(
     user.weight_unit = weight_data.weight_unit
     if weight_data.age is not None:
         user.age = weight_data.age
+    if weight_data.gender:
+        user.gender = weight_data.gender.lower()
+    if weight_data.activity_level:
+        user.activity_level = weight_data.activity_level.lower()
 
     # Convert and store height in cm
     if weight_data.height is not None:
@@ -319,28 +333,31 @@ def update_weight(
     weigh_in_record = WeighIn(user_id=current_user_id, weight=weigh_in_weight, date=datetime.datetime.utcnow())
     db.add(weigh_in_record)
     
-    # Recalculate BMR / TDEE using Mifflin-St Jeor with real height
-    age = weight_data.age or user.age or 30
-    height_cm = user.height or 170  # fallback to 170cm if not provided yet
-    bmr = (10 * weigh_in_weight) + (6.25 * height_cm) - (5 * age) + 5
-    tdee = bmr * 1.2  # Sedentary multiplier
+    # Recalculate BMR / TDEE using our standardized utility
+    from utils.nutrition import calculate_daily_targets
+    
+    age = user.age or 30
+    height_cm = user.height or 170
+    gender = user.gender or "male"
+    activity = user.activity_level or "sedentary"
     
     goal_kg = weight_data.goal_weight
     if weight_data.weight_unit.lower() == "lbs":
         goal_kg = weight_data.goal_weight * 0.453592
         
-    calorie_budget = int(tdee)
-    if goal_kg < weigh_in_weight - 1.0:
-        calorie_budget -= 500  # Cut
-    elif goal_kg > weigh_in_weight + 1.0:
-        calorie_budget += 500  # Bulk
-        
-    # Macros
-    protein_target = int(weigh_in_weight * 2.0)
-    fat_target = int((calorie_budget * 0.25) / 9)
-    carbs_target = int((calorie_budget - (protein_target * 4) - (fat_target * 9)) / 4)
-    if carbs_target < 0:
-        carbs_target = 0
+    targets = calculate_daily_targets(
+        weight_kg=weigh_in_weight,
+        height_cm=height_cm,
+        age=age,
+        gender=gender,
+        activity_level=activity,
+        goal_weight_kg=goal_kg
+    )
+    
+    calorie_budget = targets["calorie_budget"]
+    protein_target = targets["protein_target"]
+    fat_target = targets["fat_target"]
+    carbs_target = targets["carbs_target"]
     
     # Update DailyStats
     stat = db.query(DailyStats).filter(DailyStats.user_id == current_user_id).order_by(DailyStats.date.desc()).first()

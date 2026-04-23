@@ -9,9 +9,11 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_shadows.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/providers/locale_provider.dart';
+import '../../../../core/providers/selected_date_provider.dart';
 import '../../../../core/localization/translations.dart';
 import '../../providers/dashboard_provider.dart';
 import '../../providers/history_provider.dart';
+import 'package:intl/intl.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -256,7 +258,8 @@ class HomeScreen extends ConsumerWidget {
   }
 
   Widget _buildRecentMeals(BuildContext context, WidgetRef ref, String lang) {
-    final historyAsync = ref.watch(historyProvider);
+    final selectedDate = ref.watch(selectedDateProvider);
+    final historyAsync = ref.watch(historyProvider(selectedDate));
 
     return historyAsync.when(
       data: (logs) {
@@ -265,7 +268,7 @@ class HomeScreen extends ConsumerWidget {
             child: Column(
               children: [
                 const SizedBox(height: 10),
-                Icon(
+                const Icon(
                   LucideIcons.utensilsCrossed,
                   size: 48,
                   color: AppColors.inactive,
@@ -349,7 +352,17 @@ class _AnimatedMealCardState extends State<_AnimatedMealCard>
   Widget build(BuildContext context) {
     final log = widget.log;
     final imageUrl = log['image_url'] as String?;
-    final mealName = (log['meal_name'] ?? 'Unknown Meal') as String;
+    
+    // Choose name based on language
+    String mealName = (log['meal_name'] ?? 'Unknown Meal') as String;
+    if (widget.lang == 'ar' || widget.lang == 'Darija') {
+      if (log['name_ar'] != null) mealName = log['name_ar'] as String;
+    } else if (widget.lang == 'fr') {
+      if (log['name_fr'] != null) mealName = log['name_fr'] as String;
+    } else if (log['name_en'] != null) {
+      mealName = log['name_en'] as String;
+    }
+
     final calories = log['calories']?.toString() ?? '0';
     final protein = log['protein']?.toString() ?? '';
     final carbs = log['carbs']?.toString() ?? '';
@@ -472,7 +485,7 @@ class _AnimatedMealCardState extends State<_AnimatedMealCard>
               Padding(
                 padding: const EdgeInsets.only(right: 12),
                 child: Text(
-                  Translations.t(widget.lang, 'today'),
+                  _getRelativeDate(log['created_at']?.toString(), widget.lang),
                   style: const TextStyle(
                     fontSize: 12,
                     color: AppColors.inactive,
@@ -484,6 +497,27 @@ class _AnimatedMealCardState extends State<_AnimatedMealCard>
         ),
       ),
     );
+  }
+
+  String _getRelativeDate(String? isoString, String lang) {
+    if (isoString == null) return '';
+    try {
+      final date = DateTime.parse(isoString).toLocal();
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final yesterday = today.subtract(const Duration(days: 1));
+      final logDate = DateTime(date.year, date.month, date.day);
+
+      if (logDate == today) {
+        return Translations.t(lang, 'today');
+      } else if (logDate == yesterday) {
+        return 'Yesterday'; // Or add to translations
+      } else {
+        return DateFormat('MMM d').format(date);
+      }
+    } catch (_) {
+      return '';
+    }
   }
 }
 
@@ -661,39 +695,34 @@ class DonutRingPainter extends CustomPainter {
   }
 }
 
-class _WeeklyCalendar extends StatefulWidget {
+class _WeeklyCalendar extends ConsumerWidget {
   const _WeeklyCalendar();
-  @override
-  State<_WeeklyCalendar> createState() => _WeeklyCalendarState();
-}
-
-class _WeeklyCalendarState extends State<_WeeklyCalendar> {
-  late int _selectedDayOffset;
 
   @override
-  void initState() {
-    super.initState();
-    _selectedDayOffset = DateTime.now().weekday % 7;
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final now = DateTime.now();
+    final selectedDate = ref.watch(selectedDateProvider);
     final days = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+
+    // Start of current week (Sunday)
+    final startOfWeek = now.subtract(Duration(days: now.weekday % 7));
 
     return SizedBox(
       height: 72,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: List.generate(7, (i) {
-          final isSelected = i == _selectedDayOffset;
-          final isFuture = i > (now.weekday % 7);
-          final dayDate = now.day - (now.weekday % 7) + i;
+          final dayDate = startOfWeek.add(Duration(days: i));
+          final isSelected = dayDate.year == selectedDate.year &&
+              dayDate.month == selectedDate.month &&
+              dayDate.day == selectedDate.day;
+          final isFuture = dayDate.isAfter(now);
+          final dayOfMonth = dayDate.day;
 
           return GestureDetector(
             onTap: isFuture
                 ? null
-                : () => setState(() => _selectedDayOffset = i),
+                : () => ref.read(selectedDateProvider.notifier).setDate(dayDate),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -715,8 +744,8 @@ class _WeeklyCalendarState extends State<_WeeklyCalendar> {
                       color: isSelected
                           ? AppColors.primaryDark
                           : (isFuture
-                                ? const Color(0xFFDDDDDD)
-                                : const Color(0xFFCECECE)),
+                              ? const Color(0xFFDDDDDD)
+                              : const Color(0xFFCECECE)),
                       width: isSelected ? 2 : 1.5,
                     ),
                     color: isSelected
@@ -725,12 +754,10 @@ class _WeeklyCalendarState extends State<_WeeklyCalendar> {
                   ),
                   child: Center(
                     child: Text(
-                      "$dayDate",
+                      "$dayOfMonth",
                       style: TextStyle(
                         fontSize: 14,
-                        fontWeight: isSelected
-                            ? FontWeight.w700
-                            : FontWeight.w500,
+                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                         color: isSelected
                             ? AppColors.textPrimary
                             : AppColors.textSecondary,

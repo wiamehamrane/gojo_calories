@@ -1,6 +1,7 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
 from google import genai
 import os
+from typing import Optional
 from dotenv import load_dotenv
 import json
 from PIL import Image
@@ -41,7 +42,7 @@ async def analyze_food_image(file: UploadFile = File(...), current_user_id: int 
         Analyze this food image. Identify the overarching meal or food item.
         Respond ONLY with a JSON object. No markdown formatting, no backticks, no explanations. 
         Format strictly like this:
-        {"name": "Food Name", "calories": 500, "protein": 20, "carbs": 50, "fat": 15}
+        {"name_en": "Food Name English", "name_fr": "Nom de l'aliment en français", "name_ar": "اسم الطعام بالعربية", "calories": 500, "protein": 20, "carbs": 50, "fat": 15}
         """
         
         logger.info(f"Calling Gemini vision for user {current_user_id}")
@@ -72,7 +73,10 @@ async def analyze_food_image(file: UploadFile = File(...), current_user_id: int 
             # 1. Insert food log
             log = FoodLog(
                 user_id=current_user_id,
-                name=data.get('name', 'Unknown'),
+                name=data.get('name_en', data.get('name', 'Unknown')),
+                name_en=data.get('name_en'),
+                name_fr=data.get('name_fr'),
+                name_ar=data.get('name_ar'),
                 image_url=s3_url,
                 calories=int(data.get('calories', 0)),
                 protein=int(data.get('protein', 0)),
@@ -163,7 +167,7 @@ async def analyze_food_text(body: TextQuery, current_user_id: int = Depends(get_
         Estimate the nutritional macros for the following food item or meal description: "{body.query}"
         Respond ONLY with a JSON object. No markdown formatting, no backticks, no explanations. 
         Format strictly like this:
-        {{"name": "Food Name", "calories": 500, "protein": 20, "carbs": 50, "fat": 15}}
+        {{"name_en": "Food Name English", "name_fr": "Nom de l'aliment en français", "name_ar": "اسم الطعام بالعربية", "calories": 500, "protein": 20, "carbs": 50, "fat": 15}}
         """
         
         logger.info(f"Calling Gemini text analysis for user {current_user_id}: {body.query!r}")
@@ -182,7 +186,10 @@ async def analyze_food_text(body: TextQuery, current_user_id: int = Depends(get_
         with next(get_db()) as db:
             log = FoodLog(
                 user_id=current_user_id, 
-                name=data.get('name', body.query), 
+                name=data.get('name_en', body.query), 
+                name_en=data.get('name_en'),
+                name_fr=data.get('name_fr'),
+                name_ar=data.get('name_ar'),
                 image_url=None, 
                 calories=data.get('calories', 0), 
                 protein=data.get('protein', 0), 
@@ -206,7 +213,9 @@ async def analyze_food_text(body: TextQuery, current_user_id: int = Depends(get_
         raise HTTPException(status_code=500, detail=str(e))
 
 class LogItemModel(BaseModel):
-    name: str
+    name: str # Primary name (usually English)
+    name_fr: Optional[str] = None
+    name_ar: Optional[str] = None
     calories: int
     protein: int
     carbs: int
@@ -224,6 +233,9 @@ async def log_food_item(body: LogItemModel, current_user_id: int = Depends(get_c
             log = FoodLog(
                 user_id=current_user_id, 
                 name=body.name, 
+                name_en=body.name,
+                name_fr=body.name_fr,
+                name_ar=body.name_ar,
                 image_url=None, 
                 calories=body.calories, 
                 protein=body.protein, 

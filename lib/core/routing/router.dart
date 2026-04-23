@@ -11,6 +11,7 @@ import '../widgets/main_scaffold.dart';
 
 // Import remaining screens
 import '../../features/food_log/presentation/screens/food_log_screen.dart';
+import '../../features/food_log/presentation/screens/scan_food_screen.dart';
 import '../../features/progress/presentation/screens/progress_screen.dart';
 
 import '../../features/profile/presentation/screens/profile_screen.dart';
@@ -59,6 +60,10 @@ final GoRouter appRouter = GoRouter(
       },
       routes: [
         GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
+        GoRoute(
+          path: '/scan',
+          builder: (context, state) => const ScanFoodScreen(),
+        ),
         GoRoute(
           path: '/log',
           builder: (context, state) => const FoodLogScreen(),

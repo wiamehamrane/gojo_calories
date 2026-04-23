@@ -32,6 +32,33 @@ class $FoodLogsTable extends FoodLogs with TableInfo<$FoodLogsTable, FoodLog> {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _nameEnMeta = const VerificationMeta('nameEn');
+  @override
+  late final GeneratedColumn<String> nameEn = GeneratedColumn<String>(
+    'name_en',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _nameFrMeta = const VerificationMeta('nameFr');
+  @override
+  late final GeneratedColumn<String> nameFr = GeneratedColumn<String>(
+    'name_fr',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _nameArMeta = const VerificationMeta('nameAr');
+  @override
+  late final GeneratedColumn<String> nameAr = GeneratedColumn<String>(
+    'name_ar',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _caloriesMeta = const VerificationMeta(
     'calories',
   );
@@ -88,6 +115,9 @@ class $FoodLogsTable extends FoodLogs with TableInfo<$FoodLogsTable, FoodLog> {
   List<GeneratedColumn> get $columns => [
     id,
     mealName,
+    nameEn,
+    nameFr,
+    nameAr,
     calories,
     protein,
     carbs,
@@ -116,6 +146,24 @@ class $FoodLogsTable extends FoodLogs with TableInfo<$FoodLogsTable, FoodLog> {
       );
     } else if (isInserting) {
       context.missing(_mealNameMeta);
+    }
+    if (data.containsKey('name_en')) {
+      context.handle(
+        _nameEnMeta,
+        nameEn.isAcceptableOrUnknown(data['name_en']!, _nameEnMeta),
+      );
+    }
+    if (data.containsKey('name_fr')) {
+      context.handle(
+        _nameFrMeta,
+        nameFr.isAcceptableOrUnknown(data['name_fr']!, _nameFrMeta),
+      );
+    }
+    if (data.containsKey('name_ar')) {
+      context.handle(
+        _nameArMeta,
+        nameAr.isAcceptableOrUnknown(data['name_ar']!, _nameArMeta),
+      );
     }
     if (data.containsKey('calories')) {
       context.handle(
@@ -172,6 +220,18 @@ class $FoodLogsTable extends FoodLogs with TableInfo<$FoodLogsTable, FoodLog> {
         DriftSqlType.string,
         data['${effectivePrefix}meal_name'],
       )!,
+      nameEn: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name_en'],
+      ),
+      nameFr: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name_fr'],
+      ),
+      nameAr: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name_ar'],
+      ),
       calories: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}calories'],
@@ -204,6 +264,9 @@ class $FoodLogsTable extends FoodLogs with TableInfo<$FoodLogsTable, FoodLog> {
 class FoodLog extends DataClass implements Insertable<FoodLog> {
   final int id;
   final String mealName;
+  final String? nameEn;
+  final String? nameFr;
+  final String? nameAr;
   final int calories;
   final int protein;
   final int carbs;
@@ -212,6 +275,9 @@ class FoodLog extends DataClass implements Insertable<FoodLog> {
   const FoodLog({
     required this.id,
     required this.mealName,
+    this.nameEn,
+    this.nameFr,
+    this.nameAr,
     required this.calories,
     required this.protein,
     required this.carbs,
@@ -223,6 +289,15 @@ class FoodLog extends DataClass implements Insertable<FoodLog> {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['meal_name'] = Variable<String>(mealName);
+    if (!nullToAbsent || nameEn != null) {
+      map['name_en'] = Variable<String>(nameEn);
+    }
+    if (!nullToAbsent || nameFr != null) {
+      map['name_fr'] = Variable<String>(nameFr);
+    }
+    if (!nullToAbsent || nameAr != null) {
+      map['name_ar'] = Variable<String>(nameAr);
+    }
     map['calories'] = Variable<int>(calories);
     map['protein'] = Variable<int>(protein);
     map['carbs'] = Variable<int>(carbs);
@@ -235,6 +310,15 @@ class FoodLog extends DataClass implements Insertable<FoodLog> {
     return FoodLogsCompanion(
       id: Value(id),
       mealName: Value(mealName),
+      nameEn: nameEn == null && nullToAbsent
+          ? const Value.absent()
+          : Value(nameEn),
+      nameFr: nameFr == null && nullToAbsent
+          ? const Value.absent()
+          : Value(nameFr),
+      nameAr: nameAr == null && nullToAbsent
+          ? const Value.absent()
+          : Value(nameAr),
       calories: Value(calories),
       protein: Value(protein),
       carbs: Value(carbs),
@@ -251,6 +335,9 @@ class FoodLog extends DataClass implements Insertable<FoodLog> {
     return FoodLog(
       id: serializer.fromJson<int>(json['id']),
       mealName: serializer.fromJson<String>(json['mealName']),
+      nameEn: serializer.fromJson<String?>(json['nameEn']),
+      nameFr: serializer.fromJson<String?>(json['nameFr']),
+      nameAr: serializer.fromJson<String?>(json['nameAr']),
       calories: serializer.fromJson<int>(json['calories']),
       protein: serializer.fromJson<int>(json['protein']),
       carbs: serializer.fromJson<int>(json['carbs']),
@@ -264,6 +351,9 @@ class FoodLog extends DataClass implements Insertable<FoodLog> {
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'mealName': serializer.toJson<String>(mealName),
+      'nameEn': serializer.toJson<String?>(nameEn),
+      'nameFr': serializer.toJson<String?>(nameFr),
+      'nameAr': serializer.toJson<String?>(nameAr),
       'calories': serializer.toJson<int>(calories),
       'protein': serializer.toJson<int>(protein),
       'carbs': serializer.toJson<int>(carbs),
@@ -275,6 +365,9 @@ class FoodLog extends DataClass implements Insertable<FoodLog> {
   FoodLog copyWith({
     int? id,
     String? mealName,
+    Value<String?> nameEn = const Value.absent(),
+    Value<String?> nameFr = const Value.absent(),
+    Value<String?> nameAr = const Value.absent(),
     int? calories,
     int? protein,
     int? carbs,
@@ -283,6 +376,9 @@ class FoodLog extends DataClass implements Insertable<FoodLog> {
   }) => FoodLog(
     id: id ?? this.id,
     mealName: mealName ?? this.mealName,
+    nameEn: nameEn.present ? nameEn.value : this.nameEn,
+    nameFr: nameFr.present ? nameFr.value : this.nameFr,
+    nameAr: nameAr.present ? nameAr.value : this.nameAr,
     calories: calories ?? this.calories,
     protein: protein ?? this.protein,
     carbs: carbs ?? this.carbs,
@@ -293,6 +389,9 @@ class FoodLog extends DataClass implements Insertable<FoodLog> {
     return FoodLog(
       id: data.id.present ? data.id.value : this.id,
       mealName: data.mealName.present ? data.mealName.value : this.mealName,
+      nameEn: data.nameEn.present ? data.nameEn.value : this.nameEn,
+      nameFr: data.nameFr.present ? data.nameFr.value : this.nameFr,
+      nameAr: data.nameAr.present ? data.nameAr.value : this.nameAr,
       calories: data.calories.present ? data.calories.value : this.calories,
       protein: data.protein.present ? data.protein.value : this.protein,
       carbs: data.carbs.present ? data.carbs.value : this.carbs,
@@ -306,6 +405,9 @@ class FoodLog extends DataClass implements Insertable<FoodLog> {
     return (StringBuffer('FoodLog(')
           ..write('id: $id, ')
           ..write('mealName: $mealName, ')
+          ..write('nameEn: $nameEn, ')
+          ..write('nameFr: $nameFr, ')
+          ..write('nameAr: $nameAr, ')
           ..write('calories: $calories, ')
           ..write('protein: $protein, ')
           ..write('carbs: $carbs, ')
@@ -316,14 +418,27 @@ class FoodLog extends DataClass implements Insertable<FoodLog> {
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, mealName, calories, protein, carbs, fat, createdAt);
+  int get hashCode => Object.hash(
+    id,
+    mealName,
+    nameEn,
+    nameFr,
+    nameAr,
+    calories,
+    protein,
+    carbs,
+    fat,
+    createdAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is FoodLog &&
           other.id == this.id &&
           other.mealName == this.mealName &&
+          other.nameEn == this.nameEn &&
+          other.nameFr == this.nameFr &&
+          other.nameAr == this.nameAr &&
           other.calories == this.calories &&
           other.protein == this.protein &&
           other.carbs == this.carbs &&
@@ -334,6 +449,9 @@ class FoodLog extends DataClass implements Insertable<FoodLog> {
 class FoodLogsCompanion extends UpdateCompanion<FoodLog> {
   final Value<int> id;
   final Value<String> mealName;
+  final Value<String?> nameEn;
+  final Value<String?> nameFr;
+  final Value<String?> nameAr;
   final Value<int> calories;
   final Value<int> protein;
   final Value<int> carbs;
@@ -342,6 +460,9 @@ class FoodLogsCompanion extends UpdateCompanion<FoodLog> {
   const FoodLogsCompanion({
     this.id = const Value.absent(),
     this.mealName = const Value.absent(),
+    this.nameEn = const Value.absent(),
+    this.nameFr = const Value.absent(),
+    this.nameAr = const Value.absent(),
     this.calories = const Value.absent(),
     this.protein = const Value.absent(),
     this.carbs = const Value.absent(),
@@ -351,6 +472,9 @@ class FoodLogsCompanion extends UpdateCompanion<FoodLog> {
   FoodLogsCompanion.insert({
     this.id = const Value.absent(),
     required String mealName,
+    this.nameEn = const Value.absent(),
+    this.nameFr = const Value.absent(),
+    this.nameAr = const Value.absent(),
     required int calories,
     required int protein,
     required int carbs,
@@ -364,6 +488,9 @@ class FoodLogsCompanion extends UpdateCompanion<FoodLog> {
   static Insertable<FoodLog> custom({
     Expression<int>? id,
     Expression<String>? mealName,
+    Expression<String>? nameEn,
+    Expression<String>? nameFr,
+    Expression<String>? nameAr,
     Expression<int>? calories,
     Expression<int>? protein,
     Expression<int>? carbs,
@@ -373,6 +500,9 @@ class FoodLogsCompanion extends UpdateCompanion<FoodLog> {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (mealName != null) 'meal_name': mealName,
+      if (nameEn != null) 'name_en': nameEn,
+      if (nameFr != null) 'name_fr': nameFr,
+      if (nameAr != null) 'name_ar': nameAr,
       if (calories != null) 'calories': calories,
       if (protein != null) 'protein': protein,
       if (carbs != null) 'carbs': carbs,
@@ -384,6 +514,9 @@ class FoodLogsCompanion extends UpdateCompanion<FoodLog> {
   FoodLogsCompanion copyWith({
     Value<int>? id,
     Value<String>? mealName,
+    Value<String?>? nameEn,
+    Value<String?>? nameFr,
+    Value<String?>? nameAr,
     Value<int>? calories,
     Value<int>? protein,
     Value<int>? carbs,
@@ -393,6 +526,9 @@ class FoodLogsCompanion extends UpdateCompanion<FoodLog> {
     return FoodLogsCompanion(
       id: id ?? this.id,
       mealName: mealName ?? this.mealName,
+      nameEn: nameEn ?? this.nameEn,
+      nameFr: nameFr ?? this.nameFr,
+      nameAr: nameAr ?? this.nameAr,
       calories: calories ?? this.calories,
       protein: protein ?? this.protein,
       carbs: carbs ?? this.carbs,
@@ -409,6 +545,15 @@ class FoodLogsCompanion extends UpdateCompanion<FoodLog> {
     }
     if (mealName.present) {
       map['meal_name'] = Variable<String>(mealName.value);
+    }
+    if (nameEn.present) {
+      map['name_en'] = Variable<String>(nameEn.value);
+    }
+    if (nameFr.present) {
+      map['name_fr'] = Variable<String>(nameFr.value);
+    }
+    if (nameAr.present) {
+      map['name_ar'] = Variable<String>(nameAr.value);
     }
     if (calories.present) {
       map['calories'] = Variable<int>(calories.value);
@@ -433,6 +578,9 @@ class FoodLogsCompanion extends UpdateCompanion<FoodLog> {
     return (StringBuffer('FoodLogsCompanion(')
           ..write('id: $id, ')
           ..write('mealName: $mealName, ')
+          ..write('nameEn: $nameEn, ')
+          ..write('nameFr: $nameFr, ')
+          ..write('nameAr: $nameAr, ')
           ..write('calories: $calories, ')
           ..write('protein: $protein, ')
           ..write('carbs: $carbs, ')
@@ -1091,6 +1239,9 @@ typedef $$FoodLogsTableCreateCompanionBuilder =
     FoodLogsCompanion Function({
       Value<int> id,
       required String mealName,
+      Value<String?> nameEn,
+      Value<String?> nameFr,
+      Value<String?> nameAr,
       required int calories,
       required int protein,
       required int carbs,
@@ -1101,6 +1252,9 @@ typedef $$FoodLogsTableUpdateCompanionBuilder =
     FoodLogsCompanion Function({
       Value<int> id,
       Value<String> mealName,
+      Value<String?> nameEn,
+      Value<String?> nameFr,
+      Value<String?> nameAr,
       Value<int> calories,
       Value<int> protein,
       Value<int> carbs,
@@ -1124,6 +1278,21 @@ class $$FoodLogsTableFilterComposer
 
   ColumnFilters<String> get mealName => $composableBuilder(
     column: $table.mealName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get nameEn => $composableBuilder(
+    column: $table.nameEn,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get nameFr => $composableBuilder(
+    column: $table.nameFr,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get nameAr => $composableBuilder(
+    column: $table.nameAr,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1172,6 +1341,21 @@ class $$FoodLogsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get nameEn => $composableBuilder(
+    column: $table.nameEn,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get nameFr => $composableBuilder(
+    column: $table.nameFr,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get nameAr => $composableBuilder(
+    column: $table.nameAr,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get calories => $composableBuilder(
     column: $table.calories,
     builder: (column) => ColumnOrderings(column),
@@ -1212,6 +1396,15 @@ class $$FoodLogsTableAnnotationComposer
 
   GeneratedColumn<String> get mealName =>
       $composableBuilder(column: $table.mealName, builder: (column) => column);
+
+  GeneratedColumn<String> get nameEn =>
+      $composableBuilder(column: $table.nameEn, builder: (column) => column);
+
+  GeneratedColumn<String> get nameFr =>
+      $composableBuilder(column: $table.nameFr, builder: (column) => column);
+
+  GeneratedColumn<String> get nameAr =>
+      $composableBuilder(column: $table.nameAr, builder: (column) => column);
 
   GeneratedColumn<int> get calories =>
       $composableBuilder(column: $table.calories, builder: (column) => column);
@@ -1259,6 +1452,9 @@ class $$FoodLogsTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 Value<String> mealName = const Value.absent(),
+                Value<String?> nameEn = const Value.absent(),
+                Value<String?> nameFr = const Value.absent(),
+                Value<String?> nameAr = const Value.absent(),
                 Value<int> calories = const Value.absent(),
                 Value<int> protein = const Value.absent(),
                 Value<int> carbs = const Value.absent(),
@@ -1267,6 +1463,9 @@ class $$FoodLogsTableTableManager
               }) => FoodLogsCompanion(
                 id: id,
                 mealName: mealName,
+                nameEn: nameEn,
+                nameFr: nameFr,
+                nameAr: nameAr,
                 calories: calories,
                 protein: protein,
                 carbs: carbs,
@@ -1277,6 +1476,9 @@ class $$FoodLogsTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 required String mealName,
+                Value<String?> nameEn = const Value.absent(),
+                Value<String?> nameFr = const Value.absent(),
+                Value<String?> nameAr = const Value.absent(),
                 required int calories,
                 required int protein,
                 required int carbs,
@@ -1285,6 +1487,9 @@ class $$FoodLogsTableTableManager
               }) => FoodLogsCompanion.insert(
                 id: id,
                 mealName: mealName,
+                nameEn: nameEn,
+                nameFr: nameFr,
+                nameAr: nameAr,
                 calories: calories,
                 protein: protein,
                 carbs: carbs,

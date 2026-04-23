@@ -18,6 +18,8 @@ class User(Base):
     height = Column(Float, nullable=True)         # in cm internally
     height_unit = Column(String, default="cm")   # "cm" or "ft"
     age = Column(Integer, nullable=True)
+    gender = Column(String, nullable=True)        # "male" | "female"
+    activity_level = Column(String, default="sedentary")  # "sedentary" | "light" | "moderate" | "active" | "very_active"
 
     # Stripe Payments
     stripe_customer_id = Column(String, unique=True, nullable=True, index=True)
@@ -59,6 +61,9 @@ class FoodLog(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     name = Column(String, index=True)
+    name_en = Column(String, nullable=True)
+    name_fr = Column(String, nullable=True)
+    name_ar = Column(String, nullable=True)
     image_url = Column(String, nullable=True)
     
     calories = Column(Integer)

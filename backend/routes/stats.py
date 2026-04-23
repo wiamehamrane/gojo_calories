@@ -3,10 +3,12 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models import DailyStats, User, WeighIn
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 from security import get_current_user_id
 import json
 from redis_client import redis_db
+import datetime as dt
+import models
 
 router = APIRouter()
 
@@ -22,17 +24,33 @@ class StatsResponse(BaseModel):
     fat_target: int = 65
 
 @router.get("/", response_model=List[StatsResponse])
-def get_user_stats(db: Session = Depends(get_db), current_user_id: int = Depends(get_current_user_id)):
+def get_user_stats(
+    date: Optional[str] = None,
+    db: Session = Depends(get_db), 
+    current_user_id: int = Depends(get_current_user_id)
+):
+    import datetime as dt
     try:
-        cache_key = f"stats_{current_user_id}"
+        cache_key = f"stats_{current_user_id}_{date or 'latest'}"
         cached_stats = redis_db.get(cache_key)
         if cached_stats:
             return json.loads(cached_stats)
     except Exception:
-        pass  # Redis unavailable in this env, proceed without cache
+        pass
 
-    # Get last 7 days of stats
-    stats = db.query(DailyStats).filter(DailyStats.user_id == current_user_id).order_by(DailyStats.date.desc()).limit(7).all()
+    query = db.query(DailyStats).filter(DailyStats.user_id == current_user_id)
+    
+    if date:
+        try:
+            target_date = dt.datetime.strptime(date, "%Y-%m-%d").date()
+            query = query.filter(
+                DailyStats.date >= dt.datetime.combine(target_date, dt.time.min),
+                DailyStats.date < dt.datetime.combine(target_date + dt.timedelta(days=1), dt.time.min)
+            )
+        except ValueError:
+            pass
+            
+    stats = query.order_by(DailyStats.date.desc()).limit(7).all()
     if not stats:
         return []
     
@@ -83,9 +101,25 @@ def get_streak(db: Session = Depends(get_db), current_user_id: int = Depends(get
     return {"streak": streak}
 
 @router.get("/history")
-def get_user_history(db: Session = Depends(get_db), current_user_id: int = Depends(get_current_user_id)):
+def get_user_history(
+    date: Optional[str] = None,
+    db: Session = Depends(get_db), 
+    current_user_id: int = Depends(get_current_user_id)
+):
     from models import FoodLog
-    logs = db.query(FoodLog).filter(FoodLog.user_id == current_user_id).order_by(FoodLog.created_at.desc()).limit(10).all()
+    query = db.query(FoodLog).filter(FoodLog.user_id == current_user_id)
+    
+    if date:
+        try:
+            target_date = dt.datetime.strptime(date, "%Y-%m-%d").date()
+            query = query.filter(
+                FoodLog.created_at >= dt.datetime.combine(target_date, dt.time.min),
+                FoodLog.created_at < dt.datetime.combine(target_date + dt.timedelta(days=1), dt.time.min)
+            )
+        except ValueError:
+            pass
+
+    logs = query.order_by(FoodLog.created_at.desc()).limit(10).all()
     res = []
     for log in logs:
         res.append({
@@ -122,16 +156,25 @@ def log_macro(calories: int, protein: int, carbs: int, fat: int, db: Session = D
         weigh_in_weight = user.current_weight or 70.0
         goal_wt = user.goal_weight or 70.0
         age = user.age or 30
+        height_cm = user.height or 170
+        gender = user.gender or "male"
+        activity = user.activity_level or "sedentary"
+
+        from utils.nutrition import calculate_daily_targets
         
-        bmr = (10 * weigh_in_weight) + (6.25 * 170) - (5 * age) + 5
-        calorie_budget = int(bmr * 1.2)
-        if goal_wt < weigh_in_weight - 1.0: calorie_budget -= 500
-        elif goal_wt > weigh_in_weight + 1.0: calorie_budget += 500
-            
-        protein_t = int(weigh_in_weight * 2.0)
-        fat_t = int((calorie_budget * 0.25) / 9)
-        carbs_t = int((calorie_budget - (protein_t * 4) - (fat_t * 9)) / 4)
-        if carbs_t < 0: carbs_t = 0
+        targets = calculate_daily_targets(
+            weight_kg=weigh_in_weight,
+            height_cm=height_cm,
+            age=age,
+            gender=gender,
+            activity_level=activity,
+            goal_weight_kg=goal_wt
+        )
+        
+        calorie_budget = targets["calorie_budget"]
+        protein_t = targets["protein_target"]
+        fat_t = targets["fat_target"]
+        carbs_t = targets["carbs_target"]
             
         new_stat = DailyStats(
             user_id=current_user_id, 

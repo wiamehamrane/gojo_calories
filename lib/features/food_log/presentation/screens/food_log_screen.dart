@@ -51,6 +51,10 @@ class _FoodLogScreenState extends ConsumerState<FoodLogScreen> {
               protein: int.tryParse(data['protein']?.toString() ?? '0') ?? 0,
               carbs: int.tryParse(data['carbs']?.toString() ?? '0') ?? 0,
               fat: int.tryParse(data['fat']?.toString() ?? '0') ?? 0,
+              name: data['name_en']?.toString() ?? data['name']?.toString() ?? 'Analyzed Item',
+              nameEn: data['name_en']?.toString(),
+              nameFr: data['name_fr']?.toString(),
+              nameAr: data['name_ar']?.toString(),
             );
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -260,6 +264,20 @@ class _FoodLogScreenState extends ConsumerState<FoodLogScreen> {
                       ),
                     ),
                   ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _PillOutlineButton(
+                      icon: LucideIcons.image,
+                      label: Translations.t(lang, 'gallery'),
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              const ScanFoodScreen(initialMode: 'Gallery'),
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -350,23 +368,25 @@ class _PillOutlineButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return OutlinedButton(
-      style: OutlinedButton.styleFrom(
+    return ElevatedButton(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppColors.surface,
+        elevation: 0,
         side: const BorderSide(color: AppColors.textPrimary, width: 1.5),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
-        minimumSize: const Size(double.infinity, 52),
-        foregroundColor: AppColors.textPrimary,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        minimumSize: const Size(double.infinity, 54),
+        padding: EdgeInsets.zero,
       ),
       onPressed: onPressed,
-      child: Row(
+      child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 18),
-          const SizedBox(width: 8),
+          Icon(icon, size: 20, color: AppColors.textPrimary),
+          const SizedBox(height: 4),
           Text(
             label,
             style: const TextStyle(
-              fontSize: 16,
+              fontSize: 12,
               fontWeight: FontWeight.w600,
               color: AppColors.textPrimary,
             ),

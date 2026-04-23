@@ -298,7 +298,7 @@ class _ActionGrid extends ConsumerWidget {
             width: cellWidth,
             onTap: () {
               Navigator.pop(context);
-              context.push('/log');
+              context.push('/scan');
             },
           ),
         ],

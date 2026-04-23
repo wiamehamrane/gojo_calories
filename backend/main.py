@@ -28,6 +28,10 @@ try:
         # Height columns (added for accurate BMR calculation)
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS height FLOAT;"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS height_unit VARCHAR DEFAULT 'cm';"))
+        # Multilingual food names
+        conn.execute(text("ALTER TABLE food_logs ADD COLUMN IF NOT EXISTS name_en VARCHAR;"))
+        conn.execute(text("ALTER TABLE food_logs ADD COLUMN IF NOT EXISTS name_fr VARCHAR;"))
+        conn.execute(text("ALTER TABLE food_logs ADD COLUMN IF NOT EXISTS name_ar VARCHAR;"))
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS weigh_ins (
                 id SERIAL PRIMARY KEY,

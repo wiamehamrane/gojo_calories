@@ -9,6 +9,9 @@ part 'database.g.dart';
 class FoodLogs extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get mealName => text()();
+  TextColumn get nameEn => text().nullable()();
+  TextColumn get nameFr => text().nullable()();
+  TextColumn get nameAr => text().nullable()();
   IntColumn get calories => integer()();
   IntColumn get protein => integer()();
   IntColumn get carbs => integer()();
@@ -34,7 +37,18 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+        onUpgrade: (m, from, to) async {
+          if (from < 2) {
+            await m.addColumn(foodLogs, foodLogs.nameEn);
+            await m.addColumn(foodLogs, foodLogs.nameFr);
+            await m.addColumn(foodLogs, foodLogs.nameAr);
+          }
+        },
+      );
 
   Future<List<FoodLog>> getAllFoodLogs() => select(foodLogs).get();
   Future<int> insertFoodLog(FoodLogsCompanion log) =>

@@ -30,6 +30,10 @@ class PersonalDetailsScreen extends StatelessWidget {
           _buildField("Current Weight", "75 kg"),
           const SizedBox(height: 16),
           _buildField("Target Weight", "70 kg"),
+          const SizedBox(height: 16),
+          _buildField("Gender", "Male"),
+          const SizedBox(height: 16),
+          _buildField("Activity Level", "Sedentary"),
         ],
       ),
     );

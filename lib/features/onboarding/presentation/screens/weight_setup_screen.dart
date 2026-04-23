@@ -16,7 +16,10 @@ class _WeightSetupScreenState extends State<WeightSetupScreen> {
   bool _isLoading = false;
   late PageController _pageCtrl;
   int _currentIndex = 0;
-  final int _totalPages = 4;
+  final int _totalPages = 6;
+
+  String _gender = 'male';
+  String _activityLevel = 'sedentary';
 
   bool _isKg = true;
   bool _isCm = true;
@@ -56,6 +59,7 @@ class _WeightSetupScreenState extends State<WeightSetupScreen> {
       if (_currentIndex == 0 && _ageCtrl.text.isEmpty) return;
       if (_currentIndex == 1 && _heightCtrl.text.isEmpty) return;
       if (_currentIndex == 2 && _currentWtCtrl.text.isEmpty) return;
+      if (_currentIndex == 3 && _goalWtCtrl.text.isEmpty) return;
 
       _pageCtrl.nextPage(
         duration: const Duration(milliseconds: 400),
@@ -118,6 +122,8 @@ class _WeightSetupScreenState extends State<WeightSetupScreen> {
           'height': height,
           'height_unit': heightUnit,
           'age': age,
+          'gender': _gender,
+          'activity_level': _activityLevel,
         },
       );
 
@@ -249,7 +255,6 @@ class _WeightSetupScreenState extends State<WeightSetupScreen> {
                           isOpt1Valid: _isKg,
                           onChanged: (val) {
                             setState(() => _isKg = val);
-                            _focusNodes[3].requestFocus();
                           },
                         ),
                         const SizedBox(height: 30),
@@ -259,6 +264,67 @@ class _WeightSetupScreenState extends State<WeightSetupScreen> {
                           suffix: _isKg ? 'kg' : 'lbs',
                           hint: _isKg ? '70.0' : '155.0',
                           isDecimal: true,
+                        ),
+                      ],
+                    ),
+                  ),
+                  _buildStep(
+                    title: 'Select your gender',
+                    subtitle: 'This adjusts your caloric needs base.',
+                    icon: Icons.person_search_rounded,
+                    inputChild: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _buildSelectionPill(
+                          title: 'Male',
+                          isSelected: _gender == 'male',
+                          onTap: () => setState(() => _gender = 'male'),
+                        ),
+                        const SizedBox(width: 16),
+                        _buildSelectionPill(
+                          title: 'Female',
+                          isSelected: _gender == 'female',
+                          onTap: () => setState(() => _gender = 'female'),
+                        ),
+                      ],
+                    ),
+                  ),
+                  _buildStep(
+                    title: 'Your activity level?',
+                    subtitle: 'How active are you on a weekly basis?',
+                    icon: Icons.directions_run_rounded,
+                    inputChild: Column(
+                      children: [
+                        _buildSelectionPill(
+                          title: 'Sedentary',
+                          subtitle: 'Office job, little exercise',
+                          isSelected: _activityLevel == 'sedentary',
+                          onTap: () => setState(() => _activityLevel = 'sedentary'),
+                          isFullWidth: true,
+                        ),
+                        const SizedBox(height: 12),
+                        _buildSelectionPill(
+                          title: 'Lightly Active',
+                          subtitle: '1-3 days of exercise',
+                          isSelected: _activityLevel == 'light',
+                          onTap: () => setState(() => _activityLevel = 'light'),
+                          isFullWidth: true,
+                        ),
+                        const SizedBox(height: 12),
+                        _buildSelectionPill(
+                          title: 'Moderately Active',
+                          subtitle: '3-5 days of exercise',
+                          isSelected: _activityLevel == 'moderate',
+                          onTap: () => setState(() => _activityLevel = 'moderate'),
+                          isFullWidth: true,
+                        ),
+                        const SizedBox(height: 12),
+                        _buildSelectionPill(
+                          title: 'Very Active',
+                          subtitle: '6-7 days of hard exercise',
+                          isSelected: _activityLevel == 'active',
+                          onTap: () => setState(() => _activityLevel = 'active'),
+                          isFullWidth: true,
                         ),
                       ],
                     ),
@@ -426,6 +492,62 @@ class _WeightSetupScreenState extends State<WeightSetupScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildSelectionPill({
+    required String title,
+    String? subtitle,
+    required bool isSelected,
+    required VoidCallback onTap,
+    bool isFullWidth = false,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: isFullWidth ? double.infinity : 120,
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primaryDark : AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected ? AppColors.primaryDark : AppColors.border,
+            width: 2,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.primaryDark.withValues(alpha: 0.2),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : null,
+        ),
+        child: Column(
+          children: [
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: isSelected ? Colors.white : AppColors.textPrimary,
+              ),
+            ),
+            if (subtitle != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: isSelected ? Colors.white70 : AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 

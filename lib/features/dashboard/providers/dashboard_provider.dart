@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/providers/selected_date_provider.dart';
 import 'package:drift/drift.dart' hide Column;
 import '../../../core/network/api_client.dart';
 import '../../../core/models/daily_stats.dart' as models;
@@ -8,7 +9,8 @@ import '../../../core/database/database.dart';
 class DashboardNotifier extends Notifier<models.DailyStats> {
   @override
   models.DailyStats build() {
-    _loadData();
+    final date = ref.watch(selectedDateProvider);
+    _loadData(date);
     return models.DailyStats(
       calorieBudget: 2200,
       caloriesConsumed: 0,
@@ -21,9 +23,14 @@ class DashboardNotifier extends Notifier<models.DailyStats> {
     );
   }
 
-  Future<void> _loadData() async {
+  Future<void> _loadData(DateTime date) async {
+    final dateStr =
+        "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
     try {
-      final response = await ApiClient.instance.get('stats/');
+      final response = await ApiClient.instance.get(
+        'stats/',
+        queryParameters: {'date': dateStr},
+      );
       if (response.data is List && response.data.isNotEmpty) {
         final latest = response.data.first;
         final stats = models.DailyStats(
@@ -40,15 +47,13 @@ class DashboardNotifier extends Notifier<models.DailyStats> {
 
         // Sync to Drift
         final db = ref.read(databaseProvider);
-        await db
-            .into(db.dailyStats)
-            .insertOnConflictUpdate(
+        await db.into(db.dailyStats).insertOnConflictUpdate(
               DailyStatsCompanion.insert(
                 id: const Value(1),
                 date: DateTime(
-                  DateTime.now().year,
-                  DateTime.now().month,
-                  DateTime.now().day,
+                  date.year,
+                  date.month,
+                  date.day,
                 ),
                 calorieBudget: stats.calorieBudget,
                 caloriesConsumed: stats.caloriesConsumed,
@@ -64,7 +69,7 @@ class DashboardNotifier extends Notifier<models.DailyStats> {
     } catch (_) {
       // Fallback
       final db = ref.read(databaseProvider);
-      final local = await db.getStatsForDate(DateTime.now());
+      final local = await db.getStatsForDate(date);
       if (local != null) {
         state = models.DailyStats(
           calorieBudget: local.calorieBudget,
@@ -86,6 +91,9 @@ class DashboardNotifier extends Notifier<models.DailyStats> {
     required int carbs,
     required int fat,
     String name = "Food Item",
+    String? nameEn,
+    String? nameFr,
+    String? nameAr,
   }) {
     final newState = state.copyWith(
       caloriesConsumed: state.caloriesConsumed + calories,
@@ -100,6 +108,9 @@ class DashboardNotifier extends Notifier<models.DailyStats> {
     db.insertFoodLog(
       FoodLogsCompanion.insert(
         mealName: name,
+        nameEn: Value(nameEn),
+        nameFr: Value(nameFr),
+        nameAr: Value(nameAr),
         calories: calories,
         protein: protein,
         carbs: carbs,
