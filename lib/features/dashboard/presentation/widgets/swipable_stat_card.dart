@@ -43,23 +43,26 @@ class _SwipableStatCardState extends State<SwipableStatCard> {
       clipBehavior: Clip.antiAlias,
       child: Stack(
         children: [
-          PageView(
-            controller: _pageController,
-            onPageChanged: (i) => setState(() => _currentPage = i),
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(4.0),
-                child: widget.primaryView,
-              ),
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: _buildMiniChart(),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: _buildHealthSync(),
-              ),
-            ],
+          SizedBox(
+            height: 140, // Fixed height for the swipable content
+            child: PageView(
+              controller: _pageController,
+              onPageChanged: (i) => setState(() => _currentPage = i),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(4.0),
+                  child: widget.primaryView,
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: _buildMiniChart(),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: _buildHealthSync(),
+                ),
+              ],
+            ),
           ),
           // Page indicators
           Positioned(

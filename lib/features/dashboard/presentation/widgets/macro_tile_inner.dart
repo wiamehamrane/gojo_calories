@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
-import '../screens/home_screen.dart'; // For DonutRingPainter
+import '../widgets/donut_ring_painter.dart';
 
 class MacroTileInner extends StatefulWidget {
   final String macroName;

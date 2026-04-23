@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -26,13 +25,15 @@ class HomeScreen extends ConsumerWidget {
     final lang = ref.watch(localeProvider);
 
     return Scaffold(
-      backgroundColor: Colors.white, // fallback
+      backgroundColor: Colors.white,
       body: Container(
+        width: double.infinity,
+        height: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              Color(0xFFE5E5E8), // darker top
-              AppColors.background, // lighter bottom
+              Color(0xFFE5E5E8),
+              AppColors.background,
             ],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
@@ -44,41 +45,41 @@ class HomeScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-              _buildHeader(context, ref),
-              const SizedBox(height: 8), // closer to title
-              const WeeklyCalendar(),
-              const SizedBox(height: 18),
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.screenPadding,
+                _buildHeader(context, ref),
+                const SizedBox(height: 8),
+                const WeeklyCalendar(),
+                const SizedBox(height: 18),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.screenPadding,
+                  ),
+                  child: _buildCalorieRingCard(context, stats, lang),
                 ),
-                child: _buildCalorieRingCard(context, stats, lang),
-              ),
-              const SizedBox(height: AppSpacing.cardGap),
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.screenPadding,
+                const SizedBox(height: AppSpacing.cardGap),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.screenPadding,
+                  ),
+                  child: _buildMacroTilesRow(context, stats, lang),
                 ),
-                child: _buildMacroTilesRow(context, stats, lang),
-              ),
-              const SizedBox(height: 32),
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.screenPadding,
+                const SizedBox(height: 32),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.screenPadding,
+                  ),
+                  child: Text(
+                    Translations.t(lang, 'recently_uploaded'),
+                    style: AppTextStyles.sectionHeader.copyWith(color: Colors.black),
+                  ),
                 ),
-                child: Text(
-                  Translations.t(lang, 'recently_uploaded'),
-                  style: AppTextStyles.sectionHeader.copyWith(color: Colors.black),
-                ),
-              ),
-              const SizedBox(height: 12),
-              _buildRecentMeals(context, ref, lang),
-              const SizedBox(height: 100), // padding for FAB and Nav
-            ],
+                const SizedBox(height: 12),
+                _buildRecentMeals(context, ref, lang),
+                const SizedBox(height: 100),
+              ],
+            ),
           ),
         ),
       ),
-    ),
     );
   }
 
@@ -105,7 +106,7 @@ class HomeScreen extends ConsumerWidget {
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w700,
-                  color: Colors.black, // Pure black
+                  color: Colors.black,
                 ),
               ),
             ],
@@ -147,59 +148,66 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildCalorieRingCard(BuildContext context, stats, String lang) {
-    return SwipableStatCard(
-      title: 'Calories',
-      themeColor: AppColors.primaryMid,
-      primaryView: CalorieRingInner(stats: stats, lang: lang),
+  Widget _buildCalorieRingCard(BuildContext context, dynamic stats, String lang) {
+    return SizedBox(
+      height: 160,
+      child: SwipableStatCard(
+        title: 'Calories',
+        themeColor: AppColors.primaryMid,
+        primaryView: CalorieRingInner(stats: stats, lang: lang),
+      ),
     );
   }
 
-  Widget _buildMacroTilesRow(BuildContext context, stats, String lang) {
-    return Row(
-      children: [
-        Expanded(
-          child: SwipableStatCard(
-            title: 'Protein',
-            themeColor: AppColors.protein,
-            primaryView: MacroTileInner(
-              macroName: Translations.t(lang, 'macro_protein'),
-              total: stats.proteinTarget,
-              consumed: stats.proteinConsumed,
-              macroColor: AppColors.protein,
-              macroIcon: LucideIcons.beef,
+  Widget _buildMacroTilesRow(BuildContext context, dynamic stats, String lang) {
+    return SizedBox(
+      height: 160,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: SwipableStatCard(
+              title: 'Protein',
+              themeColor: AppColors.protein,
+              primaryView: MacroTileInner(
+                macroName: Translations.t(lang, 'macro_protein'),
+                total: stats.proteinTarget,
+                consumed: stats.proteinConsumed,
+                macroColor: AppColors.protein,
+                macroIcon: LucideIcons.beef,
+              ),
             ),
           ),
-        ),
-        const SizedBox(width: AppSpacing.macroTileGap),
-        Expanded(
-          child: SwipableStatCard(
-            title: 'Carbs',
-            themeColor: AppColors.carbs,
-            primaryView: MacroTileInner(
-              macroName: Translations.t(lang, 'macro_carbs'),
-              total: stats.carbsTarget,
-              consumed: stats.carbsConsumed,
-              macroColor: AppColors.carbs,
-              macroIcon: LucideIcons.wheat,
+          const SizedBox(width: AppSpacing.macroTileGap),
+          Expanded(
+            child: SwipableStatCard(
+              title: 'Carbs',
+              themeColor: AppColors.carbs,
+              primaryView: MacroTileInner(
+                macroName: Translations.t(lang, 'macro_carbs'),
+                total: stats.carbsTarget,
+                consumed: stats.carbsConsumed,
+                macroColor: AppColors.carbs,
+                macroIcon: LucideIcons.wheat,
+              ),
             ),
           ),
-        ),
-        const SizedBox(width: AppSpacing.macroTileGap),
-        Expanded(
-          child: SwipableStatCard(
-            title: 'Fats',
-            themeColor: AppColors.fats,
-            primaryView: MacroTileInner(
-              macroName: Translations.t(lang, 'macro_fats'),
-              total: stats.fatTarget,
-              consumed: stats.fatConsumed,
-              macroColor: AppColors.fats,
-              macroIcon: LucideIcons.droplets,
+          const SizedBox(width: AppSpacing.macroTileGap),
+          Expanded(
+            child: SwipableStatCard(
+              title: 'Fats',
+              themeColor: AppColors.fats,
+              primaryView: MacroTileInner(
+                macroName: Translations.t(lang, 'macro_fats'),
+                total: stats.fatTarget,
+                consumed: stats.fatConsumed,
+                macroColor: AppColors.fats,
+                macroIcon: LucideIcons.droplets,
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -239,7 +247,10 @@ class HomeScreen extends ConsumerWidget {
         );
       },
       loading: () => const Center(
-        child: CircularProgressIndicator(color: AppColors.primary),
+        child: Padding(
+          padding: EdgeInsets.all(20.0),
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
       ),
       error: (e, _) => const Center(
         child: Text(
@@ -299,7 +310,6 @@ class _AnimatedMealCardState extends State<_AnimatedMealCard>
     final log = widget.log;
     final imageUrl = log['image_url'] as String?;
     
-    // Choose name based on language
     String mealName = (log['meal_name'] ?? 'Unknown Meal') as String;
     if (widget.lang == 'ar' || widget.lang == 'Darija') {
       if (log['name_ar'] != null) mealName = log['name_ar'] as String;
@@ -333,7 +343,6 @@ class _AnimatedMealCardState extends State<_AnimatedMealCard>
           ),
           child: Row(
             children: [
-              // Food thumbnail
               ClipRRect(
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(20),
@@ -369,7 +378,6 @@ class _AnimatedMealCardState extends State<_AnimatedMealCard>
                 ),
               ),
               const SizedBox(width: 12),
-              // Info
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 12),
@@ -396,9 +404,7 @@ class _AnimatedMealCardState extends State<_AnimatedMealCard>
                           ),
                         ],
                       ),
-                      if (protein.isNotEmpty ||
-                          carbs.isNotEmpty ||
-                          fat.isNotEmpty) ...[
+                      if (protein.isNotEmpty || carbs.isNotEmpty || fat.isNotEmpty) ...[
                         const SizedBox(height: 6),
                         Row(
                           children: [
@@ -457,7 +463,7 @@ class _AnimatedMealCardState extends State<_AnimatedMealCard>
       if (logDate == today) {
         return Translations.t(lang, 'today');
       } else if (logDate == yesterday) {
-        return 'Yesterday'; // Or add to translations
+        return 'Yesterday';
       } else {
         return DateFormat('MMM d').format(date);
       }
@@ -504,59 +510,3 @@ class _MacroChip extends StatelessWidget {
     );
   }
 }
-
-  // The old _MacroTile is removed since we externalized it.
-
-class DonutRingPainter extends CustomPainter {
-  final Color trackColor;
-  final Color progressColor;
-  final double strokeWidth;
-  final double progress;
-
-  DonutRingPainter({
-    required this.trackColor,
-    required this.progressColor,
-    required this.strokeWidth,
-    required this.progress,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = (size.width - strokeWidth) / 2;
-
-    final trackPaint = Paint()
-      ..color = trackColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.round;
-
-    final progressPaint = Paint()
-      ..color = progressColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.round;
-
-    canvas.drawCircle(center, radius, trackPaint);
-
-    final startAngle = -pi / 2;
-    final sweepAngle = 2 * pi * progress;
-
-    if (progress > 0) {
-      canvas.drawArc(
-        Rect.fromCircle(center: center, radius: radius),
-        startAngle,
-        sweepAngle,
-        false,
-        progressPaint,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant DonutRingPainter oldDelegate) {
-    return oldDelegate.progress != progress;
-  }
-}
-
-// The old _WeeklyCalendar is removed since we externalized it.
