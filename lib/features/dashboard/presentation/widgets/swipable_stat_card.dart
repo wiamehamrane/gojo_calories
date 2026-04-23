@@ -3,7 +3,6 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_shadows.dart';
 import '../../../../core/theme/app_radius.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class SwipableStatCard extends StatefulWidget {
   final Widget primaryView;
