@@ -17,8 +17,7 @@ class MainScaffold extends ConsumerWidget {
   static int _calculateSelectedIndex(BuildContext context) {
     final String location = GoRouterState.of(context).uri.path;
     if (location.startsWith('/home')) return 0;
-    if (location.startsWith('/progress')) return 1;
-    if (location.startsWith('/profile')) return 2;
+    if (location.startsWith('/profile')) return 1;
     return 0;
   }
 
@@ -29,9 +28,6 @@ class MainScaffold extends ConsumerWidget {
         context.go('/home');
         break;
       case 1:
-        context.go('/progress');
-        break;
-      case 2:
         context.go('/profile');
         break;
     }
@@ -100,7 +96,7 @@ class MainScaffold extends ConsumerWidget {
             bottom: navBarHeight,
             child: GestureDetector(
               onHorizontalDragEnd: (details) {
-                if (details.primaryVelocity! < -300 && currentIndex < 2) {
+                if (details.primaryVelocity! < -300 && currentIndex < 1) {
                   _onItemTapped(currentIndex + 1, context);
                 } else if (details.primaryVelocity! > 300 && currentIndex > 0) {
                   _onItemTapped(currentIndex - 1, context);
@@ -132,17 +128,11 @@ class MainScaffold extends ConsumerWidget {
                     onTap: () => _onItemTapped(0, context),
                   ),
                   _NavItem(
-                    icon: LucideIcons.chartBar,
-                    label: Translations.t(lang, 'nav_progress'),
-                    isActive: currentIndex == 1,
-                    onTap: () => _onItemTapped(1, context),
-                  ),
-                  _NavItem(
                     icon: LucideIcons.user,
                     label: Translations.t(lang, 'nav_profile'),
-                    isActive: currentIndex == 2,
+                    isActive: currentIndex == 1,
                     isProfileTab: true,
-                    onTap: () => _onItemTapped(2, context),
+                    onTap: () => _onItemTapped(1, context),
                   ),
                 ],
               ),

@@ -170,6 +170,45 @@ class ProfileScreen extends ConsumerWidget {
                 ],
               ),
 
+              const SizedBox(height: 20),
+              _SectionLabel('Support & Legal'),
+              _GroupedListCard(
+                rows: [
+                  _SettingsRow(
+                    icon: LucideIcons.lightbulb,
+                    label: 'Feature Request',
+                    onTap: () async {
+                      final uri = Uri.parse('mailto:support@gojocalories.com?subject=Feature Request');
+                      if (await canLaunchUrl(uri)) await launchUrl(uri);
+                    },
+                  ),
+                  _SettingsRow(
+                    icon: LucideIcons.mail,
+                    label: 'Support Email',
+                    onTap: () async {
+                      final uri = Uri.parse('mailto:support@gojocalories.com?subject=Support Request');
+                      if (await canLaunchUrl(uri)) await launchUrl(uri);
+                    },
+                  ),
+                  _SettingsRow(
+                    icon: LucideIcons.fileText,
+                    label: 'Terms of Service',
+                    onTap: () async {
+                      final uri = Uri.parse('https://gojocalories.com/terms');
+                      if (await canLaunchUrl(uri)) await launchUrl(uri);
+                    },
+                  ),
+                  _SettingsRow(
+                    icon: LucideIcons.shieldCheck,
+                    label: 'Privacy Policy',
+                    onTap: () async {
+                      final uri = Uri.parse('https://gojocalories.com/privacy');
+                      if (await canLaunchUrl(uri)) await launchUrl(uri);
+                    },
+                  ),
+                ],
+              ),
+
               const SizedBox(height: 30),
               // Danger Zone
               _GroupedListCard(

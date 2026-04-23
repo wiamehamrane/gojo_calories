@@ -6,14 +6,16 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/theme/app_spacing.dart';
-import '../../../../core/theme/app_shadows.dart';
-import '../../../../core/theme/app_radius.dart';
 import '../../../../core/providers/locale_provider.dart';
 import '../../../../core/providers/selected_date_provider.dart';
 import '../../../../core/localization/translations.dart';
 import '../../providers/dashboard_provider.dart';
 import '../../providers/history_provider.dart';
 import 'package:intl/intl.dart';
+import '../widgets/swipable_stat_card.dart';
+import '../widgets/calorie_ring_inner.dart';
+import '../widgets/macro_tile_inner.dart';
+import '../widgets/weekly_calendar.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -24,17 +26,28 @@ class HomeScreen extends ConsumerWidget {
     final lang = ref.watch(localeProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        bottom: false,
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+      backgroundColor: Colors.white, // fallback
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color(0xFFE5E5E8), // darker top
+              AppColors.background, // lighter bottom
+            ],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: SafeArea(
+          bottom: false,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
               _buildHeader(context, ref),
-              const SizedBox(height: 16),
-              const _WeeklyCalendar(),
-              const SizedBox(height: 24),
+              const SizedBox(height: 8), // closer to title
+              const WeeklyCalendar(),
+              const SizedBox(height: 18),
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppSpacing.screenPadding,
@@ -55,7 +68,7 @@ class HomeScreen extends ConsumerWidget {
                 ),
                 child: Text(
                   Translations.t(lang, 'recently_uploaded'),
-                  style: AppTextStyles.sectionHeader,
+                  style: AppTextStyles.sectionHeader.copyWith(color: Colors.black),
                 ),
               ),
               const SizedBox(height: 12),
@@ -65,6 +78,7 @@ class HomeScreen extends ConsumerWidget {
           ),
         ),
       ),
+    ),
     );
   }
 
@@ -75,7 +89,6 @@ class HomeScreen extends ConsumerWidget {
       orElse: () => "0",
     );
     return Container(
-      color: AppColors.background,
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.screenPadding,
         vertical: 12,
@@ -92,7 +105,7 @@ class HomeScreen extends ConsumerWidget {
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
+                  color: Colors.black, // Pure black
                 ),
               ),
             ],
@@ -135,89 +148,10 @@ class HomeScreen extends ConsumerWidget {
   }
 
   Widget _buildCalorieRingCard(BuildContext context, stats, String lang) {
-    final int caloriesLeft = stats.calorieBudget - stats.caloriesConsumed;
-    final double progress = stats.calorieBudget > 0
-        ? (stats.caloriesConsumed / stats.calorieBudget).clamp(0.0, 1.0)
-        : 0.0;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.card),
-        boxShadow: AppShadows.cardShadow,
-      ),
-      padding: const EdgeInsets.all(AppSpacing.cardPadding),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TweenAnimationBuilder<int>(
-                tween: IntTween(
-                  begin: 0,
-                  end: caloriesLeft > 0 ? caloriesLeft : 0,
-                ),
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeOut,
-                builder: (context, val, child) =>
-                    Text(val.toString(), style: AppTextStyles.heroNumber),
-              ),
-              const SizedBox(height: 4),
-              RichText(
-                text: TextSpan(
-                  children: [
-                    TextSpan(
-                      text:
-                          "${Translations.t(lang, 'calories_left').split(' ').first} ",
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w400,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    TextSpan(
-                      text: Translations.t(
-                        lang,
-                        'calories_left',
-                      ).split(' ').skip(1).join(' '),
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          SizedBox(
-            width: 96,
-            height: 96,
-            child: Stack(
-              children: [
-                CustomPaint(
-                  size: const Size(96, 96),
-                  painter: DonutRingPainter(
-                    trackColor: AppColors.ringTrack,
-                    progressColor: AppColors.primaryMid,
-                    strokeWidth: 10.0,
-                    progress: progress,
-                  ),
-                ),
-                Center(
-                  child: SvgPicture.asset(
-                    'assets/icons/flame_gradient.svg',
-                    width: 24,
-                    height: 24,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+    return SwipableStatCard(
+      title: 'Calories',
+      themeColor: AppColors.primaryMid,
+      primaryView: CalorieRingInner(stats: stats, lang: lang),
     );
   }
 
@@ -225,32 +159,44 @@ class HomeScreen extends ConsumerWidget {
     return Row(
       children: [
         Expanded(
-          child: _MacroTile(
-            macroName: Translations.t(lang, 'macro_protein'),
-            total: stats.proteinTarget,
-            consumed: stats.proteinConsumed,
-            macroColor: AppColors.protein,
-            macroIcon: LucideIcons.beef,
+          child: SwipableStatCard(
+            title: 'Protein',
+            themeColor: AppColors.protein,
+            primaryView: MacroTileInner(
+              macroName: Translations.t(lang, 'macro_protein'),
+              total: stats.proteinTarget,
+              consumed: stats.proteinConsumed,
+              macroColor: AppColors.protein,
+              macroIcon: LucideIcons.beef,
+            ),
           ),
         ),
         const SizedBox(width: AppSpacing.macroTileGap),
         Expanded(
-          child: _MacroTile(
-            macroName: Translations.t(lang, 'macro_carbs'),
-            total: stats.carbsTarget,
-            consumed: stats.carbsConsumed,
-            macroColor: AppColors.carbs,
-            macroIcon: LucideIcons.wheat,
+          child: SwipableStatCard(
+            title: 'Carbs',
+            themeColor: AppColors.carbs,
+            primaryView: MacroTileInner(
+              macroName: Translations.t(lang, 'macro_carbs'),
+              total: stats.carbsTarget,
+              consumed: stats.carbsConsumed,
+              macroColor: AppColors.carbs,
+              macroIcon: LucideIcons.wheat,
+            ),
           ),
         ),
         const SizedBox(width: AppSpacing.macroTileGap),
         Expanded(
-          child: _MacroTile(
-            macroName: Translations.t(lang, 'macro_fats'),
-            total: stats.fatTarget,
-            consumed: stats.fatConsumed,
-            macroColor: AppColors.fats,
-            macroIcon: LucideIcons.droplets,
+          child: SwipableStatCard(
+            title: 'Fats',
+            themeColor: AppColors.fats,
+            primaryView: MacroTileInner(
+              macroName: Translations.t(lang, 'macro_fats'),
+              total: stats.fatTarget,
+              consumed: stats.fatConsumed,
+              macroColor: AppColors.fats,
+              macroIcon: LucideIcons.droplets,
+            ),
           ),
         ),
       ],
@@ -559,89 +505,7 @@ class _MacroChip extends StatelessWidget {
   }
 }
 
-class _MacroTile extends StatelessWidget {
-  final String macroName;
-  final int total;
-  final int consumed;
-  final Color macroColor;
-  final IconData macroIcon;
-
-  const _MacroTile({
-    required this.macroName,
-    required this.total,
-    required this.consumed,
-    required this.macroColor,
-    required this.macroIcon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    int left = total - consumed;
-    left = left < 0 ? 0 : left;
-    final double progress = total > 0
-        ? (consumed / total).clamp(0.0, 1.0)
-        : 0.0;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.tile),
-        boxShadow: AppShadows.cardShadow,
-      ),
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text("${left}g", style: AppTextStyles.macroValue),
-          const SizedBox(height: 2),
-          RichText(
-            text: TextSpan(
-              children: [
-                TextSpan(
-                  text: "$macroName ",
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                const TextSpan(
-                  text: "left",
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w400,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          Center(
-            child: SizedBox(
-              width: 56,
-              height: 56,
-              child: Stack(
-                children: [
-                  CustomPaint(
-                    size: const Size(56, 56),
-                    painter: DonutRingPainter(
-                      trackColor: AppColors.ringTrack,
-                      progressColor: macroColor,
-                      strokeWidth: 6.0,
-                      progress: progress,
-                    ),
-                  ),
-                  Center(child: Icon(macroIcon, size: 20, color: macroColor)),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+  // The old _MacroTile is removed since we externalized it.
 
 class DonutRingPainter extends CustomPainter {
   final Color trackColor;
@@ -695,81 +559,4 @@ class DonutRingPainter extends CustomPainter {
   }
 }
 
-class _WeeklyCalendar extends ConsumerWidget {
-  const _WeeklyCalendar();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final now = DateTime.now();
-    final selectedDate = ref.watch(selectedDateProvider);
-    final days = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-
-    // Start of current week (Sunday)
-    final startOfWeek = now.subtract(Duration(days: now.weekday % 7));
-
-    return SizedBox(
-      height: 72,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: List.generate(7, (i) {
-          final dayDate = startOfWeek.add(Duration(days: i));
-          final isSelected = dayDate.year == selectedDate.year &&
-              dayDate.month == selectedDate.month &&
-              dayDate.day == selectedDate.day;
-          final isFuture = dayDate.isAfter(now);
-          final dayOfMonth = dayDate.day;
-
-          return GestureDetector(
-            onTap: isFuture
-                ? null
-                : () => ref.read(selectedDateProvider.notifier).setDate(dayDate),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  days[i],
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.inactive,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: isSelected
-                          ? AppColors.primaryDark
-                          : (isFuture
-                              ? const Color(0xFFDDDDDD)
-                              : const Color(0xFFCECECE)),
-                      width: isSelected ? 2 : 1.5,
-                    ),
-                    color: isSelected
-                        ? AppColors.primary.withValues(alpha: 0.1)
-                        : Colors.transparent,
-                  ),
-                  child: Center(
-                    child: Text(
-                      "$dayOfMonth",
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                        color: isSelected
-                            ? AppColors.textPrimary
-                            : AppColors.textSecondary,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        }),
-      ),
-    );
-  }
-}
+// The old _WeeklyCalendar is removed since we externalized it.

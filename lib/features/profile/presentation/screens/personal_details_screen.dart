@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import 'profile_screen.dart';
 
-class PersonalDetailsScreen extends StatelessWidget {
+class PersonalDetailsScreen extends ConsumerWidget {
   const PersonalDetailsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profileAsync = ref.watch(profileProvider);
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -18,23 +22,27 @@ class PersonalDetailsScreen extends StatelessWidget {
         elevation: 0,
         iconTheme: const IconThemeData(color: AppColors.textPrimary),
       ),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-        children: [
-          _buildField("Name", "Enter your name"),
-          const SizedBox(height: 16),
-          _buildField("Age", "23"),
-          const SizedBox(height: 16),
-          _buildField("Height", "180 cm"),
-          const SizedBox(height: 16),
-          _buildField("Current Weight", "75 kg"),
-          const SizedBox(height: 16),
-          _buildField("Target Weight", "70 kg"),
-          const SizedBox(height: 16),
-          _buildField("Gender", "Male"),
-          const SizedBox(height: 16),
-          _buildField("Activity Level", "Sedentary"),
-        ],
+      body: profileAsync.when(
+        data: (data) => ListView(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+          children: [
+            _buildField("Name", "${data['name'] ?? ''}"),
+            const SizedBox(height: 16),
+            _buildField("Age", "${data['age'] ?? ''}"),
+            const SizedBox(height: 16),
+            _buildField("Height", "${data['height'] ?? ''} cm"),
+            const SizedBox(height: 16),
+            _buildField("Current Weight", "${data['current_weight'] ?? ''} kg"),
+            const SizedBox(height: 16),
+            _buildField("Target Weight", "${data['target_weight'] ?? ''} kg"),
+            const SizedBox(height: 16),
+            _buildField("Gender", "${data['gender'] ?? 'Not Set'}"),
+            const SizedBox(height: 16),
+            _buildField("Activity Level", "${data['activity_level'] ?? 'Not Set'}"),
+          ],
+        ),
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, st) => const Center(child: Text("Error", style: TextStyle(color: AppColors.danger))),
       ),
     );
   }

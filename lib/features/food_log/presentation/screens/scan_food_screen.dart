@@ -488,7 +488,7 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
                   onTap: () => context.go('/home'),
                   child: const _CameraRoundButton(icon: LucideIcons.x),
                 ),
-                const _CameraRoundButton(icon: LucideIcons.info),
+                const SizedBox.shrink(),
               ],
             ),
           ),
@@ -607,7 +607,7 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
                     ),
                   ),
                   const SizedBox(width: 48),
-                  const _CameraRoundButton(icon: LucideIcons.info),
+                  const SizedBox(width: 44), // Placeholder to keep shutter perfectly centered
                 ],
               ),
             ),

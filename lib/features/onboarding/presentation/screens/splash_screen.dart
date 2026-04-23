@@ -57,11 +57,21 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color(0xFFE5E5E8), // darker top
+              AppColors.background, // lighter bottom
+            ],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
             Container(
               width: 80,
               height: 80,
@@ -84,20 +94,25 @@ class _SplashScreenState extends State<SplashScreen> {
             const SizedBox(height: 24),
             Text(
               'GojoCalories',
-              style: Theme.of(
-                context,
-              ).textTheme.headlineLarge?.copyWith(color: AppColors.textPrimary),
+              style: const TextStyle(
+                fontSize: 36,
+                fontWeight: FontWeight.w800,
+                color: Colors.black, // Pure black
+              ),
             ).animate().fade(delay: 300.ms, duration: 400.ms),
             const SizedBox(height: 8),
             Text(
               'Track your calories with just a picture',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w400,
+                color: AppColors.textSecondary,
+              ),
             ).animate().fade(delay: 500.ms, duration: 400.ms),
           ],
         ),
       ),
+    ),
     );
   }
 }

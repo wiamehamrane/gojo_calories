@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../dashboard/providers/dashboard_provider.dart';
 
 class NutritionGoalsScreen extends ConsumerWidget {
   const NutritionGoalsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final stats = ref.watch(dashboardProvider);
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -22,13 +25,13 @@ class NutritionGoalsScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
         children: [
-          _buildGoalField("Daily Calorie Budget", "2200", "kcal"),
+          _buildGoalField("Daily Calorie Budget", "${stats.calorieBudget}", "kcal"),
           const SizedBox(height: 16),
-          _buildGoalField("Protein Target", "150", "g"),
+          _buildGoalField("Protein Target", "${stats.proteinTarget}", "g"),
           const SizedBox(height: 16),
-          _buildGoalField("Carbs Target", "200", "g"),
+          _buildGoalField("Carbs Target", "${stats.carbsTarget}", "g"),
           const SizedBox(height: 16),
-          _buildGoalField("Fats Target", "65", "g"),
+          _buildGoalField("Fats Target", "${stats.fatTarget}", "g"),
           const SizedBox(height: 32),
           ElevatedButton(
             style: ElevatedButton.styleFrom(

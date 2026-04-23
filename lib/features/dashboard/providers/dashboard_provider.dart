@@ -12,14 +12,14 @@ class DashboardNotifier extends Notifier<models.DailyStats> {
     final date = ref.watch(selectedDateProvider);
     _loadData(date);
     return models.DailyStats(
-      calorieBudget: 2200,
+      calorieBudget: 0,
       caloriesConsumed: 0,
       proteinConsumed: 0,
       carbsConsumed: 0,
       fatConsumed: 0,
-      proteinTarget: 150,
-      carbsTarget: 200,
-      fatTarget: 65,
+      proteinTarget: 0,
+      carbsTarget: 0,
+      fatTarget: 0,
     );
   }
 
@@ -34,14 +34,14 @@ class DashboardNotifier extends Notifier<models.DailyStats> {
       if (response.data is List && response.data.isNotEmpty) {
         final latest = response.data.first;
         final stats = models.DailyStats(
-          calorieBudget: latest['calorie_budget'] ?? 2200,
+          calorieBudget: latest['calorie_budget'] ?? 0,
           caloriesConsumed: latest['calories_consumed'] ?? 0,
           proteinConsumed: latest['protein_consumed'] ?? 0,
           carbsConsumed: latest['carbs_consumed'] ?? 0,
           fatConsumed: latest['fat_consumed'] ?? 0,
-          proteinTarget: latest['protein_target'] ?? 150,
-          carbsTarget: latest['carbs_target'] ?? 200,
-          fatTarget: latest['fat_target'] ?? 65,
+          proteinTarget: latest['protein_target'] ?? 0,
+          carbsTarget: latest['carbs_target'] ?? 0,
+          fatTarget: latest['fat_target'] ?? 0,
         );
         state = stats;
 

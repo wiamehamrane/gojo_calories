@@ -56,14 +56,14 @@ class DailyStats {
 
   factory DailyStats.fromMap(Map<String, dynamic> map) {
     return DailyStats(
-      calorieBudget: map['calorieBudget']?.toInt() ?? 2200,
+      calorieBudget: map['calorieBudget']?.toInt() ?? 0,
       caloriesConsumed: map['caloriesConsumed']?.toInt() ?? 0,
       proteinConsumed: map['proteinConsumed']?.toInt() ?? 0,
       carbsConsumed: map['carbsConsumed']?.toInt() ?? 0,
       fatConsumed: map['fatConsumed']?.toInt() ?? 0,
-      proteinTarget: map['proteinTarget']?.toInt() ?? 150,
-      carbsTarget: map['carbsTarget']?.toInt() ?? 200,
-      fatTarget: map['fatTarget']?.toInt() ?? 65,
+      proteinTarget: map['proteinTarget']?.toInt() ?? 0,
+      carbsTarget: map['carbsTarget']?.toInt() ?? 0,
+      fatTarget: map['fatTarget']?.toInt() ?? 0,
     );
   }
 
