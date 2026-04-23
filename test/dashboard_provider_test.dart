@@ -13,20 +13,20 @@ void main() {
     expect(state.proteinTarget, 150);
   });
 
-  test('DashboardProvider logFood updates state syncronously before API resolves', () {
-    final container = ProviderContainer();
-    addTearDown(container.dispose);
+  test(
+    'DashboardProvider logFood updates state syncronously before API resolves',
+    () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
 
-    container.read(dashboardProvider.notifier).logFood(
-      calories: 500,
-      protein: 50,
-      carbs: 40,
-      fat: 10,
-    );
-    
-    final state = container.read(dashboardProvider);
+      container
+          .read(dashboardProvider.notifier)
+          .logFood(calories: 500, protein: 50, carbs: 40, fat: 10);
 
-    expect(state.caloriesConsumed, 500);
-    expect(state.proteinConsumed, 50);
-  });
+      final state = container.read(dashboardProvider);
+
+      expect(state.caloriesConsumed, 500);
+      expect(state.proteinConsumed, 50);
+    },
+  );
 }

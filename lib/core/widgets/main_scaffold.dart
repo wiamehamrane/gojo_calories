@@ -25,9 +25,15 @@ class MainScaffold extends ConsumerWidget {
   void _onItemTapped(int index, BuildContext context) {
     if (index == _calculateSelectedIndex(context)) return;
     switch (index) {
-      case 0: context.go('/home'); break;
-      case 1: context.go('/progress'); break;
-      case 2: context.go('/profile'); break;
+      case 0:
+        context.go('/home');
+        break;
+      case 1:
+        context.go('/progress');
+        break;
+      case 2:
+        context.go('/profile');
+        break;
     }
   }
 
@@ -46,15 +52,26 @@ class MainScaffold extends ConsumerWidget {
             body: Stack(
               children: [
                 Positioned(
-                  bottom: AppSpacing.navHeight + AppSpacing.fabMargin + MediaQuery.of(context).padding.bottom,
-                  right: Directionality.of(context) == TextDirection.rtl ? null : AppSpacing.fabMargin,
-                  left: Directionality.of(context) == TextDirection.rtl ? AppSpacing.fabMargin : null,
+                  bottom:
+                      AppSpacing.navHeight +
+                      AppSpacing.fabMargin +
+                      MediaQuery.of(context).padding.bottom,
+                  right: Directionality.of(context) == TextDirection.rtl
+                      ? null
+                      : AppSpacing.fabMargin,
+                  left: Directionality.of(context) == TextDirection.rtl
+                      ? AppSpacing.fabMargin
+                      : null,
                   child: ScaleTransition(
-                    scale: CurvedAnimation(parent: anim1, curve: Curves.easeOutBack),
+                    scale: CurvedAnimation(
+                      parent: anim1,
+                      curve: Curves.easeOutBack,
+                    ),
                     child: FadeTransition(
                       opacity: anim1,
                       child: GestureDetector(
-                        onTap: () {}, // Blocks taps from closing the modal when clicking on the action grid itself
+                        onTap:
+                            () {}, // Blocks taps from closing the modal when clicking on the action grid itself
                         child: _ActionGrid(),
                       ),
                     ),
@@ -94,7 +111,9 @@ class MainScaffold extends ConsumerWidget {
           ),
           // Nav Bar
           Positioned(
-            left: 0, right: 0, bottom: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
             height: navBarHeight,
             child: Container(
               decoration: const BoxDecoration(
@@ -133,8 +152,12 @@ class MainScaffold extends ConsumerWidget {
           if (currentIndex == 0)
             Positioned(
               bottom: navBarHeight + AppSpacing.fabMargin,
-              right: Directionality.of(context) == TextDirection.rtl ? null : AppSpacing.fabMargin,
-              left: Directionality.of(context) == TextDirection.rtl ? AppSpacing.fabMargin : null,
+              right: Directionality.of(context) == TextDirection.rtl
+                  ? null
+                  : AppSpacing.fabMargin,
+              left: Directionality.of(context) == TextDirection.rtl
+                  ? AppSpacing.fabMargin
+                  : null,
               child: GestureDetector(
                 onTap: () => _showActionGrid(context),
                 child: Container(
@@ -145,7 +168,11 @@ class MainScaffold extends ConsumerWidget {
                     shape: BoxShape.circle,
                     boxShadow: AppShadows.fabShadow,
                   ),
-                  child: const Icon(LucideIcons.plus, size: 28, color: Colors.white),
+                  child: const Icon(
+                    LucideIcons.plus,
+                    size: 28,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ),
@@ -178,8 +205,12 @@ class _NavItem extends StatelessWidget {
 
     if (isProfileTab && isActive) {
       iconWidget = Container(
-        width: 28, height: 28,
-        decoration: const BoxDecoration(shape: BoxShape.circle, color: AppColors.primary),
+        width: 28,
+        height: 28,
+        decoration: const BoxDecoration(
+          shape: BoxShape.circle,
+          color: AppColors.primary,
+        ),
       );
     } else {
       iconWidget = Icon(
@@ -210,7 +241,9 @@ class _NavItem extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             label,
-            style: isActive ? AppTextStyles.navLabelActive : AppTextStyles.navLabelInactive,
+            style: isActive
+                ? AppTextStyles.navLabelActive
+                : AppTextStyles.navLabelInactive,
           ),
         ],
       ),

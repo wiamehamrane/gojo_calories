@@ -90,21 +90,25 @@ class Translations {
       'paid': 'Paid',
       'pending': 'Pending',
       'withdraw_earnings_title': 'Withdraw Earnings',
-      'referral_code_hint': 'Share this code with friends. You earn \$1 for every friend who signs up with it.',
+      'referral_code_hint':
+          'Share this code with friends. You earn \$1 for every friend who signs up with it.',
       'your_referral_code': 'Your referral code',
 
       // Onboarding
       'start_free_trial': 'Start Free Trial',
       'monthly_vip': 'Monthly VIP Access',
       'unlock_potential': 'Unlock your full\npotential today',
-      'onboard_trial_subtitle': 'Start your personalized 3-day free trial. Cancel anytime.',
+      'onboard_trial_subtitle':
+          'Start your personalized 3-day free trial. Cancel anytime.',
       'onboard_goal_title': "What's your main goal?",
-      'onboard_goal_subtitle': 'We will personalize your journey based on this objective.',
+      'onboard_goal_subtitle':
+          'We will personalize your journey based on this objective.',
       'goal_lose': 'Lose Weight',
       'goal_maintain': 'Maintain Weight',
       'goal_gain': 'Gain Muscle',
       'onboard_name_title': 'What should we call you?',
-      'onboard_name_subtitle': 'Your name will be used to personalize your dashboard.',
+      'onboard_name_subtitle':
+          'Your name will be used to personalize your dashboard.',
       'onboard_weight_title': 'Your {type} weight',
       'onboard_weight_subtitle': 'You can always update this later.',
       'onboard_activity_title': 'Activity Level',
@@ -118,7 +122,8 @@ class Translations {
       'continue_btn': 'Continue',
       'lock_in_plan': 'Lock in my Plan',
       'analyzing': 'Analyzing metadata...',
-      'analyzing_desc': 'Creating your bespoke macro targets designed to hit your goals as fast as possible.',
+      'analyzing_desc':
+          'Creating your bespoke macro targets designed to hit your goals as fast as possible.',
 
       // Exercises
       'log_exercise': 'Log Exercise',
@@ -148,7 +153,8 @@ class Translations {
       'manage_subscription': 'Manage',
       'cancel_subscription': 'Cancel Plan',
       'cancel_sub_title': 'Cancel Subscription?',
-      'cancel_sub_body': 'Your subscription will remain active until the end of the billing period.',
+      'cancel_sub_body':
+          'Your subscription will remain active until the end of the billing period.',
       'keep': 'Keep',
       'per_month_after_trial': 'per month after trial',
       'cancel_anytime': 'Cancel anytime in Settings before trial ends.',
@@ -161,7 +167,8 @@ class Translations {
       // Profile update sheet
       'update_profile': 'Update Profile',
       'delete_account': 'Delete Account',
-      'delete_account_confirm': 'This action is permanent and will completely erase all your data and cancel any active subscription. Do you wish to proceed?',
+      'delete_account_confirm':
+          'This action is permanent and will completely erase all your data and cancel any active subscription. Do you wish to proceed?',
       'delete_permanently': 'Delete Permanently',
     },
 
@@ -229,7 +236,8 @@ class Translations {
       'no_balance_withdraw': 'Aucun solde à retirer',
       'how_it_works': 'Comment ça marche',
       'how_step1_title': 'Partagez votre code',
-      'how_step1_desc': 'Envoyez-le à vos amis via n\'importe quelle application',
+      'how_step1_desc':
+          'Envoyez-le à vos amis via n\'importe quelle application',
       'how_step2_title': 'L\'ami s\'inscrit',
       'how_step2_desc': 'Il entre votre code lors de l\'inscription',
       'how_step3_title': 'Gagnez 1\$',
@@ -247,24 +255,30 @@ class Translations {
       'paid': 'Payé',
       'pending': 'En attente',
       'withdraw_earnings_title': 'Retirer les gains',
-      'referral_code_hint': 'Partagez ce code. Vous gagnez 1\$ pour chaque ami qui s\'inscrit.',
+      'referral_code_hint':
+          'Partagez ce code. Vous gagnez 1\$ pour chaque ami qui s\'inscrit.',
       'your_referral_code': 'Votre code de parrainage',
 
       'start_free_trial': 'Commencer l\'essai gratuit',
       'monthly_vip': 'Accès VIP Mensuel',
       'unlock_potential': 'Libérez tout votre\npotentiel aujourd\'hui',
-      'onboard_trial_subtitle': 'Commencez votre essai gratuit de 3 jours. Annulez à tout moment.',
+      'onboard_trial_subtitle':
+          'Commencez votre essai gratuit de 3 jours. Annulez à tout moment.',
       'onboard_goal_title': 'Quel est votre objectif principal ?',
-      'onboard_goal_subtitle': 'Nous personnaliserons votre parcours selon cet objectif.',
+      'onboard_goal_subtitle':
+          'Nous personnaliserons votre parcours selon cet objectif.',
       'goal_lose': 'Perdre du poids',
       'goal_maintain': 'Maintenir le poids',
       'goal_gain': 'Gagner du muscle',
       'onboard_name_title': 'Comment devrions-nous vous appeler ?',
-      'onboard_name_subtitle': 'Votre nom sera utilisé pour personnaliser votre tableau de bord.',
+      'onboard_name_subtitle':
+          'Votre nom sera utilisé pour personnaliser votre tableau de bord.',
       'onboard_weight_title': 'Votre poids {type}',
-      'onboard_weight_subtitle': 'Vous pouvez toujours mettre à jour cela plus tard.',
+      'onboard_weight_subtitle':
+          'Vous pouvez toujours mettre à jour cela plus tard.',
       'onboard_activity_title': 'Niveau d\'activité',
-      'onboard_activity_subtitle': 'À quel point êtes-vous actif un jour de semaine moyen ?',
+      'onboard_activity_subtitle':
+          'À quel point êtes-vous actif un jour de semaine moyen ?',
       'activity_sedentary': 'Sédentaire',
       'activity_sedentary_desc': 'Peu ou pas d\'exercice',
       'activity_light': 'Légèrement actif',
@@ -274,7 +288,8 @@ class Translations {
       'continue_btn': 'Continuer',
       'lock_in_plan': 'Valider mon plan',
       'analyzing': 'Analyse en cours...',
-      'analyzing_desc': 'Création de vos objectifs macro personnalisés pour atteindre vos objectifs le plus vite possible.',
+      'analyzing_desc':
+          'Création de vos objectifs macro personnalisés pour atteindre vos objectifs le plus vite possible.',
 
       'log_exercise': 'Enregistrer l\'exercice',
       'run': 'Course',
@@ -303,20 +318,24 @@ class Translations {
       'manage_subscription': 'Gérer',
       'cancel_subscription': 'Annuler le plan',
       'cancel_sub_title': 'Annuler l\'abonnement ?',
-      'cancel_sub_body': 'Votre abonnement restera actif jusqu\'à la fin de la période de facturation.',
+      'cancel_sub_body':
+          'Votre abonnement restera actif jusqu\'à la fin de la période de facturation.',
       'keep': 'Conserver',
       'per_month_after_trial': 'par mois après l\'essai',
-      'cancel_anytime': 'Annulez à tout moment dans les paramètres avant la fin de l\'essai.',
+      'cancel_anytime':
+          'Annulez à tout moment dans les paramètres avant la fin de l\'essai.',
 
       // Errors
       'error_generic': 'Quelque chose s\'est mal passé. Veuillez réessayer.',
-      'error_network': 'Pas de connexion Internet. Vérifiez vos paramètres réseau.',
+      'error_network':
+          'Pas de connexion Internet. Vérifiez vos paramètres réseau.',
       'error_auth': 'Session expirée. Veuillez vous reconnecter.',
 
       // Profile update sheet
       'update_profile': 'Mettre à jour le profil',
       'delete_account': 'Supprimer le compte',
-      'delete_account_confirm': 'Cette action est permanente et effacera toutes vos données et annulera tout abonnement actif. Souhaitez-vous continuer ?',
+      'delete_account_confirm':
+          'Cette action est permanente et effacera toutes vos données et annulera tout abonnement actif. Souhaitez-vous continuer ?',
       'delete_permanently': 'Supprimer définitivement',
     },
 
@@ -402,13 +421,15 @@ class Translations {
       'paid': 'مدفوع',
       'pending': 'قيد الانتظار',
       'withdraw_earnings_title': 'سحب الأرباح',
-      'referral_code_hint': 'شارك هذا الرمز مع أصدقائك. تكسب \$1 لكل صديق يسجل باستخدامه.',
+      'referral_code_hint':
+          'شارك هذا الرمز مع أصدقائك. تكسب \$1 لكل صديق يسجل باستخدامه.',
       'your_referral_code': 'رمز الإحالة الخاص بك',
 
       'start_free_trial': 'ابدأ التجربة المجانية',
       'monthly_vip': 'اشتراك VIP شهري',
       'unlock_potential': 'أطلق العنان لإمكاناتك\nالكاملة اليوم',
-      'onboard_trial_subtitle': 'ابدأ تجربتك المجانية لمدة 3 أيام. إلغاء في أي وقت.',
+      'onboard_trial_subtitle':
+          'ابدأ تجربتك المجانية لمدة 3 أيام. إلغاء في أي وقت.',
       'onboard_goal_title': 'ما هو هدفك الرئيسي؟',
       'onboard_goal_subtitle': 'سنخصص رحلتك بناءً على هذا الهدف.',
       'goal_lose': 'خسارة الوزن',
@@ -429,7 +450,8 @@ class Translations {
       'continue_btn': 'متابعة',
       'lock_in_plan': 'تثبيت خطتي',
       'analyzing': 'جارٍ التحليل...',
-      'analyzing_desc': 'إنشاء أهداف الماكرو الخاصة بك للوصول إلى أهدافك بأسرع وقت ممكن.',
+      'analyzing_desc':
+          'إنشاء أهداف الماكرو الخاصة بك للوصول إلى أهدافك بأسرع وقت ممكن.',
 
       'log_exercise': 'تسجيل التمرين',
       'run': 'ركض',
@@ -461,7 +483,8 @@ class Translations {
       'cancel_sub_body': 'سيظل اشتراكك نشطاً حتى نهاية فترة الفوترة.',
       'keep': 'الاحتفاظ',
       'per_month_after_trial': 'شهريًا بعد التجربة',
-      'cancel_anytime': 'يمكنك الإلغاء في أي وقت من الإعدادات قبل انتهاء الفترة التجريبية.',
+      'cancel_anytime':
+          'يمكنك الإلغاء في أي وقت من الإعدادات قبل انتهاء الفترة التجريبية.',
 
       // Errors
       'error_generic': 'حدث خطأ ما. الرجاء المحاولة مرة أخرى.',
@@ -471,7 +494,8 @@ class Translations {
       // Profile update sheet
       'update_profile': 'تحديث الملف الشخصي',
       'delete_account': 'حذف الحساب',
-      'delete_account_confirm': 'هذا الإجراء دائم وسيمحو جميع بياناتك ويلغي أي اشتراك نشط. هل تريد المتابعة؟',
+      'delete_account_confirm':
+          'هذا الإجراء دائم وسيمحو جميع بياناتك ويلغي أي اشتراك نشط. هل تريد المتابعة؟',
       'delete_permanently': 'حذف نهائياً',
     },
   };

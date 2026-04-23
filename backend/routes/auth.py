@@ -170,7 +170,7 @@ async def apple_login(body: dict, db: Session = Depends(get_db)):
             identity_token, 
             public_key,
             algorithms=["RS256"],
-            audience="com.gojocalories.gojocalories"
+            audience=["com.gojocalories.gojocalories", "com.gojocalories.gojocalories.web"]
         )
     except Exception as e:
         raise HTTPException(status_code=401, detail=f"Invalid Apple token: {str(e)}")
@@ -207,6 +207,16 @@ async def apple_login(body: dict, db: Session = Depends(get_db)):
     return {"access_token": access_token, "token_type": "bearer", "name": user.name}
 
 # ─────────────────────────────────────────────────────────────────────────────
+from fastapi import Request
+from fastapi.responses import RedirectResponse
+import urllib.parse
+
+@router.post("/callbacks/sign_in_with_apple")
+async def apple_callback_android(request: Request):
+    form = await request.form()
+    query_string = urllib.parse.urlencode(form)
+    intent_url = f"intent://callback?{query_string}#Intent;package=com.gojocalories.gojocalories;scheme=signinwithapple;end"
+    return RedirectResponse(url=intent_url)
 
 @router.get("/me")
 def get_me(db: Session = Depends(get_db), current_user_id: int = Depends(get_current_user_id)):

@@ -28,7 +28,11 @@ Future<void> main() async {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline, size: 48, color: Colors.redAccent),
+              const Icon(
+                Icons.error_outline,
+                size: 48,
+                color: Colors.redAccent,
+              ),
               const SizedBox(height: 12),
               const Text(
                 'Something went wrong.',
@@ -54,10 +58,12 @@ Future<void> main() async {
   final container = ProviderContainer();
   await container.read(localeProvider.notifier).loadSaved();
 
-  runApp(UncontrolledProviderScope(
-    container: container,
-    child: const GojoCaloriesApp(),
-  ));
+  runApp(
+    UncontrolledProviderScope(
+      container: container,
+      child: const GojoCaloriesApp(),
+    ),
+  );
 }
 
 class GojoCaloriesApp extends ConsumerWidget {
@@ -82,11 +88,7 @@ class GojoCaloriesApp extends ConsumerWidget {
         theme: AppTheme.lightTheme.copyWith(textTheme: textTheme),
         routerConfig: appRouter,
         locale: flutterLocale,
-        supportedLocales: const [
-          Locale('en'),
-          Locale('fr'),
-          Locale('ar'),
-        ],
+        supportedLocales: const [Locale('en'), Locale('fr'), Locale('ar')],
         localizationsDelegates: const [
           GlobalMaterialLocalizations.delegate,
           GlobalWidgetsLocalizations.delegate,

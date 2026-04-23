@@ -37,11 +37,14 @@ class AppDatabase extends _$AppDatabase {
   int get schemaVersion => 1;
 
   Future<List<FoodLog>> getAllFoodLogs() => select(foodLogs).get();
-  Future<int> insertFoodLog(FoodLogsCompanion log) => into(foodLogs).insert(log);
+  Future<int> insertFoodLog(FoodLogsCompanion log) =>
+      into(foodLogs).insert(log);
 
   Future<DailyStat?> getStatsForDate(DateTime dt) {
     final start = DateTime(dt.year, dt.month, dt.day);
-    return (select(dailyStats)..where((tbl) => tbl.date.equals(start))).getSingleOrNull();
+    return (select(
+      dailyStats,
+    )..where((tbl) => tbl.date.equals(start))).getSingleOrNull();
   }
 }
 

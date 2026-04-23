@@ -39,12 +39,9 @@ final GoRouter appRouter = GoRouter(
   initialLocation: '/splash',
   routes: [
     GoRoute(path: '/splash', builder: (context, state) => const SplashScreen()),
-    
+
     // New Auth / Onboarding Flow
-    GoRoute(
-      path: '/auth',
-      builder: (context, state) => const AuthScreen(),
-    ),
+    GoRoute(path: '/auth', builder: (context, state) => const AuthScreen()),
     GoRoute(
       path: '/onboarding/weight',
       builder: (context, state) => const WeightSetupScreen(),
@@ -77,20 +74,55 @@ final GoRouter appRouter = GoRouter(
         ),
       ],
     ),
-    
+
     // Auxiliary App Routes
-    GoRoute(path: '/profile/personal', builder: (context, state) => const PersonalDetailsScreen()),
-    GoRoute(path: '/profile/preferences', builder: (context, state) => const PreferencesScreen()),
-    GoRoute(path: '/profile/language', builder: (context, state) => const LanguageScreen()),
-    GoRoute(path: '/profile/nutrition', builder: (context, state) => const NutritionGoalsScreen()),
-    GoRoute(path: '/log_exercise', builder: (context, state) => const LogExerciseScreen()),
-    GoRoute(path: '/run_intensity', builder: (context, state) => const RunIntensityScreen()),
-    GoRoute(path: '/weight_lifting', builder: (context, state) => const WeightLiftingScreen()),
-    GoRoute(path: '/describe_exercise', builder: (context, state) => const DescribeExerciseScreen()),
-    GoRoute(path: '/manual_exercise', builder: (context, state) => const ManualExerciseScreen()),
-    GoRoute(path: '/profile/referrals', builder: (context, state) => const ReferralsScreen()),
-    GoRoute(path: '/saved_foods', builder: (context, state) => const SavedFoodsScreen()),
-    GoRoute(path: '/food_database', builder: (context, state) => const FoodDatabaseScreen()),
+    GoRoute(
+      path: '/profile/personal',
+      builder: (context, state) => const PersonalDetailsScreen(),
+    ),
+    GoRoute(
+      path: '/profile/preferences',
+      builder: (context, state) => const PreferencesScreen(),
+    ),
+    GoRoute(
+      path: '/profile/language',
+      builder: (context, state) => const LanguageScreen(),
+    ),
+    GoRoute(
+      path: '/profile/nutrition',
+      builder: (context, state) => const NutritionGoalsScreen(),
+    ),
+    GoRoute(
+      path: '/log_exercise',
+      builder: (context, state) => const LogExerciseScreen(),
+    ),
+    GoRoute(
+      path: '/run_intensity',
+      builder: (context, state) => const RunIntensityScreen(),
+    ),
+    GoRoute(
+      path: '/weight_lifting',
+      builder: (context, state) => const WeightLiftingScreen(),
+    ),
+    GoRoute(
+      path: '/describe_exercise',
+      builder: (context, state) => const DescribeExerciseScreen(),
+    ),
+    GoRoute(
+      path: '/manual_exercise',
+      builder: (context, state) => const ManualExerciseScreen(),
+    ),
+    GoRoute(
+      path: '/profile/referrals',
+      builder: (context, state) => const ReferralsScreen(),
+    ),
+    GoRoute(
+      path: '/saved_foods',
+      builder: (context, state) => const SavedFoodsScreen(),
+    ),
+    GoRoute(
+      path: '/food_database',
+      builder: (context, state) => const FoodDatabaseScreen(),
+    ),
   ],
 );
-

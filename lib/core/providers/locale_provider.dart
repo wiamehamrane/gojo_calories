@@ -22,13 +22,18 @@ class LocaleNotifier extends Notifier<String> {
   }
 }
 
-final localeProvider = NotifierProvider<LocaleNotifier, String>(LocaleNotifier.new);
+final localeProvider = NotifierProvider<LocaleNotifier, String>(
+  LocaleNotifier.new,
+);
 
 /// A helper to get the Flutter Locale object from a locale code string.
 Locale toFlutterLocale(String code) {
   switch (code) {
-    case 'fr': return const Locale('fr');
-    case 'ar': return const Locale('ar');
-    default:   return const Locale('en');
+    case 'fr':
+      return const Locale('fr');
+    case 'ar':
+      return const Locale('ar');
+    default:
+      return const Locale('en');
   }
 }

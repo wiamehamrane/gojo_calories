@@ -17,10 +17,16 @@ class AppErrorHandler {
         case DioExceptionType.badResponse:
           final statusCode = error.response?.statusCode;
           final detail = error.response?.data?['detail'];
-          if (statusCode == 401) return 'Your session has expired. Please sign in again.';
-          if (statusCode == 404) return 'The requested information was not found.';
+          if (statusCode == 401) {
+            return 'Your session has expired. Please sign in again.';
+          }
+          if (statusCode == 404) {
+            return 'The requested information was not found.';
+          }
           if (statusCode == 400 && detail != null) return detail.toString();
-          if (statusCode != null && statusCode >= 500) return 'Server error. Please try again later.';
+          if (statusCode != null && statusCode >= 500) {
+            return 'Server error. Please try again later.';
+          }
           return detail?.toString() ?? 'An unexpected error occurred.';
         default:
           return 'An unexpected error occurred. Please try again.';
@@ -37,7 +43,9 @@ class AppErrorHandler {
 
     final msg = error.toString();
     // Strip the "Exception:" prefix for cleaner UX
-    if (msg.startsWith('Exception: ')) return msg.replaceFirst('Exception: ', '');
+    if (msg.startsWith('Exception: ')) {
+      return msg.replaceFirst('Exception: ', '');
+    }
     return msg.isNotEmpty ? msg : 'Something went wrong. Please try again.';
   }
 
@@ -55,7 +63,11 @@ class AppErrorHandler {
   }
 
   /// Shows a modal dialog with the error message.
-  static void showDialog(BuildContext context, Object error, {String title = 'Error'}) {
+  static void showDialog(
+    BuildContext context,
+    Object error, {
+    String title = 'Error',
+  }) {
     if (!context.mounted) return;
     showAdaptiveDialog<void>(
       context: context,
