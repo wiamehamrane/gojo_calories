@@ -73,10 +73,10 @@ def get_user_stats(
             new_stat = DailyStats(
                 user_id=current_user_id,
                 date=dt.datetime.combine(today_utc, dt.time.min),
-                calorie_budget=targets["calorie_budget"],
-                protein_target=targets["protein_target"],
-                carbs_target=targets["carbs_target"],
-                fat_target=targets["fat_target"],
+                calorie_budget=user.manual_calories or targets["calorie_budget"],
+                protein_target=user.manual_protein or targets["protein_target"],
+                carbs_target=user.manual_carbs or targets["carbs_target"],
+                fat_target=user.manual_fat or targets["fat_target"],
                 calories_consumed=0, protein_consumed=0, carbs_consumed=0, fat_consumed=0
             )
             db.add(new_stat)
@@ -217,10 +217,10 @@ def log_macro(calories: int, protein: int, carbs: int, fat: int, db: Session = D
         new_stat = DailyStats(
             user_id=current_user_id, 
             date=datetime.datetime.utcnow(), 
-            calorie_budget=calorie_budget,
-            protein_target=protein_t,
-            carbs_target=carbs_t,
-            fat_target=fat_t,
+            calorie_budget=user.manual_calories or calorie_budget,
+            protein_target=user.manual_protein or protein_t,
+            carbs_target=user.manual_carbs or carbs_t,
+            fat_target=user.manual_fat or fat_t,
             calories_consumed=0, protein_consumed=0, carbs_consumed=0, fat_consumed=0
         )
         db.add(new_stat)

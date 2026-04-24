@@ -259,3 +259,55 @@ async def log_food_item(body: LogItemModel, current_user_id: int = Depends(get_c
     except Exception as e:
         print(f"Error logging explicit item: {e}")
         raise HTTPException(status_code=500, detail="Failed to log the item to history.")
+@router.get("/barcode/{barcode}")
+async def get_barcode_nutrition(barcode: str, current_user_id: int = Depends(get_current_user_id)):
+    """Fetches nutritional data for a given barcode from Open Food Facts."""
+    import httpx
+    
+    url = f"https://world.openfoodfacts.org/api/v2/product/{barcode}.json"
+    
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, timeout=10.0)
+            
+        if response.status_code != 200:
+            raise HTTPException(status_code=502, detail="Failed to fetch data from nutrition provider.")
+            
+        product_data = response.json()
+        if product_data.get('status') == 0 or 'product' not in product_data:
+            raise HTTPException(status_code=404, detail="Product not found in barcode database.")
+            
+        product = product_data['product']
+        nutriments = product.get('nutriments', {})
+        
+        def get_num(key: str) -> int:
+            # Try 100g first, then per-serving, then generic
+            val = nutriments.get(f'{key}_100g') or nutriments.get(f'{key}_serving') or nutriments.get(key, 0)
+            try:
+                return int(round(float(val)))
+            except (ValueError, TypeError):
+                return 0
+
+        raw_name = product.get('product_name', '')
+        brand = product.get('brands', '')
+        
+        name = raw_name
+        if brand and brand not in raw_name:
+            name = f"{raw_name} ({brand})"
+        if not name:
+            name = "Scanned Product"
+
+        return {
+            "name": name,
+            "calories": get_num('energy-kcal'),
+            "protein": get_num('proteins'),
+            "carbs": get_num('carbohydrates'),
+            "fat": get_num('fat'),
+            "brand": brand,
+            "image_url": product.get('image_url')
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Barcode lookup error: {e}")
+        raise HTTPException(status_code=500, detail="Internal error during barcode lookup.")

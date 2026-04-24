@@ -200,83 +200,49 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
       _barcodeScanned = true;
     });
     try {
-      final dio = Dio();
-      final res = await dio
-          .get(
-            'https://world.openfoodfacts.org/api/v2/product/$barcode.json',
-            options: Options(receiveTimeout: const Duration(seconds: 10)),
-          )
-          .timeout(const Duration(seconds: 12));
+      final res = await ApiClient.instance.get('food/barcode/$barcode');
 
-      final productData = res.data;
-      if (productData == null ||
-          productData['status'] == 0 ||
-          productData['product'] == null) {
-        _showError(
-          'Product not found in our database. Try scanning a different barcode or use the camera to analyze the food.',
-        );
-        setState(() {
-          _isProcessing = false;
-          _barcodeScanned = false;
-        });
-        return;
-      }
+      if (res.statusCode == 200 && res.data != null) {
+        final data = res.data as Map<String, dynamic>;
+        final productName = data['name'] ?? 'Scanned Product';
+        final calories = int.tryParse(data['calories']?.toString() ?? '0') ?? 0;
+        final protein = int.tryParse(data['protein']?.toString() ?? '0') ?? 0;
+        final carbs = int.tryParse(data['carbs']?.toString() ?? '0') ?? 0;
+        final fat = int.tryParse(data['fat']?.toString() ?? '0') ?? 0;
 
-      final product = productData['product'] as Map<String, dynamic>;
-      final nutriments = product['nutriments'] as Map<String, dynamic>? ?? {};
+        if (!mounted) return;
 
-      // Prefer 100g values; fallback to per-serving
-      double getNum(String key) {
-        final val = nutriments[key] ?? nutriments['${key}_100g'] ?? 0;
-        return (val is num)
-            ? val.toDouble()
-            : double.tryParse(val.toString()) ?? 0.0;
-      }
-
-      final rawName = product['product_name'] as String? ?? '';
-      final brand = product['brands'] as String? ?? '';
-      
-      final productName = rawName.isNotEmpty 
-          ? (brand.isNotEmpty ? '$rawName ($brand)' : rawName)
-          : 'Scanned Product';
-
-      final calories = getNum('energy-kcal').round();
-      final protein = getNum('proteins').round();
-      final carbs = getNum('carbohydrates').round();
-      final fat = getNum('fat').round();
-
-      if (!mounted) return;
-
-      // Post to backend as a FoodLog entry so it appears in stats/history
-      try {
-        await ApiClient.instance.post(
-          'food/analyze/log',
-          data: {
-            'name': productName,
-            'calories': calories,
-            'protein': protein,
-            'carbs': carbs,
-            'fat': fat,
-          },
-        );
-      } catch (_) {
-        /* non-fatal — macros already from OpenFoodFacts */
-      }
-
-      ref
-          .read(dashboardProvider.notifier)
-          .logFood(
-            calories: calories,
-            protein: protein,
-            carbs: carbs,
-            fat: fat,
-            name: productName,
+        // Post to backend as a FoodLog entry so it appears in stats/history
+        try {
+          await ApiClient.instance.post(
+            'food/analyze/log',
+            data: {
+              'name': productName,
+              'calories': calories,
+              'protein': protein,
+              'carbs': carbs,
+              'fat': fat,
+            },
           );
+        } catch (_) {
+          /* non-fatal */
+        }
 
-      await _redirectToHome();
-    } on DioException catch (e) {
-      if (mounted) {
-        _showError(_friendlyNetworkError(e));
+        ref
+            .read(dashboardProvider.notifier)
+            .logFood(
+              calories: calories,
+              protein: protein,
+              carbs: carbs,
+              fat: fat,
+              name: productName,
+            );
+
+        await _redirectToHome();
+      } else {
+        _showError(
+          'Product not found. Try using the camera to analyze the food.',
+        );
         setState(() {
           _isProcessing = false;
           _barcodeScanned = false;
@@ -284,7 +250,7 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
       }
     } catch (e) {
       if (mounted) {
-        _showError('Could not look up this barcode. Please try again.');
+        _showError('Barcode lookup failed. Please try again.');
         setState(() {
           _isProcessing = false;
           _barcodeScanned = false;

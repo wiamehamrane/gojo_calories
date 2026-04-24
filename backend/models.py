@@ -20,6 +20,12 @@ class User(Base):
     age = Column(Integer, nullable=True)
     gender = Column(String, nullable=True)        # "male" | "female"
     activity_level = Column(String, default="sedentary")  # "sedentary" | "light" | "moderate" | "active" | "very_active"
+    
+    # Manual overrides for nutrition goals
+    manual_calories = Column(Integer, nullable=True)
+    manual_protein = Column(Integer, nullable=True)
+    manual_carbs = Column(Integer, nullable=True)
+    manual_fat = Column(Integer, nullable=True)
 
     # Stripe Payments
     stripe_customer_id = Column(String, unique=True, nullable=True, index=True)

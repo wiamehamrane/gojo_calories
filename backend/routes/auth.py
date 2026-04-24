@@ -46,6 +46,10 @@ class UserProfileUpdate(BaseModel):
     activity_level: Optional[str] = None
     current_password: Optional[str] = None
     new_password: Optional[str] = None
+    daily_calories: Optional[int] = None
+    protein_target: Optional[int] = None
+    carbs_target: Optional[int] = None
+    fat_target: Optional[int] = None
 
 class UserLogin(BaseModel):
     email: str
@@ -271,6 +275,16 @@ def update_profile(
         if not profile_data.current_password or not verify_password(profile_data.current_password, user.hashed_password):
             raise HTTPException(status_code=400, detail="Current password is incorrect")
         user.hashed_password = get_password_hash(profile_data.new_password)
+    
+    # Manual Nutrition Overrides
+    if profile_data.daily_calories is not None:
+        user.manual_calories = profile_data.daily_calories
+    if profile_data.protein_target is not None:
+        user.manual_protein = profile_data.protein_target
+    if profile_data.carbs_target is not None:
+        user.manual_carbs = profile_data.carbs_target
+    if profile_data.fat_target is not None:
+        user.manual_fat = profile_data.fat_target
 
     db.commit()
     db.refresh(user)

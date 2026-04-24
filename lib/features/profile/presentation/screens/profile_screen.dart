@@ -183,8 +183,15 @@ class ProfileScreen extends ConsumerWidget {
                     icon: LucideIcons.mail,
                     label: 'Support Email',
                     onTap: () async {
-                      final uri = Uri.parse('mailto:support@gojocalories.com?subject=Support Request');
-                      if (await canLaunchUrl(uri)) await launchUrl(uri);
+                      // Try Gmail specific scheme first, then fallback to mailto
+                      final gmailUri = Uri.parse('googlegmail:///co?to=support@gojocalories.com&subject=Support%20Request');
+                      final mailtoUri = Uri.parse('mailto:support@gojocalories.com?subject=Support%20Request');
+                      
+                      if (await canLaunchUrl(gmailUri)) {
+                        await launchUrl(gmailUri);
+                      } else if (await canLaunchUrl(mailtoUri)) {
+                        await launchUrl(mailtoUri);
+                      }
                     },
                   ),
                   _SettingsRow(
@@ -527,6 +534,7 @@ class ProfileScreen extends ConsumerWidget {
   ) {
     showModalBottomSheet(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => _ProfileUpdateSheet(
