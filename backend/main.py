@@ -1,7 +1,8 @@
 import os
+import urllib.parse
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from database import engine, Base
@@ -101,4 +102,16 @@ app.include_router(vision.router, prefix="/api/food", tags=["Food Vision AI"])
 app.include_router(stats.router, prefix="/api/stats", tags=["Daily Stats"])
 app.include_router(groups.router, prefix="/api/groups", tags=["Social Groups"])
 app.include_router(referrals.router, prefix="/api/referrals", tags=["Referrals"])
+
+# Apple Sign-In callback — must be at root path to match the redirectUri
+# configured in the Flutter app: https://api.gojocalories.com/callbacks/sign_in_with_apple
+@app.post("/callbacks/sign_in_with_apple")
+async def apple_callback(request: Request):
+    form = await request.form()
+    query_string = urllib.parse.urlencode(dict(form))
+    intent_url = (
+        f"intent://callback?{query_string}"
+        "#Intent;package=com.gojocalories.gojocalories;scheme=signinwithapple;end"
+    )
+    return RedirectResponse(url=intent_url)
 

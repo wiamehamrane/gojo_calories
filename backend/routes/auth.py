@@ -17,6 +17,7 @@ import httpx
 router = APIRouter()
 
 GOOGLE_WEB_CLIENT_ID = os.getenv("GOOGLE_WEB_CLIENT_ID", "dummy_if_not_set")
+GOOGLE_IOS_CLIENT_ID = "980076580409-4d78u72lc8o7aqfuoinvd72dk2tr27co.apps.googleusercontent.com"
 
 def _generate_code(length: int = 6) -> str:
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
@@ -131,12 +132,25 @@ class SocialLogin(BaseModel):
     
 @router.post("/google")
 def google_login(body: SocialLogin, db: Session = Depends(get_db)):
-    try:
-        info = id_token.verify_oauth2_token(body.id_token, g_requests.Request(), GOOGLE_WEB_CLIENT_ID)
-    except ValueError:
-        raise HTTPException(status_code=401, detail="Invalid Google token")
+    if not body.id_token:
+        raise HTTPException(status_code=400, detail="Missing Google id_token")
 
-    email = info["email"]
+    # Try verifying against web client ID first, then iOS client ID as fallback.
+    # iOS devices issue tokens with the iOS client ID as the audience.
+    info = None
+    last_error = None
+    for audience in [GOOGLE_WEB_CLIENT_ID, GOOGLE_IOS_CLIENT_ID]:
+        try:
+            info = id_token.verify_oauth2_token(body.id_token, g_requests.Request(), audience)
+            break  # verification succeeded
+        except ValueError as e:
+            last_error = e
+    if info is None:
+        raise HTTPException(status_code=401, detail=f"Invalid Google token: {last_error}")
+
+    email = info.get("email")
+    if not email:
+        raise HTTPException(status_code=400, detail="Google token does not contain an email address")
     name = info.get("name", email.split("@")[0])
 
     user = db.query(User).filter(User.email == email).first()
@@ -160,35 +174,53 @@ def google_login(body: SocialLogin, db: Session = Depends(get_db)):
     access_token = create_access_token(data={"sub": str(user.id)})
     return {"access_token": access_token, "token_type": "bearer", "name": user.name}
 
+class AppleLoginBody(BaseModel):
+    identity_token: Optional[str] = None
+    given_name: Optional[str] = None
+    family_name: Optional[str] = None
+
 @router.post("/apple")
-async def apple_login(body: dict, db: Session = Depends(get_db)):
-    identity_token = body.get("identity_token")
-    if not identity_token:
+async def apple_login(body: AppleLoginBody, db: Session = Depends(get_db)):
+    if not body.identity_token:
         raise HTTPException(status_code=400, detail="Missing identity token")
-        
-    async with httpx.AsyncClient() as client:
-        keys_response = await client.get("https://appleid.apple.com/auth/keys")
-    jwks = keys_response.json()
 
     try:
-        header = jwt.get_unverified_header(identity_token)
-        matching_key = next(k for k in jwks["keys"] if k["kid"] == header["kid"])
+        async with httpx.AsyncClient() as client:
+            keys_response = await client.get("https://appleid.apple.com/auth/keys", timeout=10.0)
+        keys_response.raise_for_status()
+        jwks = keys_response.json()
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Failed to fetch Apple public keys: {str(e)}")
+
+    try:
+        header = jwt.get_unverified_header(body.identity_token)
+        matching_key = next(
+            (k for k in jwks["keys"] if k["kid"] == header["kid"]),
+            None
+        )
+        if matching_key is None:
+            raise HTTPException(status_code=401, detail="Apple token key not found in JWKS")
         public_key = jwt.algorithms.RSAAlgorithm.from_jwk(matching_key)
         claims = jwt.decode(
-            identity_token, 
+            body.identity_token, 
             public_key,
             algorithms=["RS256"],
             audience=["com.gojocalories.gojocalories", "com.gojocalories.gojocalories.web"]
         )
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=401, detail=f"Invalid Apple token: {str(e)}")
 
     email = claims.get("email")
     if not email:
-        email = f"apple_{claims['sub']}@privaterelay.appleid.com"
-        
-    given_name = body.get("given_name") or ""
-    family_name = body.get("family_name") or ""
+        sub = claims.get("sub")
+        if not sub:
+            raise HTTPException(status_code=400, detail="Apple token missing email and sub")
+        email = f"apple_{sub}@privaterelay.appleid.com"
+
+    given_name = body.given_name or ""
+    family_name = body.family_name or ""
     name = f"{given_name} {family_name}".strip()
     if not name:
         name = email.split("@")[0]
@@ -213,18 +245,6 @@ async def apple_login(body: dict, db: Session = Depends(get_db)):
 
     access_token = create_access_token(data={"sub": str(user.id)})
     return {"access_token": access_token, "token_type": "bearer", "name": user.name}
-
-# ─────────────────────────────────────────────────────────────────────────────
-from fastapi import Request
-from fastapi.responses import RedirectResponse
-import urllib.parse
-
-@router.post("/callbacks/sign_in_with_apple")
-async def apple_callback_android(request: Request):
-    form = await request.form()
-    query_string = urllib.parse.urlencode(form)
-    intent_url = f"intent://callback?{query_string}#Intent;package=com.gojocalories.gojocalories;scheme=signinwithapple;end"
-    return RedirectResponse(url=intent_url)
 
 @router.get("/me")
 def get_me(db: Session = Depends(get_db), current_user_id: int = Depends(get_current_user_id)):
