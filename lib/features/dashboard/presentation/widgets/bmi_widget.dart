@@ -5,13 +5,20 @@ import '../../../../core/network/api_client.dart';
 
 final bmiProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   try {
-    final response = await ApiClient.instance.get('profile/me');
+    final response = await ApiClient.instance.get('auth/me');
     final data = response.data as Map<String, dynamic>? ?? {};
-    final weight = (data['current_weight'] as num?)?.toDouble();
+    double? weight = (data['current_weight'] as num?)?.toDouble();
     final height = (data['height'] as num?)?.toDouble();
+    final weightUnit = (data['weight_unit'] as String?)?.toLowerCase();
+
     if (weight == null || height == null || weight <= 0 || height <= 0) {
       return {'bmi': null, 'category': ''};
     }
+
+    if (weightUnit == 'lbs') {
+      weight = weight * 0.453592;
+    }
+
     final bmi = weight / ((height / 100) * (height / 100));
     final category = bmi < 18.5
         ? 'Underweight'

@@ -18,6 +18,10 @@ _GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if not _GEMINI_API_KEY:
     logger.error("GEMINI_API_KEY is not set! Vision AI endpoints will fail.")
 
+_FOODDATA_API_KEY = os.getenv("FOODDATA_CENTRAL_API_KEY")
+if not _FOODDATA_API_KEY:
+    logger.error("FOODDATA_CENTRAL_API_KEY is not set! USDA food search will fail.")
+
 try:
     client = genai.Client(api_key=_GEMINI_API_KEY)
     logger.info("Gemini client initialised successfully.")
@@ -319,3 +323,60 @@ async def get_barcode_nutrition(barcode: str, current_user_id: int = Depends(get
     except Exception as e:
         logger.error(f"Barcode lookup error: {e}")
         raise HTTPException(status_code=500, detail="Internal error during barcode lookup.")
+
+@router.get("/search")
+async def search_food(query: str, current_user_id: int = Depends(get_current_user_id)):
+    """Searches FoodData Central for a given query."""
+    if not _FOODDATA_API_KEY:
+        raise HTTPException(status_code=503, detail="FoodData Central API key not configured on the server.")
+    
+    import httpx
+    url = "https://api.nal.usda.gov/fdc/v1/foods/search"
+    params = {
+        "api_key": _FOODDATA_API_KEY,
+        "query": query,
+        "pageSize": 10,
+        "pageNumber": 1
+    }
+    
+    try:
+        async with httpx.AsyncClient(headers={"User-Agent": "GojoCalories/1.0 (https://gojocalories.com)"}) as client:
+            response = await client.get(url, params=params, timeout=10.0)
+            
+        if response.status_code != 200:
+            raise HTTPException(status_code=502, detail="Failed to fetch from FoodData Central.")
+            
+        data = response.json()
+        foods = data.get("foods", [])
+        
+        results = []
+        for f in foods:
+            nutrients = f.get("foodNutrients", [])
+            
+            def get_nut(id_str):
+                for n in nutrients:
+                    if str(n.get("nutrientNumber")) == id_str or str(n.get("nutrientId")) == id_str:
+                        return int(round(n.get("value", 0)))
+                return 0
+                
+            cal = get_nut("1008")
+            protein = get_nut("1003")
+            carbs = get_nut("1005")
+            fat = get_nut("1004")
+            
+            results.append({
+                "name": f.get("description", "Unknown Food").title(),
+                "brand": f.get("brandOwner", ""),
+                "calories": cal,
+                "protein": protein,
+                "carbs": carbs,
+                "fat": fat,
+                "serving_size": f"{f.get('servingSize', 100)} {f.get('servingSizeUnit', 'g')}" if f.get('servingSize') else "100 g"
+            })
+            
+        return {"results": results}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"FDC lookup error: {e}")
+        raise HTTPException(status_code=500, detail="Internal error during FDC lookup.")

@@ -47,6 +47,7 @@ secrets:
   DATABASE_URL: /copilot/gojocalories/prod/secrets/DATABASE_URL
   STRIPE_SECRET_KEY: /copilot/gojocalories/prod/secrets/STRIPE_SECRET_KEY
   STRIPE_PUBLISHABLE_KEY: /copilot/gojocalories/prod/secrets/STRIPE_PUBLISHABLE_KEY
+  FOODDATA_CENTRAL_API_KEY: /copilot/gojocalories/prod/secrets/FOODDATA_CENTRAL_API_KEY
 
 # You can override any of the values defined above by environment.
 #environments:

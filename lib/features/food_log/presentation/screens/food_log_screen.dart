@@ -28,50 +28,77 @@ class _FoodLogScreenState extends ConsumerState<FoodLogScreen> {
   ];
   final _searchController = TextEditingController();
   bool _isSearching = false;
+  List<Map<String, dynamic>> _searchResults = [];
 
   Future<void> _submitSearch() async {
     final query = _searchController.text.trim();
     if (query.isEmpty) return;
 
-    setState(() => _isSearching = true);
+    setState(() {
+      _isSearching = true;
+      _searchResults = [];
+    });
 
     try {
-      final res = await ApiClient.instance.post(
-        'food/analyze/text',
-        data: {'query': query},
+      final res = await ApiClient.instance.get(
+        'food/search',
+        queryParameters: {'query': query},
       );
 
-      if (res.statusCode == 200) {
-        final data = res.data;
+      if (res.statusCode == 200 && res.data != null) {
         if (!mounted) return;
-        ref
-            .read(dashboardProvider.notifier)
-            .logFood(
-              calories: int.tryParse(data['calories']?.toString() ?? '0') ?? 0,
-              protein: int.tryParse(data['protein']?.toString() ?? '0') ?? 0,
-              carbs: int.tryParse(data['carbs']?.toString() ?? '0') ?? 0,
-              fat: int.tryParse(data['fat']?.toString() ?? '0') ?? 0,
-              name: data['name_en']?.toString() ?? data['name']?.toString() ?? 'Analyzed Item',
-              nameEn: data['name_en']?.toString(),
-              nameFr: data['name_fr']?.toString(),
-              nameAr: data['name_ar']?.toString(),
-            );
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Logged ${data['name']} (${data['calories']} kcal)!'),
-            backgroundColor: AppColors.primaryDark,
-          ),
-        );
-        _searchController.clear();
+        setState(() {
+          _searchResults = List<Map<String, dynamic>>.from(res.data['results'] ?? []);
+        });
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Error analyzing query')));
+        ).showSnackBar(const SnackBar(content: Text('Error searching food library.')));
       }
     } finally {
       if (mounted) setState(() => _isSearching = false);
+    }
+  }
+
+  Future<void> _logFoodItem(Map<String, dynamic> data) async {
+    final calories = int.tryParse(data['calories']?.toString() ?? '0') ?? 0;
+    final protein = int.tryParse(data['protein']?.toString() ?? '0') ?? 0;
+    final carbs = int.tryParse(data['carbs']?.toString() ?? '0') ?? 0;
+    final fat = int.tryParse(data['fat']?.toString() ?? '0') ?? 0;
+    final name = data['name']?.toString() ?? 'Food Item';
+
+    try {
+      await ApiClient.instance.post(
+        'food/analyze/log',
+        data: {
+          'name': name,
+          'calories': calories,
+          'protein': protein,
+          'carbs': carbs,
+          'fat': fat,
+        },
+      );
+    } catch (_) {}
+
+    ref.read(dashboardProvider.notifier).logFood(
+          calories: calories,
+          protein: protein,
+          carbs: carbs,
+          fat: fat,
+          name: name,
+        );
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Logged $name!'),
+          backgroundColor: AppColors.primaryDark,
+        ),
+      );
+      _searchController.clear();
+      setState(() => _searchResults = []);
     }
   }
 
@@ -197,29 +224,34 @@ class _FoodLogScreenState extends ConsumerState<FoodLogScreen> {
                             color: AppColors.primary,
                           ),
                         )
-                      : ListView(
+                      : ListView.builder(
                           padding: const EdgeInsets.symmetric(
                             horizontal: AppSpacing.screenPadding,
                           ),
-                          children: [
-                            _SuggestionRow(
-                              name: "Grilled Chicken Salad",
-                              cal: "350",
-                              unit: "1 bowl",
-                            ),
-                            const SizedBox(height: 8),
-                            _SuggestionRow(
-                              name: "Oatmeal with berries",
-                              cal: "220",
-                              unit: "1 serving",
-                            ),
-                            const SizedBox(height: 8),
-                            _SuggestionRow(
-                              name: "Avocado Toast",
-                              cal: "280",
-                              unit: "2 slices",
-                            ),
-                          ],
+                          itemCount: _searchResults.isEmpty ? 1 : _searchResults.length,
+                          itemBuilder: (context, index) {
+                            if (_searchResults.isEmpty) {
+                              return const Center(
+                                child: Padding(
+                                  padding: EdgeInsets.all(20.0),
+                                  child: Text(
+                                    'Search foods using the bar above.',
+                                    style: TextStyle(color: AppColors.textPlaceholder),
+                                  ),
+                                ),
+                              );
+                            }
+                            final item = _searchResults[index];
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 8.0),
+                              child: _SuggestionRow(
+                                name: item['name']?.toString() ?? 'Food',
+                                cal: item['calories']?.toString() ?? '0',
+                                unit: item['serving_size']?.toString() ?? '100 g',
+                                onTap: () => _logFoodItem(item),
+                              ),
+                            );
+                          },
                         ),
                 ),
                 const SizedBox(height: 80), // Padding for bottom actions
@@ -292,11 +324,13 @@ class _SuggestionRow extends StatelessWidget {
   final String name;
   final String cal;
   final String unit;
+  final VoidCallback onTap;
 
   const _SuggestionRow({
     required this.name,
     required this.cal,
     required this.unit,
+    required this.onTap,
   });
 
   @override
@@ -328,14 +362,7 @@ class _SuggestionRow extends StatelessWidget {
             ],
           ),
           GestureDetector(
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Logged $name!'),
-                  backgroundColor: AppColors.primaryDark,
-                ),
-              );
-            },
+            onTap: onTap,
             behavior: HitTestBehavior.opaque,
             child: const SizedBox(
               width: 44,
