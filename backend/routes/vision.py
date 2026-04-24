@@ -267,7 +267,7 @@ async def get_barcode_nutrition(barcode: str, current_user_id: int = Depends(get
     url = f"https://world.openfoodfacts.org/api/v2/product/{barcode}.json"
     
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(headers={"User-Agent": "GojoCalories/1.0 (https://gojocalories.com)"}) as client:
             response = await client.get(url, timeout=10.0)
             
         if response.status_code != 200:
@@ -281,12 +281,14 @@ async def get_barcode_nutrition(barcode: str, current_user_id: int = Depends(get
         nutriments = product.get('nutriments', {})
         
         def get_num(key: str) -> int:
-            # Try 100g first, then per-serving, then generic
-            val = nutriments.get(f'{key}_100g') or nutriments.get(f'{key}_serving') or nutriments.get(key, 0)
-            try:
-                return int(round(float(val)))
-            except (ValueError, TypeError):
-                return 0
+            for suffix in ['_100g', '_serving', '_value', '']:
+                k = f"{key}{suffix}"
+                if k in nutriments:
+                    try:
+                        return int(round(float(nutriments[k])))
+                    except (ValueError, TypeError):
+                        pass
+            return 0
 
         raw_name = product.get('product_name', '')
         brand = product.get('brands', '')
@@ -297,9 +299,15 @@ async def get_barcode_nutrition(barcode: str, current_user_id: int = Depends(get
         if not name:
             name = "Scanned Product"
 
+        calories = get_num('energy-kcal')
+        if calories == 0:
+            kj = get_num('energy-kj') or get_num('energy')
+            if kj > 0:
+                calories = int(round(kj / 4.184))
+
         return {
             "name": name,
-            "calories": get_num('energy-kcal'),
+            "calories": calories,
             "protein": get_num('proteins'),
             "carbs": get_num('carbohydrates'),
             "fat": get_num('fat'),

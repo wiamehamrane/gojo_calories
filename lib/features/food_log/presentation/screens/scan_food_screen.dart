@@ -103,6 +103,9 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
           return 'No internet connection. Please connect to Wi-Fi or mobile data.';
         case DioExceptionType.badResponse:
           final code = e.response?.statusCode ?? 0;
+          if (code == 404) {
+            return 'Product not found. Try using the camera to analyze the food.';
+          }
           if (code == 401 || code == 403) {
             return 'Session expired. Please log out and log back in.';
           }
@@ -250,7 +253,7 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
       }
     } catch (e) {
       if (mounted) {
-        _showError('Barcode lookup failed. Please try again.');
+        _showError(_friendlyNetworkError(e));
         setState(() {
           _isProcessing = false;
           _barcodeScanned = false;
