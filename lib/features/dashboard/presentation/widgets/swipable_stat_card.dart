@@ -100,12 +100,20 @@ class _SwipableStatCardState extends State<SwipableStatCard> {
 
   Widget _buildMiniChart() {
     final spots = widget.chartData;
-    final hasRealData = spots != null && spots.length >= 2;
+    final hasRealData = spots != null && spots.isNotEmpty;
 
     // Use real data or a placeholder flat line
-    final displaySpots = hasRealData
-        ? spots
-        : [const FlSpot(0, 0), const FlSpot(1, 0), const FlSpot(2, 0)];
+    final List<FlSpot> displaySpots;
+    if (hasRealData) {
+      if (spots.length == 1) {
+        // If only 1 day, show a flat line starting from "yesterday"
+        displaySpots = [FlSpot(spots[0].x - 1, spots[0].y), spots[0]];
+      } else {
+        displaySpots = spots;
+      }
+    } else {
+      displaySpots = [const FlSpot(0, 0), const FlSpot(1, 0), const FlSpot(2, 0)];
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

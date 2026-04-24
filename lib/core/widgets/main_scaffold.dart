@@ -17,7 +17,7 @@ class MainScaffold extends ConsumerWidget {
     final String location = GoRouterState.of(context).uri.path;
     if (location.startsWith('/home')) return 0;
     if (location.startsWith('/profile')) return 1;
-    return 0;
+    return -1;
   }
 
   static bool _isScanRoute(BuildContext context) {

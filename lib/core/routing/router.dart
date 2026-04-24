@@ -25,6 +25,7 @@ import '../../features/profile/presentation/screens/personal_details_screen.dart
 import '../../features/profile/presentation/screens/preferences_screen.dart';
 import '../../features/profile/presentation/screens/language_screen.dart';
 import '../../features/profile/presentation/screens/nutrition_goals_screen.dart';
+import '../../features/profile/presentation/screens/feature_request_screen.dart';
 import '../../features/referrals/presentation/screens/referrals_screen.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(
@@ -123,6 +124,10 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/food_database',
       builder: (context, state) => const FoodDatabaseScreen(),
+    ),
+    GoRoute(
+      path: '/feature_request',
+      builder: (context, state) => const FeatureRequestScreen(),
     ),
   ],
 );

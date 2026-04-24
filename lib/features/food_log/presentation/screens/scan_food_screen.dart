@@ -233,8 +233,11 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
             : double.tryParse(val.toString()) ?? 0.0;
       }
 
-      final productName = (product['product_name'] as String? ?? '').isNotEmpty
-          ? product['product_name'] as String
+      final rawName = product['product_name'] as String? ?? '';
+      final brand = product['brands'] as String? ?? '';
+      
+      final productName = rawName.isNotEmpty 
+          ? (brand.isNotEmpty ? '$rawName ($brand)' : rawName)
           : 'Scanned Product';
 
       final calories = getNum('energy-kcal').round();
@@ -557,82 +560,93 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
 
           // ─── Mode selector row ──────────────────────────────────────────
           Positioned(
-            bottom: safeBottom > 0 ? safeBottom + 100 : 100,
+            bottom: 0,
             left: 0,
             right: 0,
-            child: Center(
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _buildModeCard(LucideIcons.scanLine, 'Scan Food'),
-                    const SizedBox(width: 12),
-                    _buildModeCard(LucideIcons.barcode, 'Barcode'),
-                    const SizedBox(width: 12),
-                    _buildModeCard(LucideIcons.image, 'Gallery'),
-                  ],
+            child: Container(
+              padding: EdgeInsets.only(
+                bottom: safeBottom > 0 ? safeBottom + 16 : 24,
+                top: 16,
+                left: 20,
+                right: 20,
+              ),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.transparent, Colors.black.withValues(alpha: 0.7)],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
                 ),
               ),
-            ),
-          ),
-
-          // ─── Shutter row ────────────────────────────────────────────────
-          if (_currentMode == 'Scan Food' ||
-              _currentMode == 'Gallery')
-            Positioned(
-              bottom: safeBottom > 0 ? safeBottom + 28 : 28,
-              left: 0,
-              right: 0,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  const _CameraRoundButton(icon: LucideIcons.zapOff),
-                  const SizedBox(width: 48),
-                  GestureDetector(
-                    onTap: _isProcessing
-                        ? null
-                        : (_currentMode == 'Gallery'
-                              ? _pickFromGallery
-                              : _takePicture),
-                    child: Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 4),
-                        color: Colors.transparent,
-                      ),
-                      child: Center(
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          width: 64,
-                          height: 64,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: _isProcessing
-                                ? Colors.white.withValues(alpha: 0.4)
-                                : Colors.white.withValues(alpha: 0.9),
-                          ),
-                          child: Center(
-                            child: Icon(
-                              _currentMode == 'Gallery'
-                                  ? LucideIcons.image
-                                  : LucideIcons.camera,
-                              size: 28,
-                              color: AppColors.textPrimary,
+                  // Mode pills
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _buildModeCard(LucideIcons.scanLine, 'Scan Food'),
+                      const SizedBox(width: 10),
+                      _buildModeCard(LucideIcons.barcode, 'Barcode'),
+                      const SizedBox(width: 10),
+                      _buildModeCard(LucideIcons.image, 'Gallery'),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  // Shutter row (only for Scan Food and Gallery)
+                  if (_currentMode == 'Scan Food' || _currentMode == 'Gallery')
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const _CameraRoundButton(icon: LucideIcons.zapOff),
+                        const SizedBox(width: 48),
+                        GestureDetector(
+                          onTap: _isProcessing
+                              ? null
+                              : (_currentMode == 'Gallery'
+                                     ? _pickFromGallery
+                                     : _takePicture),
+                          child: Container(
+                            width: 76,
+                            height: 76,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 4),
+                              color: Colors.transparent,
+                            ),
+                            child: Center(
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                width: 60,
+                                height: 60,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: _isProcessing
+                                      ? Colors.white.withValues(alpha: 0.4)
+                                      : Colors.white.withValues(alpha: 0.9),
+                                ),
+                                child: Center(
+                                  child: Icon(
+                                    _currentMode == 'Gallery'
+                                        ? LucideIcons.image
+                                        : LucideIcons.camera,
+                                    size: 26,
+                                    color: const Color(0xFF0A0A0A),
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 48),
-                  const SizedBox(width: 44), // Placeholder to keep shutter perfectly centered
+                        const SizedBox(width: 48),
+                        const SizedBox(width: 44),
+                      ],
+                    )
+                  else
+                    const SizedBox(height: 76), // placeholder to keep mode row height consistent for barcode
                 ],
               ),
             ),
+          ),
         ],
       ),
     );

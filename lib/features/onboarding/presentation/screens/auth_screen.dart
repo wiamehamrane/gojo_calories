@@ -255,13 +255,11 @@ class _AuthScreenState extends State<AuthScreen>
                           width: 40,
                           height: 40,
                           decoration: BoxDecoration(
-                            color: AppColors.primary,
+                            color: AppColors.primary.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Icon(
-                            Icons.local_fire_department_rounded,
-                            color: Colors.white,
-                            size: 24,
+                          child: Center(
+                            child: Text('🥑', style: const TextStyle(fontSize: 22)),
                           ),
                         ),
                         const SizedBox(width: 10),

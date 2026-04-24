@@ -177,10 +177,7 @@ class ProfileScreen extends ConsumerWidget {
                   _SettingsRow(
                     icon: LucideIcons.lightbulb,
                     label: 'Feature Request',
-                    onTap: () async {
-                      final uri = Uri.parse('mailto:support@gojocalories.com?subject=Feature Request');
-                      if (await canLaunchUrl(uri)) await launchUrl(uri);
-                    },
+                    onTap: () => context.push('/feature_request'),
                   ),
                   _SettingsRow(
                     icon: LucideIcons.mail,
@@ -194,7 +191,7 @@ class ProfileScreen extends ConsumerWidget {
                     icon: LucideIcons.fileText,
                     label: 'Terms of Service',
                     onTap: () async {
-                      final uri = Uri.parse('https://gojocalories.com/terms');
+                      final uri = Uri.parse('https://gojocalories.com/terms-of-service');
                       if (await canLaunchUrl(uri)) await launchUrl(uri);
                     },
                   ),
@@ -202,7 +199,7 @@ class ProfileScreen extends ConsumerWidget {
                     icon: LucideIcons.shieldCheck,
                     label: 'Privacy Policy',
                     onTap: () async {
-                      final uri = Uri.parse('https://gojocalories.com/privacy');
+                      final uri = Uri.parse('https://gojocalories.com/privacy-policy');
                       if (await canLaunchUrl(uri)) await launchUrl(uri);
                     },
                   ),

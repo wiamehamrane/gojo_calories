@@ -52,8 +52,11 @@ def get_user_stats(
             
     stats = query.order_by(DailyStats.date.desc()).limit(7).all()
     
-    if not stats and date:
-        # If no record exists for this specific date, synthesize one using user goals
+    # Check if we have today's record. If not, synthesize it (and maybe persist it)
+    today_utc = dt.datetime.utcnow().date()
+    has_today = any(s.date.date() == today_utc for s in stats)
+    
+    if not has_today:
         user = db.query(User).filter(User.id == current_user_id).first()
         if user:
             from utils.nutrition import calculate_daily_targets
@@ -66,48 +69,26 @@ def get_user_stats(
                 goal_weight_kg=user.goal_weight or 70.0
             )
             
-            # If it's today, we might want to persist it so it shows up in future queries
-            # but for now, returning a virtual record is enough to fix the UI.
-            virtual_stat = {
-                "user_id": current_user_id,
-                "calorie_budget": targets["calorie_budget"],
-                "calories_consumed": 0,
-                "protein_consumed": 0,
-                "carbs_consumed": 0,
-                "fat_consumed": 0,
-                "protein_target": targets["protein_target"],
-                "carbs_target": targets["carbs_target"],
-                "fat_target": targets["fat_target"]
-            }
-            
-            # If the requested date is today (UTC), let's actually create it 
-            # to be consistent with how the app expects a record to exist.
+            # create the record for today so it exists in the DB
+            new_stat = DailyStats(
+                user_id=current_user_id,
+                date=dt.datetime.combine(today_utc, dt.time.min),
+                calorie_budget=targets["calorie_budget"],
+                protein_target=targets["protein_target"],
+                carbs_target=targets["carbs_target"],
+                fat_target=targets["fat_target"],
+                calories_consumed=0, protein_consumed=0, carbs_consumed=0, fat_consumed=0
+            )
+            db.add(new_stat)
             try:
-                today_utc = dt.datetime.utcnow().date()
-                requested_date = dt.datetime.strptime(date, "%Y-%m-%d").date()
-                if requested_date == today_utc:
-                    new_stat = DailyStats(
-                        user_id=current_user_id,
-                        date=dt.datetime.combine(requested_date, dt.time.min),
-                        calorie_budget=targets["calorie_budget"],
-                        protein_target=targets["protein_target"],
-                        carbs_target=targets["carbs_target"],
-                        fat_target=targets["fat_target"],
-                        calories_consumed=0, protein_consumed=0, carbs_consumed=0, fat_consumed=0
-                    )
-                    db.add(new_stat)
-                    db.commit()
-                    db.refresh(new_stat)
-                    return [virtual_stat]
+                db.commit()
+                db.refresh(new_stat)
+                # Re-fetch stats to include the new one or just prepend it
+                stats.insert(0, new_stat)
             except Exception:
-                pass
-                
-            return [virtual_stat]
-
-    if not stats:
-        return []
+                db.rollback()
+                # If commit fails (e.g. race condition), it's fine, we return what we have
     
-    # Cache result before returning
     stats_data = [{
         "user_id": s.user_id, 
         "calorie_budget": s.calorie_budget, 
@@ -119,6 +100,10 @@ def get_user_stats(
         "carbs_target": s.carbs_target,
         "fat_target": s.fat_target
     } for s in stats]
+    
+    if date and not stats_data:
+        # fallback for specific date if still empty (though insert above should handle today)
+        pass # original code had synthesize logic here, but the insert(0) handles today.
     try:
         redis_db.setex(cache_key, 300, json.dumps(stats_data))
     except Exception:
