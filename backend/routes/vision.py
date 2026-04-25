@@ -59,11 +59,13 @@ async def analyze_food_image(
         
         # Proper prompt asking for strict JSON
         prompt = """
-        Analyze this food image. Identify the overarching meal or food item.
-        Respond ONLY with a JSON object. No markdown formatting, no backticks, no explanations. 
+        Analyze this food image. Identify the overarching meal or food item and its individual ingredients.
+        Respond ONLY with a JSON object. No markdown formatting, no backticks, no explanations.
         Format strictly like this:
-        {"name_en": "Food Name English", "name_fr": "Nom de l'aliment en français", "name_ar": "اسم الطعام بالعربية", "calories": 500, "protein": 20, "carbs": 50, "fat": 15}
+        {"name_en": "Food Name English", "name_fr": "Nom de l'aliment en français", "name_ar": "اسم الطعام بالعربية", "calories": 500, "protein": 20, "carbs": 50, "fat": 15, "ingredients": [{"name": "Ingredient", "amount": "1.5 cups", "calories": 45}, {"name": "Ingredient 2", "amount": "2 tbsp", "calories": 60}]}
+        Include 3 to 8 realistic, specific ingredients with accurate amounts and calorie estimates.
         """
+
         
         logger.info(f"Calling Gemini vision for user {current_user_id}")
         response = client.models.generate_content(
@@ -159,6 +161,9 @@ async def analyze_food_image(
         except Exception:
             pass
 
+        if s3_url:
+            data['image_url'] = s3_url
+        data['log_id'] = log.id
         return data
         
     except json.JSONDecodeError as je:
