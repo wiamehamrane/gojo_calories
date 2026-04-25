@@ -105,6 +105,7 @@ async def analyze_food_image(
                 protein=int(data.get('protein', 0)),
                 carbs=int(data.get('carbs', 0)),
                 fat=int(data.get('fat', 0)),
+                ingredients=data.get('ingredients'),
             )
             db.add(log)
             db.flush()  # get log.id without committing yet
@@ -164,6 +165,7 @@ async def analyze_food_image(
         if s3_url:
             data['image_url'] = s3_url
         data['log_id'] = log.id
+        data['created_at'] = log.created_at.isoformat() + "Z"
         return data
         
     except json.JSONDecodeError as je:

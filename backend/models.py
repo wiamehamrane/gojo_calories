@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text, Boolean
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text, Boolean, JSON
 from sqlalchemy.orm import relationship
 import datetime
 from database import Base
@@ -76,8 +76,10 @@ class FoodLog(Base):
     protein = Column(Integer)
     carbs = Column(Integer)
     fat = Column(Integer)
+    ingredients = Column(JSON, nullable=True)
     
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
     
     user = relationship("User", back_populates="food_logs")
 

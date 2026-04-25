@@ -12,6 +12,8 @@ class FoodLogs extends Table {
   TextColumn get nameEn => text().nullable()();
   TextColumn get nameFr => text().nullable()();
   TextColumn get nameAr => text().nullable()();
+  TextColumn get imageUrl => text().nullable()();
+  TextColumn get ingredients => text().nullable()();
   IntColumn get calories => integer()();
   IntColumn get protein => integer()();
   IntColumn get carbs => integer()();
@@ -37,7 +39,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -47,8 +49,16 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(foodLogs, foodLogs.nameFr);
             await m.addColumn(foodLogs, foodLogs.nameAr);
           }
+          if (from < 3) {
+            await m.addColumn(foodLogs, foodLogs.imageUrl);
+          }
+          if (from < 4) {
+            await m.addColumn(foodLogs, foodLogs.ingredients);
+          }
         },
       );
+
+
 
   Future<List<FoodLog>> getAllFoodLogs() => select(foodLogs).get();
   Future<int> insertFoodLog(FoodLogsCompanion log) =>

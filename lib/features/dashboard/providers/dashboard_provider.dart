@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/selected_date_provider.dart';
 import 'package:drift/drift.dart' hide Column;
@@ -94,6 +95,8 @@ class DashboardNotifier extends Notifier<models.DailyStats> {
     String? nameEn,
     String? nameFr,
     String? nameAr,
+    String? imageUrl,
+    List<dynamic>? ingredients,
   }) {
     final newState = state.copyWith(
       caloriesConsumed: state.caloriesConsumed + calories,
@@ -111,12 +114,16 @@ class DashboardNotifier extends Notifier<models.DailyStats> {
         nameEn: Value(nameEn),
         nameFr: Value(nameFr),
         nameAr: Value(nameAr),
+        imageUrl: Value(imageUrl),
+        ingredients: Value(ingredients != null ? jsonEncode(ingredients) : null),
         calories: calories,
         protein: protein,
         carbs: carbs,
         fat: fat,
       ),
     );
+
+
 
     // Note: The backend /food/analyze endpoints now automatically
     // update DailyStats on the server. No need to post /stats/log here.

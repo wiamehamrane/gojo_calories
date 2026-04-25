@@ -179,6 +179,8 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
               nameEn: data['name_en']?.toString(),
               nameFr: data['name_fr']?.toString(),
               nameAr: data['name_ar']?.toString(),
+              imageUrl: data['image_url']?.toString(),
+              ingredients: data['ingredients'] as List<dynamic>?,
             );
         await _redirectToHome();
       } else {

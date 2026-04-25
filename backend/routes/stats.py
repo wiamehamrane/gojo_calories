@@ -209,7 +209,8 @@ def get_user_history(
             "protein": log.protein,
             "carbs": log.carbs,
             "fat": log.fat,
-            "created_at": log.created_at,
+            "ingredients": log.ingredients,
+            "created_at": log.created_at.isoformat() + "Z",
         })
     return res
 

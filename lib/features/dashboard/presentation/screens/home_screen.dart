@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -372,29 +373,36 @@ class _AnimatedMealCardState extends State<_AnimatedMealCard>
                   width: 72,
                   height: 72,
                   child: imageUrl != null && imageUrl.isNotEmpty
-                      ? Image.network(
-                          imageUrl,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, e, s) => const _FoodPlaceholder(),
-                          loadingBuilder: (ctx, child, progress) {
-                            if (progress == null) return child;
-                            return Container(
-                              color: AppColors.surfaceMuted,
-                              child: const Center(
-                                child: SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: AppColors.primary,
+                      ? (imageUrl.startsWith('/') || imageUrl.startsWith('file://')
+                          ? Image.file(
+                              File(imageUrl.replaceFirst('file://', '')),
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, e, s) => const _FoodPlaceholder(),
+                            )
+                          : Image.network(
+                              imageUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, e, s) => const _FoodPlaceholder(),
+                              loadingBuilder: (ctx, child, progress) {
+                                if (progress == null) return child;
+                                return Container(
+                                  color: AppColors.surfaceMuted,
+                                  child: const Center(
+                                    child: SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: AppColors.primary,
+                                      ),
+                                    ),
                                   ),
                                 ),
-                              ),
-                            );
-                          },
-                        )
+                              },
+                            ))
                       : const _FoodPlaceholder(),
                 ),
+
               ),
               const SizedBox(width: 12),
               Expanded(
