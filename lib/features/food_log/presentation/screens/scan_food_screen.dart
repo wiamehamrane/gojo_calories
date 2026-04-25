@@ -209,7 +209,6 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
         final protein = int.tryParse(data['protein']?.toString() ?? '0') ?? 0;
         final carbs = int.tryParse(data['carbs']?.toString() ?? '0') ?? 0;
         final fat = int.tryParse(data['fat']?.toString() ?? '0') ?? 0;
-        final imageUrl = data['image_url'] as String?;
 
         if (!mounted) return;
 
@@ -224,12 +223,13 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
               'protein': protein,
               'carbs': carbs,
               'fat': fat,
-              'image_url': ?imageUrl,
+              // Don't include image_url for barcode items
             },
             queryParameters: {'local_date': _localDateStr},
           );
-        } catch (_) {
-          /* non-fatal */
+        } catch (e) {
+          debugPrint('Barcode post to backend failed: $e');
+          /* non-fatal — local state already updated */
         }
 
         ref
@@ -240,6 +240,7 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
               carbs: carbs,
               fat: fat,
               name: productName,
+              // No imageUrl for barcode items — shows barcode icon instead
             );
 
         await _redirectToHome();

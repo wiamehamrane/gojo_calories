@@ -256,13 +256,16 @@ class HomeScreen extends ConsumerWidget {
         return Column(
           children: List.generate(
             logs.length,
-            (i) => GestureDetector(
-              onTap: () {
-                final log = logs[i] as Map<String, dynamic>;
-                context.push('/food-detail', extra: log);
-              },
-              child: _AnimatedMealCard(log: logs[i], index: i, lang: lang),
-            ),
+            (i) {
+              final log = logs[i] as Map<String, dynamic>;
+              final hasImage = (log['image_url'] as String?)?.isNotEmpty == true;
+              return GestureDetector(
+                onTap: hasImage
+                    ? () => context.push('/food-detail', extra: log)
+                    : null,
+                child: _AnimatedMealCard(log: logs[i], index: i, lang: lang),
+              );
+            },
           ),
         );
       },
@@ -400,7 +403,13 @@ class _AnimatedMealCardState extends State<_AnimatedMealCard>
                                 );
                               },
                             ))
-                      : const _FoodPlaceholder(),
+                      // No image → barcode icon (indicates barcode-scanned product)
+                      : Container(
+                          color: AppColors.surfaceMuted,
+                          child: const Center(
+                            child: Icon(LucideIcons.barcode, size: 30, color: AppColors.inactive),
+                          ),
+                        ),
                 ),
 
               ),

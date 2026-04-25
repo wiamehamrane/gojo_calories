@@ -20,13 +20,6 @@ final profileProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   return {};
 });
 
-final subscriptionProvider = FutureProvider<Map<String, dynamic>>((ref) async {
-  final res = await ApiClient.instance.get('payments/subscription');
-  if (res.statusCode == 200) {
-    return res.data;
-  }
-  return {};
-});
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -36,7 +29,6 @@ class ProfileScreen extends ConsumerWidget {
     final lang = ref.watch(localeProvider);
     String t(String k) => Translations.t(lang, k);
     final profileAsync = ref.watch(profileProvider);
-    final subAsync = ref.watch(subscriptionProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -126,15 +118,6 @@ class ProfileScreen extends ConsumerWidget {
               ),
 
               const SizedBox(height: 20),
-              _SectionLabel('Subscription'),
-
-              subAsync.when(
-                data: (sub) => _buildSubscriptionCard(context, ref, sub, t),
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, st) => const Text("Failed to load subscription"),
-              ),
-
-              const SizedBox(height: 20),
               _SectionLabel(t('settings')),
 
               _GroupedListCard(
@@ -183,15 +166,8 @@ class ProfileScreen extends ConsumerWidget {
                     icon: LucideIcons.mail,
                     label: 'Support Email',
                     onTap: () async {
-                      // Try Gmail specific scheme first, then fallback to mailto
-                      final gmailUri = Uri.parse('googlegmail:///co?to=support@gojocalories.com&subject=Support%20Request');
-                      final mailtoUri = Uri.parse('mailto:support@gojocalories.com?subject=Support%20Request');
-                      
-                      if (await canLaunchUrl(gmailUri)) {
-                        await launchUrl(gmailUri);
-                      } else if (await canLaunchUrl(mailtoUri)) {
-                        await launchUrl(mailtoUri);
-                      }
+                      final uri = Uri.parse('mailto:support@gojocalories.com?subject=Support%20Request');
+                      if (await canLaunchUrl(uri)) await launchUrl(uri);
                     },
                   ),
                   _SettingsRow(
@@ -359,173 +335,7 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSubscriptionCard(
-    BuildContext context,
-    WidgetRef ref,
-    Map<String, dynamic> sub,
-    String Function(String) t,
-  ) {
-    if (sub.isEmpty || sub['has_subscription'] != true) {
-      return Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Text(
-          t('no_subscription'),
-          style: const TextStyle(color: AppColors.textSecondary),
-        ),
-      );
-    }
-    final isCancelling = sub['cancel_at_period_end'] == true;
-    final statusLabel = sub['status'] == 'trialing'
-        ? 'Trial'
-        : (sub['status'] ?? 'Active');
-    final billingLabel = isCancelling
-        ? '${t('cancels_on')} ${sub['next_billing_date']}'
-        : '${t('renews_on')} ${sub['next_billing_date']}';
 
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: AppShadows.cardShadow,
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                sub['plan_name'] ?? 'GojoCalories Pro',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 16,
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppColors.primaryLight,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  statusLabel,
-                  style: const TextStyle(
-                    color: AppColors.primary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          if (sub['next_billing_date'] != null)
-            Text(
-              billingLabel,
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 13,
-              ),
-            ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () async {
-                    try {
-                      final res = await ApiClient.instance.post(
-                        'payments/create-portal-session',
-                        data: {},
-                      );
-                      if (res.statusCode == 200 && res.data['url'] != null) {
-                        final uri = Uri.parse(res.data['url']);
-                        if (await canLaunchUrl(uri)) await launchUrl(uri);
-                      }
-                    } catch (e) {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(t('error_generic')),
-                            backgroundColor: AppColors.danger,
-                          ),
-                        );
-                      }
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                  ),
-                  child: Text(t('manage_subscription')),
-                ),
-              ),
-              if (!isCancelling) ...[
-                const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () async {
-                      final messenger = ScaffoldMessenger.of(context);
-                      final confirm = await showDialog<bool>(
-                        context: context,
-                        builder: (ctx) => AlertDialog(
-                          title: Text(t('cancel_sub_title')),
-                          content: Text(t('cancel_sub_body')),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(ctx, false),
-                              child: Text(t('keep')),
-                            ),
-                            TextButton(
-                              onPressed: () => Navigator.pop(ctx, true),
-                              child: Text(
-                                t('cancel_subscription'),
-                                style: const TextStyle(color: AppColors.danger),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                      if (confirm == true) {
-                        try {
-                          await ApiClient.instance.post(
-                            'payments/cancel-subscription',
-                            data: {},
-                          );
-                          messenger.showSnackBar(
-                            SnackBar(content: Text(t('cancel_anytime'))),
-                          );
-                          // Refresh subscription card
-                          ref.invalidate(subscriptionProvider);
-                        } catch (e) {
-                          messenger.showSnackBar(
-                            SnackBar(
-                              content: Text(t('error_generic')),
-                              backgroundColor: AppColors.danger,
-                            ),
-                          );
-                        }
-                      }
-                    },
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.danger,
-                      side: const BorderSide(color: AppColors.danger),
-                    ),
-                    child: Text(t('cancel_subscription')),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ],
-      ),
-    );
-  }
 
   void _showUpdateProfileBottomSheet(
     BuildContext context,
