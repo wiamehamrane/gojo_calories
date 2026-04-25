@@ -139,7 +139,7 @@ class MainScaffold extends ConsumerWidget {
                     width: AppSpacing.fabSize,
                     height: AppSpacing.fabSize,
                     decoration: BoxDecoration(
-                      color: AppColors.primaryDark,
+                      color: Colors.black,
                       shape: BoxShape.circle,
                       boxShadow: AppShadows.fabShadow,
                       border: Border.all(

@@ -12,6 +12,7 @@ import '../../providers/dashboard_provider.dart';
 import '../../providers/history_provider.dart';
 import '../../providers/weekly_stats_provider.dart';
 import 'package:intl/intl.dart';
+import 'package:go_router/go_router.dart';
 import '../widgets/swipable_stat_card.dart';
 import '../widgets/calorie_ring_inner.dart';
 import '../widgets/macro_tile_inner.dart';
@@ -254,7 +255,13 @@ class HomeScreen extends ConsumerWidget {
         return Column(
           children: List.generate(
             logs.length,
-            (i) => _AnimatedMealCard(log: logs[i], index: i, lang: lang),
+            (i) => GestureDetector(
+              onTap: () {
+                final log = logs[i] as Map<String, dynamic>;
+                context.push('/food-detail', extra: log);
+              },
+              child: _AnimatedMealCard(log: logs[i], index: i, lang: lang),
+            ),
           ),
         );
       },

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/providers/selected_date_provider.dart';
 
 class WeeklyStatsData {
   final List<FlSpot> calorieSpots;
@@ -17,15 +18,21 @@ class WeeklyStatsData {
 }
 
 final weeklyStatsProvider = FutureProvider<WeeklyStatsData>((ref) async {
+  // Use the selected date as "today" so the chart reflects the user's timezone
+  final selectedDate = ref.watch(selectedDateProvider);
+  final localToday =
+      "${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}";
+
   try {
-    final response = await ApiClient.instance.get('stats/');
+    final response = await ApiClient.instance.get(
+      'stats/weekly',
+      queryParameters: {'local_today': localToday},
+    );
     final List<dynamic> data = response.data ?? [];
 
-    // Stats come in desc order (newest first), so we reverse
-    final reversed = data.reversed.toList();
-
+    // data is already in ascending order (oldest → newest, 7 entries)
     List<FlSpot> toSpots(String key) {
-      return reversed.asMap().entries.map((e) {
+      return data.asMap().entries.map((e) {
         final val = (e.value[key] ?? 0) as num;
         return FlSpot(e.key.toDouble(), val.toDouble());
       }).toList();

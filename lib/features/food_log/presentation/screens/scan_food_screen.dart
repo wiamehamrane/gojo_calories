@@ -127,13 +127,17 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
     super.dispose();
   }
 
+  /// Returns the user's current local date as "YYYY-MM-DD"
+  String get _localDateStr {
+    final now = DateTime.now();
+    return "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+  }
+
   /// Navigate to home with a smooth fade+slide transition after success.
   Future<void> _redirectToHome() async {
-    // Flash success state briefly so the user gets feedback on this screen.
     if (mounted) setState(() => _showSuccess = true);
     await Future.delayed(const Duration(milliseconds: 600));
     if (!mounted) return;
-    // Invalidate history so the new item shows up immediately.
     ref.invalidate(historyProvider);
     context.go('/home');
   }
@@ -146,7 +150,12 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
         'file': await MultipartFile.fromFile(path, filename: name),
       });
 
-      final res = await ApiClient.instance.post('food/analyze', data: formData);
+      // Pass local_date so the backend buckets the log to the user's timezone day
+      final res = await ApiClient.instance.post(
+        'food/analyze',
+        data: formData,
+        queryParameters: {'local_date': _localDateStr},
+      );
 
       if (res.statusCode == 200 && res.data != null) {
         if (!mounted) return;
@@ -157,22 +166,8 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
         final fat = int.tryParse(data['fat']?.toString() ?? '0') ?? 0;
         final mealName = data['name_en']?.toString() ?? data['name']?.toString() ?? 'Analyzed Food';
 
-        // Post to backend as a FoodLog so it shows in Recently Uploaded history
-        try {
-          await ApiClient.instance.post(
-            'food/analyze/log',
-            data: {
-              'name': mealName,
-              'calories': calories,
-              'protein': protein,
-              'carbs': carbs,
-              'fat': fat,
-            },
-          );
-        } catch (_) {
-          // Non-fatal — macros are still logged locally
-        }
-
+        // NOTE: The backend /food/analyze already saves the FoodLog + image to S3 + updates DailyStats.
+        // We only need to update local in-memory state here — no second POST needed.
         ref
             .read(dashboardProvider.notifier)
             .logFood(
@@ -207,25 +202,29 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
 
       if (res.statusCode == 200 && res.data != null) {
         final data = res.data as Map<String, dynamic>;
-        final productName = data['name'] ?? 'Scanned Product';
+        final productName = data['name'] as String? ?? 'Scanned Product';
         final calories = int.tryParse(data['calories']?.toString() ?? '0') ?? 0;
         final protein = int.tryParse(data['protein']?.toString() ?? '0') ?? 0;
         final carbs = int.tryParse(data['carbs']?.toString() ?? '0') ?? 0;
         final fat = int.tryParse(data['fat']?.toString() ?? '0') ?? 0;
+        final imageUrl = data['image_url'] as String?;
 
         if (!mounted) return;
 
-        // Post to backend as a FoodLog entry so it appears in stats/history
+        // Post to backend — include the product image URL from Open Food Facts
         try {
           await ApiClient.instance.post(
             'food/analyze/log',
             data: {
               'name': productName,
+              'name_en': productName,
               'calories': calories,
               'protein': protein,
               'carbs': carbs,
               'fat': fat,
+              ?'image_url': imageUrl,
             },
+            queryParameters: {'local_date': _localDateStr},
           );
         } catch (_) {
           /* non-fatal */
@@ -313,7 +312,12 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
     try {
       final img = await picker.pickImage(source: ImageSource.gallery);
       if (img == null) return;
-      await _analyzeFile(img.path, img.name);
+      if (_currentMode == 'Barcode') {
+        // For barcode mode, treat the image as a vision scan to detect the barcode
+        await _analyzeFile(img.path, img.name);
+      } else {
+        await _analyzeFile(img.path, img.name);
+      }
     } catch (e) {
       _showError('Could not access your gallery. Please check permissions.');
     }
@@ -335,7 +339,6 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
 
   @override
   Widget build(BuildContext context) {
-    // Full-screen loading / init
     if (_isInitializing) {
       return const Scaffold(
         backgroundColor: Colors.black,
@@ -345,9 +348,7 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
       );
     }
 
-    // Camera error — show full screen friendly message
-    if (_cameraError != null &&
-        (_currentMode == 'Scan Food' || _currentMode == 'Barcode')) {
+    if (_cameraError != null) {
       return Scaffold(
         backgroundColor: Colors.black,
         body: SafeArea(
@@ -405,25 +406,16 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
                             color: AppColors.primaryDark,
                           ),
                         ))
-                : (_currentMode == 'Barcode'
-                      ? MobileScanner(
-                          onDetect: (capture) {
-                            if (!mounted || _barcodeScanned || _isProcessing) {
-                              return;
-                            }
-                            final barcodes = capture.barcodes;
-                            if (barcodes.isNotEmpty &&
-                                barcodes.first.rawValue != null) {
-                              _lookupBarcode(barcodes.first.rawValue!);
-                            }
-                          },
-                        )
-                      : const Center(
-                          child: Text(
-                            'Gallery Selected',
-                            style: TextStyle(color: Colors.white),
-                          ),
-                        )),
+                : MobileScanner(
+                    onDetect: (capture) {
+                      if (!mounted || _barcodeScanned || _isProcessing) return;
+                      final barcodes = capture.barcodes;
+                      if (barcodes.isNotEmpty &&
+                          barcodes.first.rawValue != null) {
+                        _lookupBarcode(barcodes.first.rawValue!);
+                      }
+                    },
+                  ),
           ),
 
           // ─── Success flash overlay ──────────────────────────────────────
@@ -470,7 +462,7 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
               ),
             ),
 
-          // ─── Top buttons ────────────────────────────────────────────────
+          // ─── Top bar: close (left) + upload icon (right) ────────────────
           Positioned(
             top: safeTop > 0 ? safeTop + 10 : 30,
             left: 16,
@@ -482,32 +474,35 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
                   onTap: () => context.go('/home'),
                   child: const _CameraRoundButton(icon: LucideIcons.x),
                 ),
-                const SizedBox.shrink(),
+                // Upload icon — opens gallery for the current mode
+                GestureDetector(
+                  onTap: _isProcessing ? null : _pickFromGallery,
+                  child: const _CameraRoundButton(icon: LucideIcons.imagePlus),
+                ),
               ],
             ),
           ),
 
           // ─── Scan frame ─────────────────────────────────────────────────
-          if (_currentMode == 'Scan Food' || _currentMode == 'Barcode')
-            Center(
-              child: AnimatedBuilder(
-                animation: _pulseAnimation,
-                builder: (context, child) {
-                  return Opacity(
-                    opacity: _pulseAnimation.value,
-                    child: CustomPaint(
-                      size: const Size(240, 240),
-                      painter: _ScanCornersPainter(
-                        color: Colors.white,
-                        strokeWidth: 3,
-                        cornerLength: 28,
-                        cornerRadius: 6,
-                      ),
+          Center(
+            child: AnimatedBuilder(
+              animation: _pulseAnimation,
+              builder: (context, child) {
+                return Opacity(
+                  opacity: _pulseAnimation.value,
+                  child: CustomPaint(
+                    size: const Size(240, 240),
+                    painter: _ScanCornersPainter(
+                      color: Colors.white,
+                      strokeWidth: 3,
+                      cornerLength: 28,
+                      cornerRadius: 6,
                     ),
-                  );
-                },
-              ),
+                  ),
+                );
+              },
             ),
+          ),
 
           // ─── Barcode hint label ─────────────────────────────────────────
           if (_currentMode == 'Barcode' && !_isProcessing)
@@ -527,7 +522,7 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
               ),
             ),
 
-          // ─── Mode selector row ──────────────────────────────────────────
+          // ─── Bottom controls ────────────────────────────────────────────
           Positioned(
             bottom: 0,
             left: 0,
@@ -549,31 +544,25 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Mode pills
+                  // Mode pills — only two modes now
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       _buildModeCard(LucideIcons.scanLine, 'Scan Food'),
                       const SizedBox(width: 10),
                       _buildModeCard(LucideIcons.barcode, 'Barcode'),
-                      const SizedBox(width: 10),
-                      _buildModeCard(LucideIcons.image, 'Gallery'),
                     ],
                   ),
                   const SizedBox(height: 20),
-                  // Shutter row (only for Scan Food and Gallery)
-                  if (_currentMode == 'Scan Food' || _currentMode == 'Gallery')
+                  // Shutter button — only for Vision mode
+                  if (_currentMode == 'Scan Food')
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const _CameraRoundButton(icon: LucideIcons.zapOff),
+                        const SizedBox(width: 44),
                         const SizedBox(width: 48),
                         GestureDetector(
-                          onTap: _isProcessing
-                              ? null
-                              : (_currentMode == 'Gallery'
-                                     ? _pickFromGallery
-                                     : _takePicture),
+                          onTap: _isProcessing ? null : _takePicture,
                           child: Container(
                             width: 76,
                             height: 76,
@@ -593,13 +582,11 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
                                       ? Colors.white.withValues(alpha: 0.4)
                                       : Colors.white.withValues(alpha: 0.9),
                                 ),
-                                child: Center(
+                                child: const Center(
                                   child: Icon(
-                                    _currentMode == 'Gallery'
-                                        ? LucideIcons.image
-                                        : LucideIcons.camera,
+                                    LucideIcons.camera,
                                     size: 26,
-                                    color: const Color(0xFF0A0A0A),
+                                    color: Color(0xFF0A0A0A),
                                   ),
                                 ),
                               ),
@@ -611,7 +598,7 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
                       ],
                     )
                   else
-                    const SizedBox(height: 76), // placeholder to keep mode row height consistent for barcode
+                    const SizedBox(height: 76),
                 ],
               ),
             ),
@@ -627,9 +614,6 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
       onTap: _isProcessing
           ? null
           : () {
-              if (modeString == 'Gallery') {
-                _pickFromGallery();
-              }
               setState(() {
                 _currentMode = modeString;
                 _barcodeScanned = false;

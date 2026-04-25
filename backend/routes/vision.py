@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
+from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Query
 from google import genai
 import os
 from typing import Optional
@@ -9,6 +9,7 @@ import io
 from security import get_current_user_id
 from pydantic import BaseModel
 import logging
+import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -31,8 +32,23 @@ except Exception as _e:
 
 router = APIRouter()
 
+
+def _resolve_local_date(local_date: Optional[str]) -> datetime.date:
+    """Return the user's local date if provided, else fall back to UTC today."""
+    if local_date:
+        try:
+            return datetime.datetime.strptime(local_date, "%Y-%m-%d").date()
+        except ValueError:
+            pass
+    return datetime.datetime.utcnow().date()
+
+
 @router.post("/analyze")
-async def analyze_food_image(file: UploadFile = File(...), current_user_id: int = Depends(get_current_user_id)):
+async def analyze_food_image(
+    file: UploadFile = File(...),
+    local_date: Optional[str] = Query(None, description="User's local date YYYY-MM-DD"),
+    current_user_id: int = Depends(get_current_user_id),
+):
     try:
         if client is None:
             raise HTTPException(status_code=503, detail="Vision AI is unavailable: GEMINI_API_KEY is not configured on the server.")
@@ -71,8 +87,9 @@ async def analyze_food_image(file: UploadFile = File(...), current_user_id: int 
         # Save to DB using a single session
         from models import FoodLog, DailyStats, User
         from database import get_db
-        import datetime
         
+        today = _resolve_local_date(local_date)
+
         with next(get_db()) as db:
             # 1. Insert food log
             log = FoodLog(
@@ -90,8 +107,7 @@ async def analyze_food_image(file: UploadFile = File(...), current_user_id: int 
             db.add(log)
             db.flush()  # get log.id without committing yet
 
-            # 2. Update (or create) today's DailyStats in the same session
-            today = datetime.datetime.utcnow().date()
+            # 2. Update (or create) the user's local-date DailyStats in the same session
             stat = db.query(DailyStats).filter(
                 DailyStats.user_id == current_user_id,
                 DailyStats.date >= datetime.datetime.combine(today, datetime.time.min),
@@ -115,7 +131,7 @@ async def analyze_food_image(file: UploadFile = File(...), current_user_id: int 
                 carbs_t = max(int((budget - protein_t * 4 - fat_t * 9) / 4), 0)
                 stat = DailyStats(
                     user_id=current_user_id,
-                    date=datetime.datetime.utcnow(),
+                    date=datetime.datetime.combine(today, datetime.time.min),
                     calorie_budget=budget,
                     protein_target=protein_t,
                     carbs_target=carbs_t,
@@ -138,6 +154,8 @@ async def analyze_food_image(file: UploadFile = File(...), current_user_id: int 
         try:
             from redis_client import redis_db
             redis_db.delete(f"stats_{current_user_id}")
+            redis_db.delete(f"stats_{current_user_id}_{today.isoformat()}")
+            redis_db.delete(f"stats_{current_user_id}_latest")
         except Exception:
             pass
 
@@ -216,53 +234,65 @@ async def analyze_food_text(body: TextQuery, current_user_id: int = Depends(get_
         print(f"Error analyzing text: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
 class LogItemModel(BaseModel):
-    name: str # Primary name (usually English)
+    name: str  # Primary name (usually English)
+    name_en: Optional[str] = None
     name_fr: Optional[str] = None
     name_ar: Optional[str] = None
+    image_url: Optional[str] = None
     calories: int
     protein: int
     carbs: int
     fat: int
 
+
 @router.post("/analyze/log")
-async def log_food_item(body: LogItemModel, current_user_id: int = Depends(get_current_user_id)):
+async def log_food_item(
+    body: LogItemModel,
+    local_date: Optional[str] = Query(None, description="User's local date YYYY-MM-DD"),
+    current_user_id: int = Depends(get_current_user_id),
+):
     """Saves a food log and updates daily stats using exact pre-determined macros (e.g. from a barcode scan)."""
     from models import FoodLog
     from database import get_db
-    from routes.stats import log_macro
-    
+    from routes.stats import _log_macro_with_date
+
     try:
+        today = _resolve_local_date(local_date)
         with next(get_db()) as db:
             log = FoodLog(
-                user_id=current_user_id, 
-                name=body.name, 
-                name_en=body.name,
+                user_id=current_user_id,
+                name=body.name,
+                name_en=body.name_en or body.name,
                 name_fr=body.name_fr,
                 name_ar=body.name_ar,
-                image_url=None, 
-                calories=body.calories, 
-                protein=body.protein, 
-                carbs=body.carbs, 
-                fat=body.fat
+                image_url=body.image_url,
+                calories=body.calories,
+                protein=body.protein,
+                carbs=body.carbs,
+                fat=body.fat,
             )
             db.add(log)
             db.commit()
-            
-            # Automatically update the user's daily progress
-            log_macro(
-                calories=log.calories, 
-                protein=log.protein, 
-                carbs=log.carbs, 
-                fat=log.fat, 
-                db=db, 
-                current_user_id=current_user_id
+
+            # Automatically update the user's daily progress using the local date
+            _log_macro_with_date(
+                calories=log.calories,
+                protein=log.protein,
+                carbs=log.carbs,
+                fat=log.fat,
+                db=db,
+                current_user_id=current_user_id,
+                local_date=today,
             )
 
         return {"status": "success", "message": "Log created successfully"}
     except Exception as e:
         print(f"Error logging explicit item: {e}")
         raise HTTPException(status_code=500, detail="Failed to log the item to history.")
+
+
 @router.get("/barcode/{barcode}")
 async def get_barcode_nutrition(barcode: str, current_user_id: int = Depends(get_current_user_id)):
     """Fetches nutritional data for a given barcode from Open Food Facts."""
@@ -271,8 +301,8 @@ async def get_barcode_nutrition(barcode: str, current_user_id: int = Depends(get
     url = f"https://world.openfoodfacts.org/api/v2/product/{barcode}.json"
     
     try:
-        async with httpx.AsyncClient(headers={"User-Agent": "GojoCalories/1.0 (https://gojocalories.com)"}) as client:
-            response = await client.get(url, timeout=10.0)
+        async with httpx.AsyncClient(headers={"User-Agent": "GojoCalories/1.0 (https://gojocalories.com)"}) as http:
+            response = await http.get(url, timeout=10.0)
             
         if response.status_code != 200:
             raise HTTPException(status_code=502, detail="Failed to fetch data from nutrition provider.")
@@ -324,6 +354,42 @@ async def get_barcode_nutrition(barcode: str, current_user_id: int = Depends(get
         logger.error(f"Barcode lookup error: {e}")
         raise HTTPException(status_code=500, detail="Internal error during barcode lookup.")
 
+
+@router.get("/ingredients/{food_name}")
+async def get_food_ingredients(
+    food_name: str,
+    current_user_id: int = Depends(get_current_user_id),
+):
+    """Uses Gemini to return a detailed ingredient breakdown for a given food item."""
+    if client is None:
+        raise HTTPException(status_code=503, detail="Vision AI unavailable.")
+
+    prompt = f"""
+    For the food item "{food_name}", provide a detailed ingredient breakdown with estimated portion sizes and calories.
+    Respond ONLY with a JSON object. No markdown, no backticks, no explanations.
+    Format exactly like this:
+    {{"ingredients": [{{"name": "Ingredient Name", "amount": "1.5 cups", "calories": 45}}, ...]}}
+    Include 3 to 8 ingredients. Be realistic and specific.
+    """
+
+    try:
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=prompt,
+        )
+        raw_text = response.text
+        text = raw_text.replace('```json', '').replace('```', '').strip()
+        data = json.loads(text)
+        return data
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=422, detail="AI could not generate ingredient data.")
+    except Exception as e:
+        err_str = str(e).lower()
+        if 'quota' in err_str or '429' in err_str:
+            raise HTTPException(status_code=503, detail="AI service temporarily unavailable.")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/search")
 async def search_food(query: str, current_user_id: int = Depends(get_current_user_id)):
     """Searches FoodData Central for a given query."""
@@ -340,8 +406,8 @@ async def search_food(query: str, current_user_id: int = Depends(get_current_use
     }
     
     try:
-        async with httpx.AsyncClient(headers={"User-Agent": "GojoCalories/1.0 (https://gojocalories.com)"}) as client:
-            response = await client.get(url, params=params, timeout=10.0)
+        async with httpx.AsyncClient(headers={"User-Agent": "GojoCalories/1.0 (https://gojocalories.com)"}) as http:
+            response = await http.get(url, params=params, timeout=10.0)
             
         if response.status_code != 200:
             raise HTTPException(status_code=502, detail="Failed to fetch from FoodData Central.")

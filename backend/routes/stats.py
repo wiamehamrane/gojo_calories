@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from database import get_db
 from models import DailyStats, User, WeighIn
@@ -83,11 +83,9 @@ def get_user_stats(
             try:
                 db.commit()
                 db.refresh(new_stat)
-                # Re-fetch stats to include the new one or just prepend it
                 stats.insert(0, new_stat)
             except Exception:
                 db.rollback()
-                # If commit fails (e.g. race condition), it's fine, we return what we have
     
     stats_data = [{
         "user_id": s.user_id, 
@@ -101,15 +99,55 @@ def get_user_stats(
         "fat_target": s.fat_target
     } for s in stats]
     
-    if date and not stats_data:
-        # fallback for specific date if still empty (though insert above should handle today)
-        pass # original code had synthesize logic here, but the insert(0) handles today.
     try:
         redis_db.setex(cache_key, 300, json.dumps(stats_data))
     except Exception:
         pass
     
     return stats_data
+
+
+@router.get("/weekly")
+def get_weekly_stats(
+    local_today: Optional[str] = Query(None, description="User's local today date YYYY-MM-DD"),
+    db: Session = Depends(get_db),
+    current_user_id: int = Depends(get_current_user_id),
+):
+    """Returns exactly 7 days of stats (local_today and 6 days back), zero-filling missing days."""
+    if local_today:
+        try:
+            today = dt.datetime.strptime(local_today, "%Y-%m-%d").date()
+        except ValueError:
+            today = dt.datetime.utcnow().date()
+    else:
+        today = dt.datetime.utcnow().date()
+
+    start = today - dt.timedelta(days=6)
+
+    # Fetch any existing rows in this window
+    rows = db.query(DailyStats).filter(
+        DailyStats.user_id == current_user_id,
+        DailyStats.date >= dt.datetime.combine(start, dt.time.min),
+        DailyStats.date < dt.datetime.combine(today + dt.timedelta(days=1), dt.time.min),
+    ).all()
+
+    # Build a lookup keyed by date
+    row_by_date = {r.date.date(): r for r in rows}
+
+    result = []
+    for i in range(7):
+        day = start + dt.timedelta(days=i)
+        row = row_by_date.get(day)
+        result.append({
+            "date": day.isoformat(),
+            "calories_consumed": row.calories_consumed if row else 0,
+            "protein_consumed": row.protein_consumed if row else 0,
+            "carbs_consumed": row.carbs_consumed if row else 0,
+            "fat_consumed": row.fat_consumed if row else 0,
+        })
+
+    return result
+
 
 @router.get("/streak")
 def get_streak(db: Session = Depends(get_db), current_user_id: int = Depends(get_current_user_id)):
@@ -120,7 +158,6 @@ def get_streak(db: Session = Depends(get_db), current_user_id: int = Depends(get
     check_date = today
 
     while True:
-        # We need to query for the day's record using the date portion
         stat = db.query(DailyStats).filter(
             DailyStats.user_id == current_user_id,
             DailyStats.date >= dt.datetime.combine(check_date, dt.time.min),
@@ -137,6 +174,7 @@ def get_streak(db: Session = Depends(get_db), current_user_id: int = Depends(get
             break
 
     return {"streak": streak}
+
 
 @router.get("/history")
 def get_user_history(
@@ -161,15 +199,20 @@ def get_user_history(
     res = []
     for log in logs:
         res.append({
+            "id": log.id,
             "meal_name": log.name,
+            "name_en": log.name_en,
+            "name_fr": log.name_fr,
+            "name_ar": log.name_ar,
             "calories": log.calories,
             "image_url": log.image_url,
             "protein": log.protein,
             "carbs": log.carbs,
             "fat": log.fat,
-            "created_at": log.created_at
+            "created_at": log.created_at,
         })
     return res
+
 
 @router.get("/progress/weigh-ins")
 def get_weigh_ins(db: Session = Depends(get_db), current_user_id: int = Depends(get_current_user_id)):
@@ -182,64 +225,92 @@ def get_weigh_ins(db: Session = Depends(get_db), current_user_id: int = Depends(
         })
     return res
 
-@router.post("/log")
-def log_macro(calories: int, protein: int, carbs: int, fat: int, db: Session = Depends(get_db), current_user_id: int = Depends(get_current_user_id)):
+
+def _log_macro_with_date(
+    calories: int,
+    protein: int,
+    carbs: int,
+    fat: int,
+    db: Session,
+    current_user_id: int,
+    local_date: "dt.date | None" = None,
+):
+    """Update DailyStats for the given local date (or UTC today as fallback)."""
     import datetime
-    stat = db.query(DailyStats).filter(DailyStats.user_id == current_user_id).order_by(DailyStats.date.desc()).first()
-    
-    today = datetime.datetime.utcnow().date()
-    # Check if a stat exists for today, else create a new one
-    if not stat or stat.date.date() != today:
+
+    today = local_date or datetime.datetime.utcnow().date()
+
+    stat = db.query(DailyStats).filter(
+        DailyStats.user_id == current_user_id,
+        DailyStats.date >= datetime.datetime.combine(today, datetime.time.min),
+        DailyStats.date < datetime.datetime.combine(today + datetime.timedelta(days=1), datetime.time.min),
+    ).first()
+
+    if not stat:
         user = db.query(User).filter(User.id == current_user_id).first()
-        weigh_in_weight = user.current_weight or 70.0
-        goal_wt = user.goal_weight or 70.0
-        age = user.age or 30
-        height_cm = user.height or 170
-        gender = user.gender or "male"
-        activity = user.activity_level or "sedentary"
+        weigh_in_weight = (user.current_weight or 70.0) if user else 70.0
+        goal_wt = (user.goal_weight or 70.0) if user else 70.0
+        age = (user.age or 30) if user else 30
+        height_cm = (user.height or 170) if user else 170
+        gender = (user.gender or "male") if user else "male"
+        activity = (user.activity_level or "sedentary") if user else "sedentary"
 
         from utils.nutrition import calculate_daily_targets
-        
         targets = calculate_daily_targets(
             weight_kg=weigh_in_weight,
             height_cm=height_cm,
             age=age,
             gender=gender,
             activity_level=activity,
-            goal_weight_kg=goal_wt
+            goal_weight_kg=goal_wt,
         )
-        
-        calorie_budget = targets["calorie_budget"]
-        protein_t = targets["protein_target"]
-        fat_t = targets["fat_target"]
-        carbs_t = targets["carbs_target"]
-            
-        new_stat = DailyStats(
-            user_id=current_user_id, 
-            date=datetime.datetime.utcnow(), 
-            calorie_budget=user.manual_calories or calorie_budget,
-            protein_target=user.manual_protein or protein_t,
-            carbs_target=user.manual_carbs or carbs_t,
-            fat_target=user.manual_fat or fat_t,
-            calories_consumed=0, protein_consumed=0, carbs_consumed=0, fat_consumed=0
+
+        stat = DailyStats(
+            user_id=current_user_id,
+            date=datetime.datetime.combine(today, datetime.time.min),
+            calorie_budget=(user.manual_calories if user else None) or targets["calorie_budget"],
+            protein_target=(user.manual_protein if user else None) or targets["protein_target"],
+            carbs_target=(user.manual_carbs if user else None) or targets["carbs_target"],
+            fat_target=(user.manual_fat if user else None) or targets["fat_target"],
+            calories_consumed=0, protein_consumed=0, carbs_consumed=0, fat_consumed=0,
         )
-        db.add(new_stat)
-        db.commit()
-        db.refresh(new_stat)
-        stat = new_stat
-        
+        db.add(stat)
+        db.flush()
+
     stat.calories_consumed += calories
     stat.protein_consumed += protein
     stat.carbs_consumed += carbs
     stat.fat_consumed += fat
-    
+
     db.commit()
     db.refresh(stat)
-    
+
     # Invalidate cache
     try:
         redis_db.delete(f"stats_{current_user_id}")
+        redis_db.delete(f"stats_{current_user_id}_{today.isoformat()}")
+        redis_db.delete(f"stats_{current_user_id}_latest")
     except Exception:
         pass
 
+    return stat
+
+
+@router.post("/log")
+def log_macro(
+    calories: int,
+    protein: int,
+    carbs: int,
+    fat: int,
+    db: Session = Depends(get_db),
+    current_user_id: int = Depends(get_current_user_id),
+):
+    stat = _log_macro_with_date(
+        calories=calories,
+        protein=protein,
+        carbs=carbs,
+        fat=fat,
+        db=db,
+        current_user_id=current_user_id,
+    )
     return {"status": "success", "consumed": stat.calories_consumed}

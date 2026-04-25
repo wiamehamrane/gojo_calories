@@ -12,6 +12,7 @@ import '../widgets/main_scaffold.dart';
 // Import remaining screens
 import '../../features/food_log/presentation/screens/food_log_screen.dart';
 import '../../features/food_log/presentation/screens/scan_food_screen.dart';
+import '../../features/food_log/presentation/screens/food_detail_screen.dart';
 
 import '../../features/profile/presentation/screens/profile_screen.dart';
 import '../../features/dashboard/presentation/screens/log_exercise_screen.dart';
@@ -128,6 +129,13 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/feature_request',
       builder: (context, state) => const FeatureRequestScreen(),
+    ),
+    GoRoute(
+      path: '/food-detail',
+      builder: (context, state) {
+        final log = state.extra as Map<String, dynamic>;
+        return FoodDetailScreen(log: log);
+      },
     ),
   ],
 );
