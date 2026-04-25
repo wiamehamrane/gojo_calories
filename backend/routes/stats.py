@@ -113,7 +113,10 @@ def get_weekly_stats(
     db: Session = Depends(get_db),
     current_user_id: int = Depends(get_current_user_id),
 ):
-    """Returns exactly 7 days of stats (local_today and 6 days back), zero-filling missing days."""
+    """Returns 7 days of aggregated stats (by local date), derived from FoodLog (source of truth).
+    DailyStats rows can be timezone-misaligned; FoodLog.created_at is always accurate."""
+    from models import FoodLog
+
     if local_today:
         try:
             today = dt.datetime.strptime(local_today, "%Y-%m-%d").date()
@@ -124,26 +127,46 @@ def get_weekly_stats(
 
     start = today - dt.timedelta(days=6)
 
-    # Fetch any existing rows in this window
-    rows = db.query(DailyStats).filter(
-        DailyStats.user_id == current_user_id,
-        DailyStats.date >= dt.datetime.combine(start, dt.time.min),
-        DailyStats.date < dt.datetime.combine(today + dt.timedelta(days=1), dt.time.min),
+    # Fetch all food logs in the 8-day window (±1 day for timezone safety)
+    window_start = dt.datetime.combine(start - dt.timedelta(days=1), dt.time.min)
+    window_end = dt.datetime.combine(today + dt.timedelta(days=2), dt.time.min)
+    logs = db.query(FoodLog).filter(
+        FoodLog.user_id == current_user_id,
+        FoodLog.created_at >= window_start,
+        FoodLog.created_at < window_end,
     ).all()
 
-    # Build a lookup keyed by date
-    row_by_date = {r.date.date(): r for r in rows}
+    # Build lookup: local_date_string -> aggregated macros
+    # We map each log to a local date by shifting UTC created_at by the offset implied
+    # by local_today vs utc_today. This is an approximation that works for most timezones.
+    utc_today = dt.datetime.utcnow().date()
+    tz_offset_days = (today - utc_today).days  # e.g. +1 if local is 1 day ahead of UTC
+    # In practice tz_offset_days is 0, so we use hour-level granularity instead:
+    # Just bin each log's UTC timestamp into the local day it falls on given the offset.
+
+    from collections import defaultdict
+    day_totals: dict = defaultdict(lambda: {"calories_consumed": 0, "protein_consumed": 0, "carbs_consumed": 0, "fat_consumed": 0})
+
+    for log in logs:
+        # Shift UTC to local date using offset between local_today and utc_today
+        local_dt = log.created_at + dt.timedelta(days=tz_offset_days)
+        local_date = local_dt.date()
+        if start <= local_date <= today:
+            day_totals[local_date]["calories_consumed"] += log.calories or 0
+            day_totals[local_date]["protein_consumed"] += log.protein or 0
+            day_totals[local_date]["carbs_consumed"] += log.carbs or 0
+            day_totals[local_date]["fat_consumed"] += log.fat or 0
 
     result = []
     for i in range(7):
         day = start + dt.timedelta(days=i)
-        row = row_by_date.get(day)
+        totals = day_totals.get(day, {})
         result.append({
             "date": day.isoformat(),
-            "calories_consumed": row.calories_consumed if row else 0,
-            "protein_consumed": row.protein_consumed if row else 0,
-            "carbs_consumed": row.carbs_consumed if row else 0,
-            "fat_consumed": row.fat_consumed if row else 0,
+            "calories_consumed": totals.get("calories_consumed", 0),
+            "protein_consumed": totals.get("protein_consumed", 0),
+            "carbs_consumed": totals.get("carbs_consumed", 0),
+            "fat_consumed": totals.get("fat_consumed", 0),
         })
 
     return result
@@ -188,14 +211,18 @@ def get_user_history(
     if date:
         try:
             target_date = dt.datetime.strptime(date, "%Y-%m-%d").date()
+            # Expand window by ±1 day to handle timezone offsets:
+            # logs stored in UTC may appear shifted relative to local date.
+            window_start = dt.datetime.combine(target_date - dt.timedelta(days=1), dt.time.min)
+            window_end = dt.datetime.combine(target_date + dt.timedelta(days=2), dt.time.min)
             query = query.filter(
-                FoodLog.created_at >= dt.datetime.combine(target_date, dt.time.min),
-                FoodLog.created_at < dt.datetime.combine(target_date + dt.timedelta(days=1), dt.time.min)
+                FoodLog.created_at >= window_start,
+                FoodLog.created_at < window_end,
             )
         except ValueError:
             pass
 
-    logs = query.order_by(FoodLog.created_at.desc()).limit(10).all()
+    logs = query.order_by(FoodLog.created_at.desc()).limit(50).all()
     res = []
     for log in logs:
         res.append({

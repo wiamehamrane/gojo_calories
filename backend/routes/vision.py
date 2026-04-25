@@ -69,7 +69,7 @@ async def analyze_food_image(
         
         logger.info(f"Calling Gemini vision for user {current_user_id}")
         response = client.models.generate_content(
-            model='gemini-1.5-flash',
+            model='gemini-2.5-flash-lite',
             contents=[prompt, image]
         )
         
@@ -201,7 +201,7 @@ async def analyze_food_text(body: TextQuery, current_user_id: int = Depends(get_
         
         logger.info(f"Calling Gemini text analysis for user {current_user_id}: {body.query!r}")
         response = client.models.generate_content(
-            model='gemini-1.5-flash',
+            model='gemini-2.5-flash-lite',
             contents=prompt
         )
         raw_text = response.text
