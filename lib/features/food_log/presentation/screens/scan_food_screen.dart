@@ -224,7 +224,7 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
               'protein': protein,
               'carbs': carbs,
               'fat': fat,
-              if (imageUrl != null) 'image_url': imageUrl,
+              'image_url': ?imageUrl,
             },
             queryParameters: {'local_date': _localDateStr},
           );

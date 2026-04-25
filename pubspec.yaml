@@ -60,6 +60,7 @@ dependencies:
   sign_in_with_apple: ^7.0.1
   intl: ^0.20.2
   share_plus: ^13.1.0
+  flutter_launcher_icons: ^0.14.4
 
 dev_dependencies:
   flutter_test:
@@ -117,3 +118,15 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  remove_alpha_ios: true
+  image_path: "assets/icons/app_icon.png"
+  min_sdk_android: 21 # android min sdk min:16, default 21
+  web:
+    generate: true
+    image_path: "assets/icons/app_icon.png"
+    background_color: "#0A0A0A"
+    theme_color: "#0A0A0A"

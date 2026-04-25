@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -558,7 +559,7 @@ class _FoodDetailScreenState extends ConsumerState<FoodDetailScreen> {
 
   Widget _buildHeroImage(String? imageUrl) {
     if (imageUrl != null && imageUrl.isNotEmpty) {
-      // Check if it's a local file path (from camera/gallery before upload)
+      // Local file path (camera/gallery before upload completes)
       if (imageUrl.startsWith('/') || imageUrl.startsWith('file://')) {
         final path = imageUrl.replaceFirst('file://', '');
         return Image.file(
@@ -567,13 +568,15 @@ class _FoodDetailScreenState extends ConsumerState<FoodDetailScreen> {
           errorBuilder: (_, e, s) => _placeholder(),
         );
       }
+      // Network image — show shimmer while loading, never fallback to placeholder mid-load
       return Image.network(
         imageUrl,
         fit: BoxFit.cover,
         errorBuilder: (_, e, s) => _placeholder(),
         loadingBuilder: (ctx, child, progress) {
-          if (progress == null) return child;
-          return _placeholder();
+          if (progress == null) return child; // fully loaded
+          // Show animated shimmer while loading
+          return _ShimmerPlaceholder();
         },
       );
     }
@@ -583,8 +586,22 @@ class _FoodDetailScreenState extends ConsumerState<FoodDetailScreen> {
   Widget _placeholder() {
     return Container(
       color: const Color(0xFF1A1A1A),
-      child: const Center(
-        child: Icon(LucideIcons.utensils, size: 64, color: Colors.white24),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SvgPicture.asset(
+              'assets/icons/avocado.svg',
+              width: 56,
+              height: 56,
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'No photo',
+              style: TextStyle(color: Colors.white30, fontSize: 13),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -990,6 +1007,55 @@ class _SheetTile extends StatelessWidget {
             const SizedBox(width: 14),
             Text(label, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: color)),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Shimmer placeholder — shown while a network image loads
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ShimmerPlaceholder extends StatefulWidget {
+  const _ShimmerPlaceholder();
+
+  @override
+  State<_ShimmerPlaceholder> createState() => _ShimmerPlaceholderState();
+}
+
+class _ShimmerPlaceholderState extends State<_ShimmerPlaceholder>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _anim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1100),
+    )..repeat(reverse: true);
+    _anim = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _anim,
+      builder: (context, child) => Container(
+        color: Color.lerp(
+          const Color(0xFF1C1C1C),
+          const Color(0xFF2E2E2E),
+          _anim.value,
         ),
       ),
     );

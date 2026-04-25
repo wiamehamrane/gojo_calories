@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:gojocalories/core/network/api_client.dart';
@@ -14,21 +15,25 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
-  late AnimationController _shimmerController;
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnim;
 
   @override
   void initState() {
     super.initState();
 
-    // Set immersive status bar so the splash fills the entire screen
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.light);
 
-    _shimmerController = AnimationController(
+    _pulseController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat();
+      duration: const Duration(milliseconds: 2000),
+    )..repeat(reverse: true);
 
-    Future.delayed(const Duration(milliseconds: 2400), () async {
+    _pulseAnim = Tween<double>(begin: 0.85, end: 1.0).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+
+    Future.delayed(const Duration(milliseconds: 2600), () async {
       if (!mounted) return;
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('access_token');
@@ -66,166 +71,208 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   void dispose() {
-    _shimmerController.dispose();
+    _pulseController.dispose();
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.dark);
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: const Color(0xFF0A0A0A),
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // ── Subtle radial glow behind logo ──────────────────────────────
+          // ── Background: large radial glow (lime) centred high ───────────
           Positioned(
-            top: MediaQuery.of(context).size.height * 0.25,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: Container(
-                width: 260,
-                height: 260,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      Colors.white.withValues(alpha: 0.06),
-                      Colors.transparent,
-                    ],
+            top: size.height * 0.1,
+            left: size.width * 0.5 - 180,
+            child: AnimatedBuilder(
+              animation: _pulseAnim,
+              builder: (_, child) => Transform.scale(
+                scale: _pulseAnim.value,
+                child: Container(
+                  width: 360,
+                  height: 360,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        const Color(0xFF97FF5A).withValues(alpha: 0.14),
+                        const Color(0xFF97FF5A).withValues(alpha: 0.04),
+                        Colors.transparent,
+                      ],
+                      stops: const [0.0, 0.55, 1.0],
+                    ),
                   ),
                 ),
               ),
             ),
           ),
 
-          // ── Center content ──────────────────────────────────────────────
+          // ── Second smaller teal glow bottom-right ───────────────────────
+          Positioned(
+            bottom: size.height * 0.1,
+            right: -60,
+            child: Container(
+              width: 220,
+              height: 220,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    const Color(0xFF00B4CC).withValues(alpha: 0.10),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // ── Centre content ──────────────────────────────────────────────
           Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Logo mark — monochrome squircle icon
-                Container(
-                  width: 88,
-                  height: 88,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.white.withValues(alpha: 0.12),
-                        blurRadius: 32,
-                        spreadRadius: 4,
+                // ── Logo container with neon lime border glow ─────────────
+                AnimatedBuilder(
+                  animation: _pulseAnim,
+                  builder: (_, child) => Container(
+                    width: 104,
+                    height: 104,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF161616),
+                      borderRadius: BorderRadius.circular(28),
+                      border: Border.all(
+                        color: const Color(0xFF97FF5A)
+                            .withValues(alpha: 0.35 * _pulseAnim.value),
+                        width: 1.5,
                       ),
-                    ],
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF97FF5A)
+                              .withValues(alpha: 0.20 * _pulseAnim.value),
+                          blurRadius: 40,
+                          spreadRadius: 0,
+                        ),
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.5),
+                          blurRadius: 16,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: child,
                   ),
-                  child: const Center(
-                    child: Text(
-                      'GJ',
-                      style: TextStyle(
-                        fontSize: 30,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.black,
-                        letterSpacing: -1,
-                      ),
+                  child: Center(
+                    child: SvgPicture.asset(
+                      'assets/icons/avocado.svg',
+                      width: 56,
+                      height: 56,
                     ),
                   ),
                 )
                     .animate()
                     .scale(
-                      begin: const Offset(0.75, 0.75),
+                      begin: const Offset(0.7, 0.7),
                       end: const Offset(1.0, 1.0),
-                      duration: 600.ms,
+                      duration: 650.ms,
                       curve: Curves.easeOutBack,
                     )
-                    .fade(duration: 400.ms),
+                    .fade(duration: 450.ms),
 
-                const SizedBox(height: 28),
+                const SizedBox(height: 30),
 
-                // App name
+                // ── App name ───────────────────────────────────────────────
                 const Text(
                   'GojoCalories',
                   style: TextStyle(
-                    fontSize: 34,
+                    fontSize: 36,
                     fontWeight: FontWeight.w800,
                     color: Colors.white,
-                    letterSpacing: -1.0,
+                    letterSpacing: -1.2,
+                    height: 1.0,
                   ),
                 )
                     .animate()
-                    .fade(delay: 350.ms, duration: 400.ms)
+                    .fade(delay: 380.ms, duration: 400.ms)
                     .slideY(
-                      begin: 0.15,
+                      begin: 0.18,
                       end: 0,
-                      delay: 350.ms,
+                      delay: 380.ms,
                       duration: 400.ms,
                       curve: Curves.easeOut,
                     ),
 
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
 
-                // Tagline
+                // ── Tagline ────────────────────────────────────────────────
                 const Text(
                   'Track smarter. Eat better.',
                   style: TextStyle(
-                    fontSize: 15,
+                    fontSize: 14,
                     fontWeight: FontWeight.w400,
-                    color: Colors.white38,
-                    letterSpacing: 0.2,
+                    color: Color(0xFF666666),
+                    letterSpacing: 0.3,
                   ),
-                )
-                    .animate()
-                    .fade(delay: 550.ms, duration: 400.ms),
+                ).animate().fade(delay: 580.ms, duration: 400.ms),
               ],
             ),
           ),
 
-          // ── Loading indicator at bottom ─────────────────────────────────
+          // ── Loading dots at bottom ──────────────────────────────────────
           Positioned(
-            bottom: 56,
+            bottom: 52,
             left: 0,
             right: 0,
-            child: Column(
-              children: [
-                // Animated dot-row loader
-                AnimatedBuilder(
-                  animation: _shimmerController,
-                  builder: (_, child) {
-                    return Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(3, (i) {
-                        final phase = ((_shimmerController.value * 3) - i).clamp(0.0, 1.0);
-                        final scale = 0.5 + 0.5 * (1 - (phase - 0.5).abs() * 2).clamp(0.0, 1.0);
-                        return Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 4),
-                          width: 6 * scale,
-                          height: 6 * scale,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.white.withValues(alpha: 0.3 + 0.5 * scale.clamp(0.0, 1.0)),
-                          ),
-                        );
-                      }),
-                    );
-                  },
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Powered by Gemini AI',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.white24,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              ],
-            )
-                .animate()
-                .fade(delay: 700.ms, duration: 400.ms),
-          ),
+            child: _PulsingDots(controller: _pulseController),
+          )
+              .animate()
+              .fade(delay: 750.ms, duration: 400.ms),
         ],
       ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Pulsing three-dot loader
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _PulsingDots extends StatelessWidget {
+  final AnimationController controller;
+  const _PulsingDots({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, child) {
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(3, (i) {
+            // Stagger each dot by 0.33 of the cycle
+            final phase = ((controller.value * 3) - i).clamp(0.0, 1.0);
+            final brightness = (0.5 - (phase - 0.5).abs() * 2).clamp(0.0, 1.0);
+            final size = 5.0 + 3.0 * brightness;
+            return Container(
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              width: size,
+              height: size,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Color.lerp(
+                  const Color(0xFF333333),
+                  const Color(0xFF97FF5A),
+                  brightness,
+                ),
+              ),
+            );
+          }),
+        );
+      },
     );
   }
 }

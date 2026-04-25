@@ -397,7 +397,7 @@ class _AnimatedMealCardState extends State<_AnimatedMealCard>
                                       ),
                                     ),
                                   ),
-                                ),
+                                );
                               },
                             ))
                       : const _FoodPlaceholder(),
