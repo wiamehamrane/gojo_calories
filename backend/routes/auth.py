@@ -316,16 +316,7 @@ def delete_account(db: Session = Depends(get_db), current_user_id: int = Depends
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # Cancel Stripe subscription if exists
-    if user.stripe_customer_id:
-        try:
-            import stripe
-            stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
-            subscriptions = stripe.Subscription.list(customer=user.stripe_customer_id, status="active", limit=5)
-            for sub in subscriptions.data:
-                stripe.Subscription.cancel(sub.id)
-        except Exception:
-            pass  # Don't block account deletion if Stripe fails
+
 
     db.delete(user)
     db.commit()

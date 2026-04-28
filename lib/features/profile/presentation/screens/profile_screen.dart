@@ -11,6 +11,8 @@ import '../../../../core/providers/locale_provider.dart';
 import '../../../../core/localization/translations.dart';
 import '../../../../core/network/api_client.dart';
 
+import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
+
 // Providers
 final profileProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   final res = await ApiClient.instance.get('auth/me');
@@ -136,6 +138,17 @@ class ProfileScreen extends ConsumerWidget {
                     icon: LucideIcons.languages,
                     label: t('language'),
                     onTap: () => context.push('/profile/language'),
+                  ),
+                  _SettingsRow(
+                    icon: LucideIcons.creditCard,
+                    label: 'Manage Subscription',
+                    onTap: () async {
+                      try {
+                        await RevenueCatUI.presentCustomerCenter();
+                      } catch (e) {
+                        debugPrint('Customer Center error: $e');
+                      }
+                    },
                   ),
                 ],
               ),

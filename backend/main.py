@@ -105,7 +105,7 @@ def read_root():
     return {"status": "GojoCalories MVP API is running natively."}
 
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
-app.include_router(payments.router, prefix="/api/payments", tags=["Stripe Payments"])
+app.include_router(payments.router, prefix="/api/payments", tags=["Payments"])
 
 # Hard Paywall temporarily suspended for AWS testing mode
 app.include_router(vision.router, prefix="/api/food", tags=["Food Vision AI"])
