@@ -1,4 +1,24 @@
-<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-  <path d="M16 2C10.5 2 6 8.5 6 18C6 24.6 10.5 30 16 30C21.5 30 26 24.6 26 18C26 8.5 21.5 2 16 2Z" fill="#00B4CC" />
-  <ellipse cx="16" cy="21" rx="5" ry="6" fill="#007D8F" />
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Outer dark green skin -->
+  <ellipse cx="100" cy="115" rx="62" ry="75" fill="#2d6a1e"/>
+  <!-- Upper pointed part -->
+  <path d="M100 18 C75 30, 48 65, 48 115 Q48 190 100 190 Q152 190 152 115 C152 65 125 30 100 18Z" fill="#3a8c27"/>
+  <!-- Cream/yellow-green flesh -->
+  <path d="M100 38 C80 52, 62 78, 62 115 Q62 172 100 172 Q138 172 138 115 C138 78 120 52 100 38Z" fill="#d4e89a"/>
+  <!-- Inner lighter flesh -->
+  <path d="M100 50 C83 62, 68 85, 68 115 Q68 162 100 162 Q132 162 132 115 C132 85 117 62 100 50Z" fill="#e8f5b8"/>
+  <!-- Pit (brown seed) -->
+  <circle cx="100" cy="128" r="30" fill="#5c2e00"/>
+  <circle cx="100" cy="128" r="26" fill="#7a3a00"/>
+  <circle cx="100" cy="128" r="22" fill="#8b4513"/>
+  <!-- Pit highlight -->
+  <ellipse cx="93" cy="120" rx="8" ry="6" fill="#a0521a" opacity="0.6"/>
+  <!-- Skin texture bumps -->
+  <circle cx="72" cy="88" r="3" fill="#2d6a1e" opacity="0.5"/>
+  <circle cx="65" cy="108" r="2.5" fill="#2d6a1e" opacity="0.5"/>
+  <circle cx="68" cy="128" r="2" fill="#2d6a1e" opacity="0.4"/>
+  <circle cx="130" cy="95" r="2.5" fill="#2d6a1e" opacity="0.4"/>
+  <circle cx="134" cy="115" r="2" fill="#2d6a1e" opacity="0.4"/>
+  <!-- Skin highlight -->
+  <path d="M82 50 C76 60 70 75 70 95" stroke="#4db02e" stroke-width="4" stroke-linecap="round" fill="none" opacity="0.5"/>
 </svg>
