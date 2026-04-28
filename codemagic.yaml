@@ -192,3 +192,24 @@ workflows:
         recipients:
           - jadtneamou@proton.me
           - zelghourfi@gmail.com
+
+  android-debug:
+    name: GojoCalories Android Debug Build
+    instance_type: linux
+    max_build_duration: 60
+    environment:
+      flutter: stable
+    scripts:
+      - name: Install dependencies
+        script: |
+          flutter packages pub get
+      - name: Android debug build
+        script: |
+          flutter build apk --debug
+    artifacts:
+      - build/app/outputs/flutter-apk/**/*.apk
+    publishing:
+      email:
+        recipients:
+          - jadtneamou@proton.me
+          - zelghourfi@gmail.com
