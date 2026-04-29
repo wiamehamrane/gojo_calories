@@ -12,7 +12,7 @@ import logging
 logger = logging.getLogger(__name__)
 load_dotenv()
 
-from routes import vision, auth, stats, groups, referrals, payments
+from routes import vision, auth, stats, groups, referrals, payments, notifications
 
 Base.metadata.create_all(bind=engine)
 
@@ -22,6 +22,7 @@ try:
         from sqlalchemy import text
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS stripe_customer_id VARCHAR;"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS has_paid BOOLEAN DEFAULT FALSE;"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_email_verified BOOLEAN DEFAULT FALSE;"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS current_weight FLOAT;"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS goal_weight FLOAT;"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS weight_unit VARCHAR DEFAULT 'kg';"))
@@ -112,6 +113,7 @@ app.include_router(vision.router, prefix="/api/food", tags=["Food Vision AI"])
 app.include_router(stats.router, prefix="/api/stats", tags=["Daily Stats"])
 app.include_router(groups.router, prefix="/api/groups", tags=["Social Groups"])
 app.include_router(referrals.router, prefix="/api/referrals", tags=["Referrals"])
+app.include_router(notifications.router, prefix="/api/notifications", tags=["Notifications"])
 
 # Apple Sign-In callback — must be at root path to match the redirectUri
 # configured in the Flutter app: https://api.gojocalories.com/callbacks/sign_in_with_apple

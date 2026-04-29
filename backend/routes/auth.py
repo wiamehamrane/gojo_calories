@@ -1,7 +1,8 @@
 import random
 import string
 import os
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 from database import get_db
 from models import User, Referral, WeighIn, DailyStats
@@ -13,6 +14,7 @@ from google.oauth2 import id_token
 from google.auth.transport import requests as g_requests
 import jwt
 import httpx
+from services import email_service
 
 router = APIRouter()
 
@@ -57,7 +59,7 @@ class UserLogin(BaseModel):
     password: str
 
 @router.post("/register")
-def register(user: UserCreate, db: Session = Depends(get_db)):
+def register(user: UserCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     db_user = db.query(User).filter(User.email == user.email).first()
     if db_user:
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -98,6 +100,17 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
         db.commit()
     
     access_token = create_access_token(data={"sub": str(new_user.id)})
+    
+    # Send verification email in background
+    token = email_service.generate_verification_token(new_user.id)
+    verify_url = f"https://api.gojocalories.com/api/auth/verify-email?token={token}"
+    html_body = f"""
+    <h2>Welcome to GojoCalories!</h2>
+    <p>Please verify your email address by clicking the link below:</p>
+    <a href="{verify_url}">{verify_url}</a>
+    """
+    background_tasks.add_task(email_service.send_email, new_user.email, "Verify your email for GojoCalories", html_body)
+
     return {
         "status": "success",
         "access_token": access_token,
@@ -121,6 +134,41 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
         "user_id": db_user.id,
         "name": db_user.name
     }
+
+@router.get("/verify-email", response_class=HTMLResponse)
+def verify_email(token: str, db: Session = Depends(get_db)):
+    user_id = email_service.verify_email_token(token)
+    if not user_id:
+        return "<html><body><h1>Invalid or expired verification token</h1></body></html>"
+    
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        return "<html><body><h1>User not found</h1></body></html>"
+    
+    user.is_email_verified = True
+    db.commit()
+    return "<html><body><h1>Email verified successfully! You can now return to the app.</h1></body></html>"
+
+class ResendVerification(BaseModel):
+    pass
+
+@router.post("/resend-verification")
+def resend_verification(background_tasks: BackgroundTasks, db: Session = Depends(get_db), current_user_id: int = Depends(get_current_user_id)):
+    user = db.query(User).filter(User.id == current_user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if user.is_email_verified:
+        raise HTTPException(status_code=400, detail="Email is already verified")
+        
+    token = email_service.generate_verification_token(user.id)
+    verify_url = f"https://api.gojocalories.com/api/auth/verify-email?token={token}"
+    html_body = f"""
+    <h2>Verify your email</h2>
+    <p>Please verify your email address by clicking the link below:</p>
+    <a href="{verify_url}">{verify_url}</a>
+    """
+    background_tasks.add_task(email_service.send_email, user.email, "Verify your email for GojoCalories", html_body)
+    return {"status": "success", "message": "Verification email sent"}
 
 # ── SOCIAL LOGIN ─────────────────────────────────────────────────────────────
 
@@ -266,6 +314,7 @@ def get_me(db: Session = Depends(get_db), current_user_id: int = Depends(get_cur
         "activity_level": user.activity_level,
         "stripe_customer_id": user.stripe_customer_id,
         "referral_code": user.referral_code,
+        "is_email_verified": getattr(user, 'is_email_verified', False),
     }
 
 @router.put("/me/profile")

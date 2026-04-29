@@ -10,6 +10,7 @@ class User(Base):
     email = Column(String, unique=True, index=True)
     name = Column(String)
     hashed_password = Column(String)
+    is_email_verified = Column(Boolean, default=False, nullable=False)
 
     # Profile / Health data
     current_weight = Column(Float, nullable=True)

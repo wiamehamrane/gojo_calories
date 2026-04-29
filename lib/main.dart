@@ -9,9 +9,15 @@ import 'core/theme/app_theme.dart';
 import 'core/routing/router.dart';
 import 'core/providers/locale_provider.dart';
 import 'core/localization/translations.dart';
+import 'package:onesignal_flutter/onesignal_flutter.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize OneSignal
+  OneSignal.Debug.setLogLevel(OSLogLevel.verbose);
+  OneSignal.initialize("60019fa3-3a1b-4c1e-a4dc-22ac49dc32de");
+  OneSignal.Notifications.requestPermission(true);
 
   // Global Flutter error handler — prevents raw red crash screens
   FlutterError.onError = (FlutterErrorDetails details) {

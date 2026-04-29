@@ -47,7 +47,15 @@ class ProfileScreen extends ConsumerWidget {
 
               // User card
               profileAsync.when(
-                data: (data) => _buildUserCard(context, ref, data, t),
+                data: (data) => Column(
+                  children: [
+                    _buildUserCard(context, ref, data, t),
+                    if (data['is_email_verified'] != true) ...[
+                      const SizedBox(height: 16),
+                      _buildVerificationBanner(context, ref, data, t),
+                    ],
+                  ],
+                ),
                 loading: () => const Center(
                   child: CircularProgressIndicator(color: AppColors.primary),
                 ),
@@ -225,6 +233,81 @@ class ProfileScreen extends ConsumerWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildVerificationBanner(
+    BuildContext context,
+    WidgetRef ref,
+    Map<String, dynamic> data,
+    String Function(String) t,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.fire.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.fire.withValues(alpha: 0.3)),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          const Icon(LucideIcons.mailWarning, color: AppColors.fire, size: 24),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "Email Not Verified",
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.fire,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  "Please verify to secure your account.",
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              try {
+                await ApiClient.instance.post('auth/resend-verification');
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Verification email sent! Check your inbox.")),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Failed to send email.")),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.fire,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text("Verify", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+          ),
+        ],
       ),
     );
   }
