@@ -221,7 +221,7 @@ class _PaywallScreenState extends State<PaywallScreen> with WidgetsBindingObserv
 
               // Pricing Text
               Text(
-                '3 Days Free, then \$9.99/month',
+                '3 Days Free, then \$4.20/month',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 14,
