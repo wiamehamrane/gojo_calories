@@ -46,6 +46,15 @@ def get_current_user_id(token: str = Depends(oauth2_scheme)):
     except InvalidTokenError:
         raise credentials_exception
 
+def get_current_user(user_id: int = Depends(get_current_user_id), db: Session = Depends(get_db)):
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found",
+        )
+    return user
+
 def require_paid_user(user_id: int = Depends(get_current_user_id), db = Depends(get_db)):
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user or not user.has_paid:
