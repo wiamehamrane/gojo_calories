@@ -49,7 +49,7 @@ class _PaywallScreenState extends State<PaywallScreen> with WidgetsBindingObserv
         // 2. Build Stripe URL safely — Uri.https constructor handles all encoding
         //    This prevents malformed URLs from breaking the Stripe checkout page.
         final Uri stripeUrl = Uri.https(
-          'buy.stripe.com',
+          'pay.gojocalories.com',
           '/4gM00j7278bA4jMfyW0co00',
           {
             'client_reference_id': userId,
