@@ -28,7 +28,7 @@ class GroupResponse(BaseModel):
     member_count: int
 
 @router.post("/", response_model=GroupResponse)
-def create_group(group: GroupCreate, db: Session = Depends(get_db), current_user_id: int = Depends(get_current_user_id)):
+def create_group(group: GroupCreate, db: Session = Depends(get_db), current_user_id: str = Depends(get_current_user_id)):
     if db.query(Group).filter(Group.name == group.name).first():
         raise HTTPException(status_code=400, detail="Group name already exists")
     
@@ -45,7 +45,7 @@ def create_group(group: GroupCreate, db: Session = Depends(get_db), current_user
     return {"id": new_group.id, "name": new_group.name, "description": new_group.description, "member_count": 1}
 
 @router.post("/{group_id}/join")
-def join_group(group_id: int, db: Session = Depends(get_db), current_user_id: int = Depends(get_current_user_id)):
+def join_group(group_id: int, db: Session = Depends(get_db), current_user_id: str = Depends(get_current_user_id)):
     group = db.query(Group).filter(Group.id == group_id).first()
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
@@ -59,7 +59,7 @@ def join_group(group_id: int, db: Session = Depends(get_db), current_user_id: in
     return {"status": "success"}
 
 @router.get("/my", response_model=List[GroupResponse])
-def get_my_groups(db: Session = Depends(get_db), current_user_id: int = Depends(get_current_user_id)):
+def get_my_groups(db: Session = Depends(get_db), current_user_id: str = Depends(get_current_user_id)):
     memberships = db.query(GroupMember).filter(GroupMember.user_id == current_user_id).all()
     group_ids = [m.group_id for m in memberships]
     groups = db.query(Group).filter(Group.id.in_(group_ids)).all()
@@ -71,7 +71,7 @@ def get_my_groups(db: Session = Depends(get_db), current_user_id: int = Depends(
     return res
 
 @router.get("/discover", response_model=List[GroupResponse])
-def discover_groups(db: Session = Depends(get_db), current_user_id: int = Depends(get_current_user_id)):
+def discover_groups(db: Session = Depends(get_db), current_user_id: str = Depends(get_current_user_id)):
     memberships = db.query(GroupMember).filter(GroupMember.user_id == current_user_id).all()
     joined_ids = [m.group_id for m in memberships]
     
@@ -83,7 +83,7 @@ def discover_groups(db: Session = Depends(get_db), current_user_id: int = Depend
     return res
 
 @router.get("/feed", response_model=List[FeedItem])
-def get_community_feed(db: Session = Depends(get_db), current_user_id: int = Depends(get_current_user_id)):
+def get_community_feed(db: Session = Depends(get_db), current_user_id: str = Depends(get_current_user_id)):
     # Feed represents recent food logs of users who share a group with me
     memberships = db.query(GroupMember).filter(GroupMember.user_id == current_user_id).all()
     my_group_ids = [m.group_id for m in memberships]

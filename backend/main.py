@@ -8,11 +8,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from database import engine, Base
 import models
 import logging
+from fastapi.staticfiles import StaticFiles
 
 logger = logging.getLogger(__name__)
 load_dotenv()
 
-from routes import vision, auth, stats, groups, referrals, payments, notifications
+os.makedirs("uploads", exist_ok=True)
+
+from routes import vision, auth, stats, groups, referrals, payments, notifications, exercises, recipes
 
 Base.metadata.create_all(bind=engine)
 
@@ -101,6 +104,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+
 @app.get("/")
 def read_root():
     return {"status": "GojoCalories MVP API is running natively."}
@@ -114,6 +119,8 @@ app.include_router(stats.router, prefix="/api/stats", tags=["Daily Stats"])
 app.include_router(groups.router, prefix="/api/groups", tags=["Social Groups"])
 app.include_router(referrals.router, prefix="/api/referrals", tags=["Referrals"])
 app.include_router(notifications.router, prefix="/api/notifications", tags=["Notifications"])
+app.include_router(exercises.router, prefix="/api/exercises", tags=["Exercises"])
+app.include_router(recipes.router, prefix="/api/recipes", tags=["Recipes"])
 
 # Apple Sign-In callback — must be at root path to match the redirectUri
 # configured in the Flutter app: https://api.gojocalories.com/callbacks/sign_in_with_apple

@@ -43,7 +43,7 @@ class WithdrawRequest(BaseModel):
 
 @router.get("/me")
 def get_my_referrals(
-    user_id: int = Depends(get_current_user_id),
+    user_id: str = Depends(get_current_user_id),
     db: Session = Depends(get_db),
 ):
     user = db.query(User).filter(User.id == user_id).first()
@@ -96,7 +96,7 @@ def get_my_referrals(
 @router.post("/withdraw")
 def request_withdrawal(
     body: WithdrawRequest,
-    user_id: int = Depends(get_current_user_id),
+    user_id: str = Depends(get_current_user_id),
     db: Session = Depends(get_db),
 ):
     user = db.query(User).filter(User.id == user_id).first()

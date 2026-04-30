@@ -27,7 +27,6 @@ class _AuthScreenState extends State<AuthScreen>
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   final _nameCtrl = TextEditingController();
-  final _referralCtrl = TextEditingController();
   final _emailFocus = FocusNode();
   final _passFocus = FocusNode();
   final _nameFocus = FocusNode();
@@ -44,7 +43,6 @@ class _AuthScreenState extends State<AuthScreen>
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
     _nameCtrl.dispose();
-    _referralCtrl.dispose();
     _emailFocus.dispose();
     _passFocus.dispose();
     _nameFocus.dispose();
@@ -59,7 +57,9 @@ class _AuthScreenState extends State<AuthScreen>
       if (res.statusCode == 200) {
         final data = res.data;
         if (!mounted) return;
-        if (data['current_weight'] == null) {
+        if (data['is_email_verified'] != true) {
+          context.go('/onboarding/verify', extra: data['email']);
+        } else if (data['current_weight'] == null) {
           context.go('/onboarding/weight');
         } else if (data['has_paid'] != true) {
           context.go('/onboarding/paywall');
@@ -95,8 +95,6 @@ class _AuthScreenState extends State<AuthScreen>
               'email': email,
               'name': name,
               'password': password,
-              if (_referralCtrl.text.trim().isNotEmpty)
-                'referral_code': _referralCtrl.text.trim().toUpperCase(),
             }
           : {'email': email, 'password': password};
 
@@ -413,19 +411,6 @@ class _AuthScreenState extends State<AuthScreen>
                                   ),
                                 ),
                               ),
-
-                              // Optional referral code — only on sign-up tab
-                              if (_tab.index == 0) ...[
-                                const SizedBox(height: 14),
-                                _buildField(
-                                  controller: _referralCtrl,
-                                  label: 'Referral Code (optional)',
-                                  hint: 'e.g. ABC123',
-                                  icon: Icons.card_giftcard_rounded,
-                                  textInputAction: TextInputAction.done,
-                                  onSubmitted: (_) => _submitEmail(),
-                                ),
-                              ],
 
                               if (_tab.index == 0)
                                 Padding(

@@ -43,11 +43,11 @@ def get_current_user_id(token: str = Depends(oauth2_scheme)):
         user_id: str = payload.get("sub")
         if user_id is None:
             raise credentials_exception
-        return int(user_id)
+        return str(user_id)
     except InvalidTokenError:
         raise credentials_exception
 
-def get_current_user(user_id: int = Depends(get_current_user_id), db: Session = Depends(get_db)):
+def get_current_user(user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
         raise HTTPException(
@@ -56,7 +56,7 @@ def get_current_user(user_id: int = Depends(get_current_user_id), db: Session = 
         )
     return user
 
-def require_paid_user(user_id: int = Depends(get_current_user_id), db = Depends(get_db)):
+def require_paid_user(user_id: str = Depends(get_current_user_id), db = Depends(get_db)):
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user or not user.has_paid:
         raise HTTPException(

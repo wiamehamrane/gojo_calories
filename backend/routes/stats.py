@@ -13,7 +13,7 @@ import models
 router = APIRouter()
 
 class StatsResponse(BaseModel):
-    user_id: int
+    user_id: str
     calorie_budget: int
     calories_consumed: int
     protein_consumed: int
@@ -27,7 +27,7 @@ class StatsResponse(BaseModel):
 def get_user_stats(
     date: Optional[str] = None,
     db: Session = Depends(get_db), 
-    current_user_id: int = Depends(get_current_user_id)
+    current_user_id: str = Depends(get_current_user_id)
 ):
     import datetime as dt
     try:
@@ -111,7 +111,7 @@ def get_user_stats(
 def get_weekly_stats(
     local_today: Optional[str] = Query(None, description="User's local today date YYYY-MM-DD"),
     db: Session = Depends(get_db),
-    current_user_id: int = Depends(get_current_user_id),
+    current_user_id: str = Depends(get_current_user_id),
 ):
     """Returns 7 days of aggregated stats (by local date), derived from FoodLog (source of truth).
     DailyStats rows can be timezone-misaligned; FoodLog.created_at is always accurate."""
@@ -173,7 +173,7 @@ def get_weekly_stats(
 
 
 @router.get("/streak")
-def get_streak(db: Session = Depends(get_db), current_user_id: int = Depends(get_current_user_id)):
+def get_streak(db: Session = Depends(get_db), current_user_id: str = Depends(get_current_user_id)):
     """Return the user's current logging streak (consecutive days with calories_consumed > 0)."""
     import datetime as dt
     today = dt.datetime.utcnow().date()
@@ -203,7 +203,7 @@ def get_streak(db: Session = Depends(get_db), current_user_id: int = Depends(get
 def get_user_history(
     date: Optional[str] = None,
     db: Session = Depends(get_db), 
-    current_user_id: int = Depends(get_current_user_id)
+    current_user_id: str = Depends(get_current_user_id)
 ):
     from models import FoodLog
     query = db.query(FoodLog).filter(FoodLog.user_id == current_user_id)
@@ -243,7 +243,7 @@ def get_user_history(
 
 
 @router.get("/progress/weigh-ins")
-def get_weigh_ins(db: Session = Depends(get_db), current_user_id: int = Depends(get_current_user_id)):
+def get_weigh_ins(db: Session = Depends(get_db), current_user_id: str = Depends(get_current_user_id)):
     records = db.query(WeighIn).filter(WeighIn.user_id == current_user_id).order_by(WeighIn.date.asc()).all()
     res = []
     for r in records:
@@ -260,7 +260,7 @@ def _log_macro_with_date(
     carbs: int,
     fat: int,
     db: Session,
-    current_user_id: int,
+    current_user_id: str,
     local_date: "dt.date | None" = None,
 ):
     """Update DailyStats for the given local date (or UTC today as fallback)."""
@@ -331,7 +331,7 @@ def log_macro(
     carbs: int,
     fat: int,
     db: Session = Depends(get_db),
-    current_user_id: int = Depends(get_current_user_id),
+    current_user_id: str = Depends(get_current_user_id),
 ):
     stat = _log_macro_with_date(
         calories=calories,

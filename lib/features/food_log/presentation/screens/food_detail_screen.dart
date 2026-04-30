@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -33,7 +34,9 @@ class _FoodDetailScreenState extends ConsumerState<FoodDetailScreen> {
   List<_Ingredient> _ingredients = [];
   bool _ingredientsLoading = false;
 
-  Map<String, dynamic> get log => widget.log;
+  late Map<String, dynamic> _log;
+
+  Map<String, dynamic> get log => _log;
 
   // ── helpers ─────────────────────────────────────────────────────────────────
 
@@ -60,7 +63,18 @@ class _FoodDetailScreenState extends ConsumerState<FoodDetailScreen> {
   @override
   void initState() {
     super.initState();
+    _log = Map<String, dynamic>.from(widget.log);
     _seedIngredients();
+  }
+
+  Future<void> _navigateToFixResults() async {
+    final updatedLog = await context.push<Map<String, dynamic>>('/fix-results', extra: _log);
+    if (updatedLog != null) {
+      setState(() {
+        _log = updatedLog;
+        _seedIngredients(); // Re-seed ingredients with the new data
+      });
+    }
   }
 
   void _seedIngredients() {
@@ -501,7 +515,7 @@ class _FoodDetailScreenState extends ConsumerState<FoodDetailScreen> {
             children: [
               Expanded(
                 child: GestureDetector(
-                  onTap: _fetchIngredients,
+                  onTap: _navigateToFixResults,
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 15),
                     decoration: BoxDecoration(

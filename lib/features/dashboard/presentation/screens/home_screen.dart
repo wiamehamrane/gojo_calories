@@ -1,10 +1,12 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/network/api_client.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/providers/locale_provider.dart';
 import '../../../../core/providers/selected_date_provider.dart';
@@ -13,7 +15,6 @@ import '../../providers/dashboard_provider.dart';
 import '../../providers/history_provider.dart';
 import '../../providers/weekly_stats_provider.dart';
 import 'package:intl/intl.dart';
-import 'package:go_router/go_router.dart';
 import '../widgets/swipable_stat_card.dart';
 import '../widgets/calorie_ring_inner.dart';
 import '../widgets/macro_tile_inner.dart';
@@ -372,41 +373,52 @@ class _AnimatedMealCardState extends State<_AnimatedMealCard>
                 child: SizedBox(
                   width: 72,
                   height: 72,
-                  child: imageUrl != null && imageUrl.isNotEmpty
-                      ? (imageUrl.startsWith('/') || imageUrl.startsWith('file://')
-                          ? Image.file(
-                              File(imageUrl.replaceFirst('file://', '')),
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, e, s) => const _FoodPlaceholder(),
-                            )
-                          : Image.network(
-                              imageUrl,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, e, s) => const _FoodPlaceholder(),
-                              loadingBuilder: (ctx, child, progress) {
-                                if (progress == null) return child;
-                                return Container(
-                                  color: AppColors.surfaceMuted,
-                                  child: const Center(
-                                    child: SizedBox(
-                                      width: 16,
-                                      height: 16,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: AppColors.primary,
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              },
-                            ))
-                      // No image → barcode icon (indicates barcode-scanned product)
-                      : Container(
+                  child: (() {
+                    if (imageUrl == null || imageUrl.isEmpty) {
+                      return Container(
+                        color: AppColors.surfaceMuted,
+                        child: const Center(
+                          child: Icon(LucideIcons.barcode, size: 30, color: AppColors.inactive),
+                        ),
+                      );
+                    }
+                    if (imageUrl.startsWith('/uploads/')) {
+                      final fullUrl = '${ApiClient.instance.options.baseUrl.replaceAll('/api/', '')}$imageUrl';
+                      return Image.network(
+                        fullUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, e, s) => const _FoodPlaceholder(),
+                      );
+                    }
+                    if (imageUrl.startsWith('/') || imageUrl.startsWith('file://')) {
+                      return Image.file(
+                        File(imageUrl.replaceFirst('file://', '')),
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, e, s) => const _FoodPlaceholder(),
+                      );
+                    }
+                    return Image.network(
+                      imageUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, e, s) => const _FoodPlaceholder(),
+                      loadingBuilder: (ctx, child, progress) {
+                        if (progress == null) return child;
+                        return Container(
                           color: AppColors.surfaceMuted,
                           child: const Center(
-                            child: Icon(LucideIcons.barcode, size: 30, color: AppColors.inactive),
+                            child: SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppColors.primary,
+                              ),
+                            ),
                           ),
-                        ),
+                        );
+                      },
+                    );
+                  })(),
                 ),
 
               ),

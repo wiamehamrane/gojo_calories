@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../features/onboarding/presentation/screens/splash_screen.dart';
 import '../../features/onboarding/presentation/screens/auth_screen.dart';
+import '../../features/onboarding/presentation/screens/verify_otp_screen.dart';
 import '../../features/onboarding/presentation/screens/weight_setup_screen.dart';
 import '../../features/onboarding/presentation/screens/paywall_screen.dart';
 import '../../features/dashboard/presentation/screens/home_screen.dart';
@@ -13,6 +14,7 @@ import '../widgets/main_scaffold.dart';
 import '../../features/food_log/presentation/screens/food_log_screen.dart';
 import '../../features/food_log/presentation/screens/scan_food_screen.dart';
 import '../../features/food_log/presentation/screens/food_detail_screen.dart';
+import '../../features/food_log/presentation/screens/fix_results_screen.dart';
 
 import '../../features/profile/presentation/screens/profile_screen.dart';
 import '../../features/dashboard/presentation/screens/log_exercise_screen.dart';
@@ -44,6 +46,13 @@ final GoRouter appRouter = GoRouter(
 
     // New Auth / Onboarding Flow
     GoRoute(path: '/auth', builder: (context, state) => const AuthScreen()),
+    GoRoute(
+      path: '/onboarding/verify',
+      builder: (context, state) {
+        final email = state.extra as String? ?? '';
+        return VerifyOTPScreen(email: email);
+      },
+    ),
     GoRoute(
       path: '/onboarding/weight',
       builder: (context, state) => const WeightSetupScreen(),
@@ -135,6 +144,13 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) {
         final log = state.extra as Map<String, dynamic>;
         return FoodDetailScreen(log: log);
+      },
+    ),
+    GoRoute(
+      path: '/fix-results',
+      builder: (context, state) {
+        final log = state.extra as Map<String, dynamic>;
+        return FixResultsScreen(log: log);
       },
     ),
   ],

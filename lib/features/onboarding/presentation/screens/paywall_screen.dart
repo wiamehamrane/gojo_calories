@@ -5,6 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:gojocalories/core/network/api_client.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:gojocalories/core/theme/app_colors.dart';
 
 class PaywallScreen extends StatefulWidget {
   const PaywallScreen({super.key});
@@ -147,12 +149,12 @@ class _PaywallScreenState extends State<PaywallScreen> with WidgetsBindingObserv
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A), // Premium Dark Slate
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.white),
+          icon: const Icon(LucideIcons.x, color: AppColors.textPrimary),
           onPressed: (_isLoading || _isVerifying) ? null : () async {
             final prefs = await SharedPreferences.getInstance();
             await prefs.remove('access_token');
@@ -172,18 +174,17 @@ class _PaywallScreenState extends State<PaywallScreen> with WidgetsBindingObserv
               // Icon / Hero Image
               Center(
                 child: Container(
-                  padding: const EdgeInsets.all(24),
+                  width: 80,
+                  height: 80,
                   decoration: BoxDecoration(
-                    color: Colors.blueAccent.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
+                    color: AppColors.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(24),
                   ),
-                  child: const Icon(
-                    LucideIcons.crown,
-                    size: 64,
-                    color: Colors.blueAccent,
+                  child: const Center(
+                    child: Text('🥑', style: TextStyle(fontSize: 40)),
                   ),
                 ),
-              ),
+              ).animate().scale(duration: 500.ms, curve: Curves.easeOutBack),
               const SizedBox(height: 32),
               
               // Headline
@@ -192,43 +193,43 @@ class _PaywallScreenState extends State<PaywallScreen> with WidgetsBindingObserv
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textPrimary,
                   letterSpacing: -0.5,
                 ),
-              ),
+              ).animate().slideY(begin: 0.1, duration: 400.ms).fadeIn(),
               const SizedBox(height: 16),
               
               // Subtitle
-              Text(
+              const Text(
                 'Get full access to personalized AI nutrition tracking and advanced stats.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 16,
-                  color: Colors.white.withValues(alpha: 0.7),
+                  color: AppColors.textSecondary,
                   height: 1.5,
                 ),
-              ),
+              ).animate().fadeIn(delay: 150.ms),
               const SizedBox(height: 48),
 
               // Feature List
-              _buildFeatureRow('AI-Powered Food Logging'),
-              _buildFeatureRow('Advanced Macro Analytics'),
-              _buildFeatureRow('Personalized Meal Plans'),
-              _buildFeatureRow('Priority Support'),
+              _buildFeatureRow('AI-Powered Food Logging', 200),
+              _buildFeatureRow('Advanced Macro Analytics', 250),
+              _buildFeatureRow('Personalized Meal Plans', 300),
+              _buildFeatureRow('Priority Support', 350),
               
               const Spacer(),
 
               // Pricing Text
-              Text(
+              const Text(
                 '3 Days Free, then \$4.20/month',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: Colors.white.withValues(alpha: 0.9),
+                  color: AppColors.textPrimary,
                 ),
-              ),
+              ).animate().fadeIn(delay: 400.ms),
               const SizedBox(height: 16),
 
               // CTA Button — changes to "I've Completed Payment" after browser opens
@@ -236,7 +237,7 @@ class _PaywallScreenState extends State<PaywallScreen> with WidgetsBindingObserv
                 ElevatedButton(
                   onPressed: _isLoading ? null : _subscribe,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blueAccent,
+                    backgroundColor: AppColors.primaryDark,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 20),
                     shape: RoundedRectangleBorder(
@@ -310,12 +311,12 @@ class _PaywallScreenState extends State<PaywallScreen> with WidgetsBindingObserv
               const SizedBox(height: 16),
               
               // Terms/Privacy
-              Text(
+              const Text(
                 'Cancel anytime. Secure checkout via Stripe.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 12,
-                  color: Colors.white.withValues(alpha: 0.5),
+                  color: AppColors.textPlaceholder,
                 ),
               ),
             ],
@@ -325,23 +326,30 @@ class _PaywallScreenState extends State<PaywallScreen> with WidgetsBindingObserv
     );
   }
 
-  Widget _buildFeatureRow(String text) {
+  Widget _buildFeatureRow(String text, int delayMs) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: Row(
         children: [
-          const Icon(Icons.check_circle_rounded, color: Colors.greenAccent, size: 24),
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: const BoxDecoration(
+              color: AppColors.primary,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(LucideIcons.check, color: Colors.white, size: 16),
+          ),
           const SizedBox(width: 16),
           Text(
             text,
             style: const TextStyle(
               fontSize: 16,
-              fontWeight: FontWeight.w500,
-              color: Colors.white,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
             ),
           ),
         ],
-      ),
+      ).animate().slideX(begin: 0.1, duration: 400.ms).fadeIn(delay: delayMs.ms),
     );
   }
 }

@@ -13,12 +13,17 @@ def get_s3_client():
 
 def upload_image_to_s3(file_bytes: bytes, content_type: str) -> str:
     bucket = os.getenv('AWS_BUCKET_NAME')
+    file_name = f"food_logs_{uuid.uuid4()}.jpg"
+    
     if not bucket:
-        # Fallback if S3 is not configured
-        return None
+        # Fallback to local file system
+        os.makedirs("uploads", exist_ok=True)
+        with open(f"uploads/{file_name}", "wb") as f:
+            f.write(file_bytes)
+        base_url = os.getenv("API_BASE_URL", "https://api.gojocalories.com")
+        return f"{base_url}/uploads/{file_name}"
         
     s3 = get_s3_client()
-    file_name = f"food_logs/{uuid.uuid4()}.jpg"
     
     try:
         s3.put_object(

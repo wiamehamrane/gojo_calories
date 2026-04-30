@@ -40,6 +40,7 @@ class UserWeightUpdate(BaseModel):
     age: Optional[int] = None
     gender: Optional[str] = None
     activity_level: Optional[str] = None
+    referral_code: Optional[str] = None
 
 class UserProfileUpdate(BaseModel):
     name: Optional[str] = None
@@ -101,15 +102,15 @@ def register(user: UserCreate, background_tasks: BackgroundTasks, db: Session = 
     
     access_token = create_access_token(data={"sub": str(new_user.id)})
     
-    # Send verification email in background
-    token = email_service.generate_verification_token(new_user.id)
-    verify_url = f"https://api.gojocalories.com/api/auth/verify-email?token={token}"
+    # Send verification OTP in background
+    otp = email_service.generate_verification_otp(new_user.email)
     html_body = f"""
     <h2>Welcome to GojoCalories!</h2>
-    <p>Please verify your email address by clicking the link below:</p>
-    <a href="{verify_url}">{verify_url}</a>
+    <p>Your email verification code is:</p>
+    <h1 style="letter-spacing: 5px; color: #4CAF50;">{otp}</h1>
+    <p>This code will expire in 15 minutes.</p>
     """
-    background_tasks.add_task(email_service.send_email, new_user.email, "Verify your email for GojoCalories", html_body)
+    background_tasks.add_task(email_service.send_email, new_user.email, "Your GojoCalories Verification Code", html_body)
 
     return {
         "status": "success",
@@ -135,39 +136,42 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
         "name": db_user.name
     }
 
-@router.get("/verify-email", response_class=HTMLResponse)
-def verify_email(token: str, db: Session = Depends(get_db)):
-    user_id = email_service.verify_email_token(token)
-    if not user_id:
-        return "<html><body><h1>Invalid or expired verification token</h1></body></html>"
+class VerifyOTP(BaseModel):
+    email: str
+    otp: str
+
+@router.post("/verify-otp")
+def verify_otp(body: VerifyOTP, db: Session = Depends(get_db)):
+    if not email_service.verify_email_otp(body.email, body.otp):
+        raise HTTPException(status_code=400, detail="Invalid or expired OTP")
     
-    user = db.query(User).filter(User.id == user_id).first()
+    user = db.query(User).filter(User.email == body.email).first()
     if not user:
-        return "<html><body><h1>User not found</h1></body></html>"
+        raise HTTPException(status_code=404, detail="User not found")
     
     user.is_email_verified = True
     db.commit()
-    return "<html><body><h1>Email verified successfully! You can now return to the app.</h1></body></html>"
+    return {"status": "success", "message": "Email verified successfully"}
 
 class ResendVerification(BaseModel):
     pass
 
 @router.post("/resend-verification")
-def resend_verification(background_tasks: BackgroundTasks, db: Session = Depends(get_db), current_user_id: int = Depends(get_current_user_id)):
+def resend_verification(background_tasks: BackgroundTasks, db: Session = Depends(get_db), current_user_id: str = Depends(get_current_user_id)):
     user = db.query(User).filter(User.id == current_user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     if user.is_email_verified:
         raise HTTPException(status_code=400, detail="Email is already verified")
         
-    token = email_service.generate_verification_token(user.id)
-    verify_url = f"https://api.gojocalories.com/api/auth/verify-email?token={token}"
+    otp = email_service.generate_verification_otp(user.email)
     html_body = f"""
     <h2>Verify your email</h2>
-    <p>Please verify your email address by clicking the link below:</p>
-    <a href="{verify_url}">{verify_url}</a>
+    <p>Your email verification code is:</p>
+    <h1 style="letter-spacing: 5px; color: #4CAF50;">{otp}</h1>
+    <p>This code will expire in 15 minutes.</p>
     """
-    background_tasks.add_task(email_service.send_email, user.email, "Verify your email for GojoCalories", html_body)
+    background_tasks.add_task(email_service.send_email, user.email, "Your GojoCalories Verification Code", html_body)
     return {"status": "success", "message": "Verification email sent"}
 
 # ── SOCIAL LOGIN ─────────────────────────────────────────────────────────────
@@ -295,7 +299,7 @@ async def apple_login(body: AppleLoginBody, db: Session = Depends(get_db)):
     return {"access_token": access_token, "token_type": "bearer", "name": user.name}
 
 @router.get("/me")
-def get_me(db: Session = Depends(get_db), current_user_id: int = Depends(get_current_user_id)):
+def get_me(db: Session = Depends(get_db), current_user_id: str = Depends(get_current_user_id)):
     user = db.query(User).filter(User.id == current_user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -321,7 +325,7 @@ def get_me(db: Session = Depends(get_db), current_user_id: int = Depends(get_cur
 def update_profile(
     profile_data: UserProfileUpdate,
     db: Session = Depends(get_db),
-    current_user_id: int = Depends(get_current_user_id)
+    current_user_id: str = Depends(get_current_user_id)
 ):
     user = db.query(User).filter(User.id == current_user_id).first()
     if not user:
@@ -360,7 +364,7 @@ def update_profile(
     return {"status": "success", "name": user.name, "email": user.email, "age": user.age}
 
 @router.delete("/me")
-def delete_account(db: Session = Depends(get_db), current_user_id: int = Depends(get_current_user_id)):
+def delete_account(db: Session = Depends(get_db), current_user_id: str = Depends(get_current_user_id)):
     user = db.query(User).filter(User.id == current_user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -375,7 +379,7 @@ def delete_account(db: Session = Depends(get_db), current_user_id: int = Depends
 def update_weight(
     weight_data: UserWeightUpdate,
     db: Session = Depends(get_db),
-    current_user_id: int = Depends(get_current_user_id)
+    current_user_id: str = Depends(get_current_user_id)
 ):
     user = db.query(User).filter(User.id == current_user_id).first()
     if not user:
@@ -390,6 +394,18 @@ def update_weight(
         user.gender = weight_data.gender.lower()
     if weight_data.activity_level:
         user.activity_level = weight_data.activity_level.lower()
+        
+    if weight_data.referral_code and not user.referred_by:
+        referrer = db.query(User).filter(User.referral_code == weight_data.referral_code.upper()).first()
+        if referrer and referrer.id != user.id:
+            user.referred_by = referrer.id
+            referrer.referral_balance = round(referrer.referral_balance + 1.0, 2)
+            referral_record = Referral(
+                referrer_id=referrer.id,
+                referred_user_id=user.id,
+                amount=1.0,
+            )
+            db.add(referral_record)
 
     # Convert and store height in cm
     if weight_data.height is not None:

@@ -44,18 +44,19 @@ def send_email(to_email: str, subject: str, html_body: str):
         logger.error(f"Failed to send email to {to_email}: {e.response['Error']['Message']}")
         return False
 
-def generate_verification_token(user_id: int) -> str:
-    """Generates a JWT token for email verification valid for 24 hours."""
-    expire = datetime.utcnow() + timedelta(hours=24)
-    to_encode = {"sub": str(user_id), "exp": expire.timestamp(), "type": "email_verification"}
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+import random
+from redis_client import redis_db
 
-def verify_email_token(token: str) -> int:
-    """Verifies the JWT token and returns the user_id if valid, else None."""
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        if payload.get("type") != "email_verification":
-            return None
-        return int(payload.get("sub"))
-    except jwt.InvalidTokenError:
-        return None
+def generate_verification_otp(email: str) -> str:
+    """Generates a 6-digit OTP for email verification valid for 15 minutes."""
+    otp = str(random.randint(100000, 999999))
+    redis_db.setex(f"otp_{email}", 900, otp)  # 15 minutes
+    return otp
+
+def verify_email_otp(email: str, otp: str) -> bool:
+    """Verifies the OTP for the given email."""
+    stored_otp = redis_db.get(f"otp_{email}")
+    if stored_otp and stored_otp == otp:
+        redis_db.delete(f"otp_{email}")
+        return True
+    return False

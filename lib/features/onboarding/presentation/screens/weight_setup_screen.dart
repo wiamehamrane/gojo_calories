@@ -16,7 +16,7 @@ class _WeightSetupScreenState extends State<WeightSetupScreen> {
   bool _isLoading = false;
   late PageController _pageCtrl;
   int _currentIndex = 0;
-  final int _totalPages = 6;
+  final int _totalPages = 7;
 
   String _gender = 'male';
   String _activityLevel = 'sedentary';
@@ -28,8 +28,9 @@ class _WeightSetupScreenState extends State<WeightSetupScreen> {
   final _heightCtrl = TextEditingController();
   final _currentWtCtrl = TextEditingController();
   final _goalWtCtrl = TextEditingController();
+  final _referralCtrl = TextEditingController();
 
-  final _focusNodes = List.generate(4, (_) => FocusNode());
+  final _focusNodes = List.generate(5, (_) => FocusNode());
 
   @override
   void initState() {
@@ -47,6 +48,7 @@ class _WeightSetupScreenState extends State<WeightSetupScreen> {
     _heightCtrl.dispose();
     _currentWtCtrl.dispose();
     _goalWtCtrl.dispose();
+    _referralCtrl.dispose();
     for (var f in _focusNodes) {
       f.dispose();
     }
@@ -65,7 +67,9 @@ class _WeightSetupScreenState extends State<WeightSetupScreen> {
         duration: const Duration(milliseconds: 400),
         curve: Curves.fastOutSlowIn,
       );
-      _focusNodes[_currentIndex + 1].requestFocus();
+      if (_currentIndex + 1 < _focusNodes.length) {
+        _focusNodes[_currentIndex + 1].requestFocus();
+      }
     } else {
       _submitWeights();
     }
@@ -88,6 +92,7 @@ class _WeightSetupScreenState extends State<WeightSetupScreen> {
     final goalStr = _goalWtCtrl.text.trim();
     final ageStr = _ageCtrl.text.trim();
     final heightStr = _heightCtrl.text.trim();
+    final referralStr = _referralCtrl.text.trim();
 
     if (currentStr.isEmpty ||
         goalStr.isEmpty ||
@@ -124,6 +129,7 @@ class _WeightSetupScreenState extends State<WeightSetupScreen> {
           'age': age,
           'gender': _gender,
           'activity_level': _activityLevel,
+          if (referralStr.isNotEmpty) 'referral_code': referralStr,
         },
       );
 
@@ -325,6 +331,39 @@ class _WeightSetupScreenState extends State<WeightSetupScreen> {
                           isSelected: _activityLevel == 'active',
                           onTap: () => setState(() => _activityLevel = 'active'),
                           isFullWidth: true,
+                        ),
+                      ],
+                    ),
+                  ),
+                  _buildStep(
+                    title: 'Got a referral code?',
+                    subtitle: 'Enter it here (optional)',
+                    icon: Icons.card_giftcard_rounded,
+                    inputChild: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _referralCtrl,
+                            focusNode: _focusNodes[4],
+                            textInputAction: TextInputAction.done,
+                            onSubmitted: (_) => _submitWeights(),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 32,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.primaryDark,
+                              letterSpacing: 2,
+                            ),
+                            decoration: InputDecoration(
+                              hintText: 'ABC123',
+                              hintStyle: TextStyle(
+                                color: AppColors.primary.withValues(alpha: 0.2),
+                              ),
+                              border: InputBorder.none,
+                              isDense: true,
+                            ),
+                          ),
                         ),
                       ],
                     ),
