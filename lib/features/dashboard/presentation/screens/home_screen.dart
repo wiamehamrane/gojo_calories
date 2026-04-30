@@ -258,7 +258,6 @@ class HomeScreen extends ConsumerWidget {
             logs.length,
             (i) {
               final log = logs[i] as Map<String, dynamic>;
-              final hasImage = (log['image_url'] as String?)?.isNotEmpty == true;
               return GestureDetector(
                 onTap: () => context.push('/food-detail', extra: log),
                 child: _AnimatedMealCard(log: logs[i], index: i, lang: lang),
