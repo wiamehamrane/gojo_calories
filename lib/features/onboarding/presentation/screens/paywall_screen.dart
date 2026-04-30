@@ -22,6 +22,17 @@ class _PaywallScreenState extends State<PaywallScreen> with WidgetsBindingObserv
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _checkBrowserOpenedState();
+  }
+
+  Future<void> _checkBrowserOpenedState() async {
+    final prefs = await SharedPreferences.getInstance();
+    final opened = prefs.getBool('stripe_browser_opened') ?? false;
+    if (opened && mounted) {
+      setState(() => _browserOpened = true);
+      // Auto-verify if they just returned and the flag is set
+      _verifyPayment();
+    }
   }
 
   @override
@@ -67,7 +78,12 @@ class _PaywallScreenState extends State<PaywallScreen> with WidgetsBindingObserv
           throw Exception('Could not launch Stripe URL');
         }
 
-        // 4. Show "I've completed payment" button — do NOT redirect yet.
+        // 4. Save state so that if the app is killed in the background,
+        //    we remember they opened the browser.
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('stripe_browser_opened', true);
+
+        // 5. Show "I've completed payment" button — do NOT redirect yet.
         //    Payment is only confirmed when the Stripe webhook fires and
         //    sets has_paid = true on the backend.
         if (mounted) {
@@ -98,6 +114,7 @@ class _PaywallScreenState extends State<PaywallScreen> with WidgetsBindingObserv
         if (res.statusCode == 200 && res.data['has_paid'] == true) {
           final prefs = await SharedPreferences.getInstance();
           await prefs.setBool('is_onboarded', true);
+          await prefs.remove('stripe_browser_opened'); // Clear the flag on success
           if (!mounted) return;
           context.go('/home');
           return;
@@ -139,6 +156,7 @@ class _PaywallScreenState extends State<PaywallScreen> with WidgetsBindingObserv
           onPressed: (_isLoading || _isVerifying) ? null : () async {
             final prefs = await SharedPreferences.getInstance();
             await prefs.remove('access_token');
+            await prefs.remove('stripe_browser_opened'); // clear flag on logout
             if (context.mounted) context.go('/auth');
           },
         ),
