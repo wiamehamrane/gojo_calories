@@ -54,14 +54,14 @@ class _PaywallScreenState extends State<PaywallScreen> with WidgetsBindingObserv
       // 1. Fetch user info to pass to Stripe
       final res = await ApiClient.instance.get('auth/me');
       if (res.statusCode == 200) {
-        final userId = res.data['id'].toString();
+        final userId = res.data['user_id'].toString();
         final userEmail = res.data['email'].toString();
 
         // 2. Build Stripe URL safely — Uri.https constructor handles all encoding
         //    This prevents malformed URLs from breaking the Stripe checkout page.
         final Uri stripeUrl = Uri.https(
           'pay.gojocalories.com',
-          '/b/cNi28rgCH0J87vYaeC0co01',
+          '/b/fZu6oHeuzdvU5nQfyW0co02',
           {
             'client_reference_id': userId,
             'prefilled_email': userEmail,
