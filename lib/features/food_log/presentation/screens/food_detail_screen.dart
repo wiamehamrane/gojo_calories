@@ -509,7 +509,6 @@ class _FoodDetailScreenState extends ConsumerState<FoodDetailScreen> {
                       borderRadius: BorderRadius.circular(999),
                       border: Border.all(color: Colors.black, width: 1.5),
                     ),
-                    alignment: Alignment.center,
                     child: const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -538,9 +537,9 @@ class _FoodDetailScreenState extends ConsumerState<FoodDetailScreen> {
                       color: Colors.black,
                       borderRadius: BorderRadius.circular(999),
                     ),
-                    alignment: Alignment.center,
                     child: const Text(
                       'Done',
+                      textAlign: TextAlign.center,
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 15,

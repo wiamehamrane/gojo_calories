@@ -32,6 +32,7 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
   late Animation<double> _pulseAnimation;
   late String _currentMode;
   String? _cameraError;
+  String? _pickedImagePath;
 
   @override
   void initState() {
@@ -318,6 +319,7 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
     try {
       final photo = await _controller!.takePicture();
       if (!mounted) return;
+      setState(() => _pickedImagePath = photo.path);
       await _analyzeFile(photo.path, photo.name);
     } on CameraException catch (e) {
       _showError(_friendlyCameraError(e.code));
@@ -331,6 +333,8 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
     try {
       final img = await picker.pickImage(source: ImageSource.gallery);
       if (img == null) return;
+      if (!mounted) return;
+      setState(() => _pickedImagePath = img.path);
       if (_currentMode == 'Barcode') {
         // For barcode mode, treat the image as a vision scan to detect the barcode
         await _analyzeFile(img.path, img.name);
@@ -417,16 +421,18 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
         children: [
           // ─── Background layer ───────────────────────────────────────────
           Positioned.fill(
-            child: _currentMode == 'Scan Food'
-                ? (_controller != null && _controller!.value.isInitialized
-                      ? _buildCameraPreview()
-                      : const Center(
-                          child: CircularProgressIndicator(
-                            color: AppColors.primaryDark,
-                          ),
-                        ))
-                : MobileScanner(
-                    onDetect: (capture) {
+            child: _pickedImagePath != null
+                ? Image.file(File(_pickedImagePath!), fit: BoxFit.cover)
+                : _currentMode == 'Scan Food'
+                    ? (_controller != null && _controller!.value.isInitialized
+                          ? _buildCameraPreview()
+                          : const Center(
+                              child: CircularProgressIndicator(
+                                color: AppColors.primaryDark,
+                              ),
+                            ))
+                    : MobileScanner(
+                        onDetect: (capture) {
                       if (!mounted || _barcodeScanned || _isProcessing) return;
                       final barcodes = capture.barcodes;
                       if (barcodes.isNotEmpty &&
@@ -636,6 +642,7 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
               setState(() {
                 _currentMode = modeString;
                 _barcodeScanned = false;
+                _pickedImagePath = null;
               });
             },
       child: AnimatedContainer(
