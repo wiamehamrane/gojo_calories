@@ -1,10 +1,9 @@
-import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:purchases_flutter/purchases_flutter.dart';
 import 'core/theme/app_theme.dart';
 import 'core/routing/router.dart';
 import 'core/providers/locale_provider.dart';
@@ -58,18 +57,6 @@ Future<void> main() async {
   } catch (e) {
     debugPrint("Could not load .env file: $e");
   }
-
-  await Purchases.setLogLevel(LogLevel.debug);
-  
-  PurchasesConfiguration configuration;
-  if (Platform.isAndroid) {
-    configuration = PurchasesConfiguration("test_OSyGkvBEMvLbxWjQZJqngisxXzm");
-  } else if (Platform.isIOS) {
-    configuration = PurchasesConfiguration("test_OSyGkvBEMvLbxWjQZJqngisxXzm");
-  } else {
-    configuration = PurchasesConfiguration("test_OSyGkvBEMvLbxWjQZJqngisxXzm");
-  }
-  await Purchases.configure(configuration);
 
   // Load persisted locale before creating the widget tree
   final container = ProviderContainer();

@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:gojocalories/core/network/api_client.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:purchases_flutter/purchases_flutter.dart';
+
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -31,30 +31,9 @@ class _SplashScreenState extends State<SplashScreen> {
           if (res.statusCode == 200) {
             final data = res.data;
 
-            // Log in to RevenueCat using internal user ID
-            try {
-              final String userId = data['id'].toString();
-              await Purchases.logIn(userId);
-            } catch (e) {
-              debugPrint('RevenueCat login failed: $e');
-            }
-
-            // Check entitlement locally
-            bool hasPro = false;
-            try {
-              final customerInfo = await Purchases.getCustomerInfo();
-              final entitlement =
-                  customerInfo.entitlements.all['gojocalories Pro'];
-              if (entitlement != null && entitlement.isActive) {
-                hasPro = true;
-              }
-            } catch (e) {
-              debugPrint('Failed to get customer info: $e');
-            }
-
             if (data['current_weight'] == null) {
               router.go('/onboarding/weight');
-            } else if (!hasPro && data['has_paid'] != true) {
+            } else if (data['has_paid'] != true) {
               router.go('/onboarding/paywall');
             } else {
               await prefs.setBool('is_onboarded', true);

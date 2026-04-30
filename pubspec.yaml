@@ -60,8 +60,6 @@ dependencies:
   intl: ^0.20.2
   share_plus: ^13.1.0
   flutter_launcher_icons: ^0.14.4
-  purchases_flutter: ^10.0.1
-  purchases_ui_flutter: ^10.0.1
   onesignal_flutter: ^5.5.1
 
 dev_dependencies:

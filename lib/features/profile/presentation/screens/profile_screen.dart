@@ -11,7 +11,7 @@ import '../../../../core/providers/locale_provider.dart';
 import '../../../../core/localization/translations.dart';
 import '../../../../core/network/api_client.dart';
 
-import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
+
 
 // Providers
 final profileProvider = FutureProvider<Map<String, dynamic>>((ref) async {
@@ -152,9 +152,26 @@ class ProfileScreen extends ConsumerWidget {
                     label: 'Manage Subscription',
                     onTap: () async {
                       try {
-                        await RevenueCatUI.presentCustomerCenter();
+                        final res = await ApiClient.instance.post('payments/create-portal-session');
+                        if (res.statusCode == 200 && res.data['url'] != null) {
+                          final uri = Uri.parse(res.data['url']);
+                          if (await canLaunchUrl(uri)) {
+                            await launchUrl(uri, mode: LaunchMode.externalApplication);
+                          }
+                        } else {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Could not load billing portal.')),
+                            );
+                          }
+                        }
                       } catch (e) {
-                        debugPrint('Customer Center error: $e');
+                        debugPrint('Portal error: $e');
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('No active subscription found.')),
+                          );
+                        }
                       }
                     },
                   ),

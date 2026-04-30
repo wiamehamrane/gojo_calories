@@ -46,6 +46,7 @@ secrets:
   AWS_BUCKET_NAME: /copilot/gojocalories/prod/secrets/AWS_BUCKET_NAME
   DATABASE_URL: /copilot/gojocalories/prod/secrets/DATABASE_URL
   STRIPE_SECRET_KEY: /copilot/gojocalories/prod/secrets/STRIPE_SECRET_KEY
+  STRIPE_WEBHOOK_SECRET: /copilot/gojocalories/prod/secrets/STRIPE_WEBHOOK_SECRET
   STRIPE_PUBLISHABLE_KEY: /copilot/gojocalories/prod/secrets/STRIPE_PUBLISHABLE_KEY
   FOODDATA_CENTRAL_API_KEY: /copilot/gojocalories/prod/secrets/FOODDATA_CENTRAL_API_KEY
 

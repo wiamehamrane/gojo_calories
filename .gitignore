@@ -49,3 +49,7 @@ backend/venv/
 backend/__pycache__/
 .env
 *.p8
+
+ziOXSupi
+gojocalories_backup.zip
+.agents/

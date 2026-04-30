@@ -1,67 +1,102 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, Header
+from fastapi import APIRouter, Depends, HTTPException, Request, Header, status
 from sqlalchemy.orm import Session
 from database import get_db
 import models
+from security import get_current_user
 import logging
 import os
+import stripe
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-# Optional: Add a webhook authorization header check
-REVENUECAT_WEBHOOK_AUTH_TOKEN = os.getenv("REVENUECAT_WEBHOOK_AUTH_TOKEN")
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
 
-@router.post("/revenuecat-webhook")
-async def revenuecat_webhook(
-    request: Request,
-    authorization: str = Header(None),
-    db: Session = Depends(get_db)
-):
-    # If an auth token is set in the environment, verify it
-    if REVENUECAT_WEBHOOK_AUTH_TOKEN and authorization != REVENUECAT_WEBHOOK_AUTH_TOKEN:
-        raise HTTPException(status_code=401, detail="Unauthorized webhook")
+@router.post("/webhook")
+async def stripe_webhook(request: Request, stripe_signature: str = Header(None), db: Session = Depends(get_db)):
+    if not stripe_signature:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing Stripe signature")
+
+    payload = await request.body()
 
     try:
-        payload = await request.json()
-        event = payload.get("event", {})
-        event_type = event.get("type")
-        app_user_id = event.get("app_user_id")
+        event = stripe.Webhook.construct_event(
+            payload, stripe_signature, STRIPE_WEBHOOK_SECRET
+        )
+    except ValueError as e:
+        logger.error(f"Invalid payload: {e}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid payload")
+    except stripe.SignatureVerificationError as e:
+        logger.error(f"Invalid signature: {e}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid signature")
 
-        if not app_user_id or not event_type:
-            return {"status": "ignored", "reason": "Missing required fields"}
+    event_type = event['type']
+    data_object = event['data']['object']
 
-        # Try to parse the user_id (it should be the integer ID we passed via Purchases.logIn)
-        try:
-            user_id = int(app_user_id)
-        except ValueError:
-            logger.warning(f"RevenueCat webhook received non-integer app_user_id: {app_user_id}")
-            return {"status": "ignored", "reason": "Invalid app_user_id format"}
+    try:
+        if event_type == 'checkout.session.completed':
+            # Extract user ID passed via client_reference_id in the Payment Link
+            client_reference_id = data_object.get('client_reference_id')
+            customer_id = data_object.get('customer')
+            
+            if client_reference_id:
+                try:
+                    user_id = int(client_reference_id)
+                    user = db.query(models.User).filter(models.User.id == user_id).first()
+                    if user:
+                        user.stripe_customer_id = customer_id
+                        user.has_paid = True
+                        db.commit()
+                        logger.info(f"User {user_id} subscribed via Stripe Checkout. Customer ID: {customer_id}")
+                    else:
+                        logger.warning(f"Webhook checkout.session.completed: User {user_id} not found.")
+                except ValueError:
+                    logger.warning(f"Webhook checkout.session.completed: Invalid client_reference_id {client_reference_id}")
+            else:
+                logger.warning("Webhook checkout.session.completed: Missing client_reference_id")
 
-        user = db.query(models.User).filter(models.User.id == user_id).first()
-        if not user:
-            logger.warning(f"RevenueCat webhook user not found: {user_id}")
-            return {"status": "ignored", "reason": "User not found"}
-
-        # RevenueCat Event Types that grant/revoke access
-        # INITIAL_PURCHASE, RENEWAL, NON_RENEWING_PURCHASE, UNCANCELLATION
-        # EXPIRATION, TRANSFER, BILLING_ISSUE, SUBSCRIPTION_PAUSED
-        
-        # We check expiration in case it's a cancellation that has now expired
-        if event_type in ["INITIAL_PURCHASE", "RENEWAL", "UNCANCELLATION", "NON_RENEWING_PURCHASE"]:
-            if not user.has_paid:
-                user.has_paid = True
-                db.commit()
-                logger.info(f"User {user_id} subscription granted via RevenueCat {event_type}.")
-        
-        elif event_type in ["EXPIRATION", "BILLING_ISSUE", "SUBSCRIPTION_PAUSED", "TRANSFER"]:
-            if user.has_paid:
-                user.has_paid = False
-                db.commit()
-                logger.info(f"User {user_id} subscription revoked via RevenueCat {event_type}.")
+        elif event_type in ['customer.subscription.updated', 'customer.subscription.deleted']:
+            customer_id = data_object.get('customer')
+            status_val = data_object.get('status')
+            
+            if customer_id:
+                user = db.query(models.User).filter(models.User.stripe_customer_id == customer_id).first()
+                if user:
+                    # active, trialing = paid. incomplete, incomplete_expired, past_due, canceled, unpaid = unpaid
+                    is_active = status_val in ['active', 'trialing']
+                    if user.has_paid != is_active:
+                        user.has_paid = is_active
+                        db.commit()
+                        logger.info(f"User {user.id} subscription status updated to {is_active} (Stripe status: {status_val})")
+                else:
+                    logger.warning(f"Webhook {event_type}: No user found for stripe_customer_id {customer_id}")
 
         return {"status": "success"}
 
     except Exception as e:
-        logger.error(f"RevenueCat Webhook Error: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.error(f"Stripe Webhook Error: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal webhook error")
+
+
+@router.post("/create-portal-session")
+async def create_portal_session(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if not current_user.stripe_customer_id:
+        # If the user doesn't have a Stripe customer ID, they haven't checked out yet.
+        # So we cannot open the portal.
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No active Stripe customer found.")
+        
+    try:
+        session = stripe.billing_portal.Session.create(
+            customer=current_user.stripe_customer_id,
+            # We assume the app is hosted somewhere, or we can use the main site URL
+            return_url="https://gojocalories.com" 
+        )
+        return {"url": session.url}
+    except Exception as e:
+        logger.error(f"Error creating Stripe portal session: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
