@@ -152,6 +152,10 @@ async def analyze_food_image(
             stat.carbs_consumed += log.carbs
             stat.fat_consumed += log.fat
             db.commit()
+            
+            # Capture data while session is still active
+            log_id = log.id
+            log_created_at = log.created_at.isoformat() + "Z"
 
         # Invalidate Redis cache so next stats call is fresh
         try:
@@ -164,8 +168,8 @@ async def analyze_food_image(
 
         if s3_url:
             data['image_url'] = s3_url
-        data['log_id'] = log.id
-        data['created_at'] = log.created_at.isoformat() + "Z"
+        data['log_id'] = log_id
+        data['created_at'] = log_created_at
         return data
         
     except json.JSONDecodeError as je:

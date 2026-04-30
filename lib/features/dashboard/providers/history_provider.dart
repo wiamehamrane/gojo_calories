@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/database/database_provider.dart';
@@ -33,6 +34,8 @@ final historyProvider = FutureProvider.family<List<dynamic>, DateTime>((ref, dat
             'protein': log.protein,
             'carbs': log.carbs,
             'fat': log.fat,
+            'image_url': log.imageUrl,
+            'ingredients': log.ingredients != null ? jsonDecode(log.ingredients!) : null,
             'created_at': log.createdAt.toIso8601String(),
           },
         )

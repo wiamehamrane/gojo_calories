@@ -11,6 +11,7 @@ import '../../../../core/network/api_client.dart';
 import '../../../dashboard/providers/dashboard_provider.dart';
 import '../../../dashboard/providers/history_provider.dart';
 import 'package:go_router/go_router.dart';
+import 'food_detail_screen.dart';
 
 class ScanFoodScreen extends ConsumerStatefulWidget {
   final String initialMode;
@@ -168,6 +169,12 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
 
         // NOTE: The backend /food/analyze already saves the FoodLog + image to S3 + updates DailyStats.
         // We only need to update local in-memory state here — no second POST needed.
+        // Prepare data for the detail screen
+        final logData = Map<String, dynamic>.from(data);
+        // Ensure image_url is present, fallback to local path if needed
+        logData['image_url'] = data['image_url'] ?? path;
+        logData['created_at'] = data['created_at'] ?? DateTime.now().toIso8601String();
+
         ref
             .read(dashboardProvider.notifier)
             .logFood(
@@ -179,10 +186,19 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
               nameEn: data['name_en']?.toString(),
               nameFr: data['name_fr']?.toString(),
               nameAr: data['name_ar']?.toString(),
-              imageUrl: data['image_url']?.toString(),
+              imageUrl: logData['image_url']?.toString(),
               ingredients: data['ingredients'] as List<dynamic>?,
             );
-        await _redirectToHome();
+            
+        if (!mounted) return;
+        
+        // Navigate to details screen instead of home
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => FoodDetailScreen(log: logData),
+          ),
+        );
       } else {
         _showError('Analysis failed. Please try again with a clearer photo.');
       }
