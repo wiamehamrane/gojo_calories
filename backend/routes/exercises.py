@@ -33,17 +33,9 @@ def log_exercise(exercise: ExerciseCreate, current_user_id: str = Depends(get_cu
         db.add(new_exercise)
         
         # Increase daily calorie budget
-        today = datetime.datetime.utcnow().date()
-        stat = db.query(DailyStats).filter(
-            DailyStats.user_id == current_user_id,
-            DailyStats.date >= datetime.datetime.combine(today, datetime.time.min),
-            DailyStats.date < datetime.datetime.combine(today + datetime.timedelta(days=1), datetime.time.min)
-        ).first()
+        from utils.stats_utils import get_or_create_daily_stats
+        stat = get_or_create_daily_stats(db, current_user_id)
         
-        if not stat:
-            stat = DailyStats(user_id=current_user_id, date=datetime.datetime.utcnow())
-            db.add(stat)
-            
         # Add burned calories to the budget
         stat.calorie_budget += exercise.calories_burned
         

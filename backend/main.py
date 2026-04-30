@@ -10,12 +10,18 @@ import models
 import logging
 from fastapi.staticfiles import StaticFiles
 
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 load_dotenv()
 
 os.makedirs("uploads", exist_ok=True)
 
 from routes import vision, auth, stats, groups, referrals, payments, notifications, exercises, recipes
+
+if os.getenv("WIPE_DB") == "true":
+    logger.warning("WIPE_DB is true. Dropping all tables...")
+    Base.metadata.drop_all(bind=engine)
+    logger.warning("Tables dropped.")
 
 Base.metadata.create_all(bind=engine)
 

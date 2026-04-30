@@ -22,7 +22,7 @@ class FeedItem(BaseModel):
     created_at: datetime
     
 class GroupResponse(BaseModel):
-    id: int
+    id: str
     name: str
     description: Optional[str]
     member_count: int
@@ -45,7 +45,7 @@ def create_group(group: GroupCreate, db: Session = Depends(get_db), current_user
     return {"id": new_group.id, "name": new_group.name, "description": new_group.description, "member_count": 1}
 
 @router.post("/{group_id}/join")
-def join_group(group_id: int, db: Session = Depends(get_db), current_user_id: str = Depends(get_current_user_id)):
+def join_group(group_id: str, db: Session = Depends(get_db), current_user_id: str = Depends(get_current_user_id)):
     group = db.query(Group).filter(Group.id == group_id).first()
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")

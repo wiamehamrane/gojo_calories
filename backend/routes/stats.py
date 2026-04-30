@@ -57,35 +57,9 @@ def get_user_stats(
     has_today = any(s.date.date() == today_utc for s in stats)
     
     if not has_today:
-        user = db.query(User).filter(User.id == current_user_id).first()
-        if user:
-            from utils.nutrition import calculate_daily_targets
-            targets = calculate_daily_targets(
-                weight_kg=user.current_weight or 70.0,
-                height_cm=user.height or 170,
-                age=user.age or 30,
-                gender=user.gender or "male",
-                activity_level=user.activity_level or "sedentary",
-                goal_weight_kg=user.goal_weight or 70.0
-            )
-            
-            # create the record for today so it exists in the DB
-            new_stat = DailyStats(
-                user_id=current_user_id,
-                date=dt.datetime.combine(today_utc, dt.time.min),
-                calorie_budget=user.manual_calories or targets["calorie_budget"],
-                protein_target=user.manual_protein or targets["protein_target"],
-                carbs_target=user.manual_carbs or targets["carbs_target"],
-                fat_target=user.manual_fat or targets["fat_target"],
-                calories_consumed=0, protein_consumed=0, carbs_consumed=0, fat_consumed=0
-            )
-            db.add(new_stat)
-            try:
-                db.commit()
-                db.refresh(new_stat)
-                stats.insert(0, new_stat)
-            except Exception:
-                db.rollback()
+        from utils.stats_utils import get_or_create_daily_stats
+        new_stat = get_or_create_daily_stats(db, current_user_id, today_utc)
+        stats.insert(0, new_stat)
     
     stats_data = [{
         "user_id": s.user_id, 
@@ -275,35 +249,8 @@ def _log_macro_with_date(
     ).first()
 
     if not stat:
-        user = db.query(User).filter(User.id == current_user_id).first()
-        weigh_in_weight = (user.current_weight or 70.0) if user else 70.0
-        goal_wt = (user.goal_weight or 70.0) if user else 70.0
-        age = (user.age or 30) if user else 30
-        height_cm = (user.height or 170) if user else 170
-        gender = (user.gender or "male") if user else "male"
-        activity = (user.activity_level or "sedentary") if user else "sedentary"
-
-        from utils.nutrition import calculate_daily_targets
-        targets = calculate_daily_targets(
-            weight_kg=weigh_in_weight,
-            height_cm=height_cm,
-            age=age,
-            gender=gender,
-            activity_level=activity,
-            goal_weight_kg=goal_wt,
-        )
-
-        stat = DailyStats(
-            user_id=current_user_id,
-            date=datetime.datetime.combine(today, datetime.time.min),
-            calorie_budget=(user.manual_calories if user else None) or targets["calorie_budget"],
-            protein_target=(user.manual_protein if user else None) or targets["protein_target"],
-            carbs_target=(user.manual_carbs if user else None) or targets["carbs_target"],
-            fat_target=(user.manual_fat if user else None) or targets["fat_target"],
-            calories_consumed=0, protein_consumed=0, carbs_consumed=0, fat_consumed=0,
-        )
-        db.add(stat)
-        db.flush()
+        from utils.stats_utils import get_or_create_daily_stats
+        stat = get_or_create_daily_stats(db, current_user_id, today)
 
     stat.calories_consumed += calories
     stat.protein_consumed += protein
