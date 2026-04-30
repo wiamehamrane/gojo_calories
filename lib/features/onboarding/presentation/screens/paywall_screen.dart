@@ -30,25 +30,28 @@ class _PaywallScreenState extends State<PaywallScreen> {
           'https://pay.gojocalories.com/4gM00j7278bA4jMfyW0co00?client_reference_id=$userId&prefilled_email=${Uri.encodeComponent(userEmail)}'
         );
 
-        // 3. Open URL
-        if (await canLaunchUrl(stripeUrl)) {
-          await launchUrl(stripeUrl, mode: LaunchMode.externalApplication);
-          
-          // 4. Mark as onboarded and wait for webhook in background
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setBool('is_onboarded', true);
-          
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Please complete your subscription in the browser.'),
-              backgroundColor: Colors.blue,
-            ),
-          );
-          context.go('/home');
-        } else {
+        // 3. Open URL — launchUrl directly for https is the recommended approach
+        final launched = await launchUrl(
+          stripeUrl,
+          mode: LaunchMode.externalApplication,
+        );
+        
+        if (!launched) {
           throw Exception('Could not launch Stripe URL');
         }
+
+        // 4. Mark as onboarded and wait for webhook in background
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('is_onboarded', true);
+        
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please complete your subscription in the browser.'),
+            backgroundColor: Colors.blue,
+          ),
+        );
+        context.go('/home');
       }
     } catch (e) {
       if (!mounted) return;
