@@ -50,7 +50,7 @@ class _PaywallScreenState extends State<PaywallScreen> with WidgetsBindingObserv
         //    This prevents malformed URLs from breaking the Stripe checkout page.
         final Uri stripeUrl = Uri.https(
           'pay.gojocalories.com',
-          '/b/4gM00j7278bA4jMfyW0co00',
+          '/b/cNi28rgCH0J87vYaeC0co01',
           {
             'client_reference_id': userId,
             'prefilled_email': userEmail,

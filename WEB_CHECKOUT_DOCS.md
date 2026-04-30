@@ -27,6 +27,8 @@ Your backend route `/api/payments/create-checkout-session` is actually perfectly
 
 Stripe Checkout is a Stripe-hosted payment page. Normally, users are redirected to `checkout.stripe.com`. However, you can configure Stripe to use your domain, such as `pay.gojocalories.com` or `checkout.gojocalories.com`.
 
+For example, your current link is `https://pay.gojocalories.com/b/cNi28rgCH0J87vYaeC0co01`.
+
 ### Setup Steps in Stripe Dashboard
 1. Go to your **Stripe Dashboard** > **Settings** (gear icon) > **Custom Domains**.
 2. Click **Add your domain**.
