@@ -24,9 +24,13 @@ final weeklyStatsProvider = FutureProvider<WeeklyStatsData>((ref) async {
       "${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}";
 
   try {
+    final tzOffset = selectedDate.timeZoneOffset.inMinutes;
     final response = await ApiClient.instance.get(
       'stats/weekly',
-      queryParameters: {'local_today': localToday},
+      queryParameters: {
+        'local_today': localToday,
+        'tz_offset': tzOffset,
+      },
     );
     final List<dynamic> data = response.data ?? [];
 

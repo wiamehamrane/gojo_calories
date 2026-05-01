@@ -7,9 +7,13 @@ final historyProvider = FutureProvider.family<List<dynamic>, DateTime>((ref, dat
   final dateStr =
       "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
   try {
+    final tzOffset = date.timeZoneOffset.inMinutes;
     final res = await ApiClient.instance.get(
       'stats/history',
-      queryParameters: {'date': dateStr},
+      queryParameters: {
+        'date': dateStr,
+        'tz_offset': tzOffset,
+      },
     );
     final apiData = res.data ?? [];
     return apiData;

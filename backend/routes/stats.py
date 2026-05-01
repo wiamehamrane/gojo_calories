@@ -84,6 +84,7 @@ def get_user_stats(
 @router.get("/weekly")
 def get_weekly_stats(
     local_today: Optional[str] = Query(None, description="User's local today date YYYY-MM-DD"),
+    tz_offset: Optional[int] = Query(0, description="Timezone offset in minutes"),
     db: Session = Depends(get_db),
     current_user_id: str = Depends(get_current_user_id),
 ):
@@ -110,20 +111,12 @@ def get_weekly_stats(
         FoodLog.created_at < window_end,
     ).all()
 
-    # Build lookup: local_date_string -> aggregated macros
-    # We map each log to a local date by shifting UTC created_at by the offset implied
-    # by local_today vs utc_today. This is an approximation that works for most timezones.
-    utc_today = dt.datetime.utcnow().date()
-    tz_offset_days = (today - utc_today).days  # e.g. +1 if local is 1 day ahead of UTC
-    # In practice tz_offset_days is 0, so we use hour-level granularity instead:
-    # Just bin each log's UTC timestamp into the local day it falls on given the offset.
-
     from collections import defaultdict
     day_totals: dict = defaultdict(lambda: {"calories_consumed": 0, "protein_consumed": 0, "carbs_consumed": 0, "fat_consumed": 0})
 
     for log in logs:
-        # Shift UTC to local date using offset between local_today and utc_today
-        local_dt = log.created_at + dt.timedelta(days=tz_offset_days)
+        # Shift UTC to local date using the provided offset
+        local_dt = log.created_at + dt.timedelta(minutes=tz_offset or 0)
         local_date = local_dt.date()
         if start <= local_date <= today:
             day_totals[local_date]["calories_consumed"] += log.calories or 0
@@ -176,6 +169,7 @@ def get_streak(db: Session = Depends(get_db), current_user_id: str = Depends(get
 @router.get("/history")
 def get_user_history(
     date: Optional[str] = None,
+    tz_offset: Optional[int] = Query(0, description="Timezone offset in minutes (e.g. 60 for UTC+1)"),
     db: Session = Depends(get_db), 
     current_user_id: str = Depends(get_current_user_id)
 ):
@@ -185,10 +179,12 @@ def get_user_history(
     if date:
         try:
             target_date = dt.datetime.strptime(date, "%Y-%m-%d").date()
-            # Expand window by ±1 day to handle timezone offsets:
-            # logs stored in UTC may appear shifted relative to local date.
-            window_start = dt.datetime.combine(target_date - dt.timedelta(days=1), dt.time.min)
-            window_end = dt.datetime.combine(target_date + dt.timedelta(days=2), dt.time.min)
+            # Calculate UTC window for this local date
+            # local 00:00 = UTC 00:00 - offset
+            local_midnight = dt.datetime.combine(target_date, dt.time.min)
+            window_start = local_midnight - dt.timedelta(minutes=tz_offset or 0)
+            window_end = window_start + dt.timedelta(days=1)
+            
             query = query.filter(
                 FoodLog.created_at >= window_start,
                 FoodLog.created_at < window_end,
