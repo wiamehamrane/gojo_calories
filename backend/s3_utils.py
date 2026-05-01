@@ -19,16 +19,22 @@ def get_s3_client():
     
     return boto3.client('s3', **kwargs)
 
+def _save_locally(file_bytes: bytes, file_name: str) -> str:
+    """Helper to save file to local uploads directory."""
+    os.makedirs("uploads", exist_ok=True)
+    file_path = os.path.join("uploads", file_name)
+    with open(file_path, "wb") as f:
+        f.write(file_bytes)
+    logger.info(f"File saved locally: {file_path}")
+    return f"/uploads/{file_name}"
+
 def upload_image_to_s3(file_bytes: bytes, content_type: str) -> str:
     bucket = os.getenv('AWS_BUCKET_NAME')
     file_name = f"food_logs_{uuid.uuid4()}.jpg"
     
     if not bucket:
         logger.warning("AWS_BUCKET_NAME not set, falling back to local storage.")
-        os.makedirs("uploads", exist_ok=True)
-        with open(f"uploads/{file_name}", "wb") as f:
-            f.write(file_bytes)
-        return f"/uploads/{file_name}"
+        return _save_locally(file_bytes, file_name)
         
     s3 = get_s3_client()
     
@@ -50,8 +56,8 @@ def upload_image_to_s3(file_bytes: bytes, content_type: str) -> str:
         logger.info(f"S3 upload successful. Generated pre-signed URL: {url}")
         return url
     except (NoCredentialsError, ClientError) as e:
-        logger.error(f"S3 Upload failed: {e}")
-        return None
+        logger.error(f"S3 Upload failed: {e}. Falling back to local storage.")
+        return _save_locally(file_bytes, file_name)
     except Exception as e:
-        logger.error(f"Unexpected error during S3 upload: {e}")
-        return None
+        logger.error(f"Unexpected error during S3 upload: {e}. Falling back to local storage.")
+        return _save_locally(file_bytes, file_name)
