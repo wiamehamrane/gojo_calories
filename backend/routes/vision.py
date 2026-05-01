@@ -69,7 +69,7 @@ async def analyze_food_image(
         
         logger.info(f"Calling Gemini vision for user {current_user_id}")
         response = client.models.generate_content(
-            model='gemini-2.5-flash-lite',
+            model='gemini-flash-latest',
             contents=[prompt, image]
         )
         
@@ -205,7 +205,7 @@ async def analyze_food_text(body: TextQuery, current_user_id: str = Depends(get_
         
         logger.info(f"Calling Gemini text analysis for user {current_user_id}: {body.query!r}")
         response = client.models.generate_content(
-            model='gemini-2.5-flash-lite',
+            model='gemini-flash-latest',
             contents=prompt
         )
         raw_text = response.text
@@ -285,7 +285,7 @@ async def fix_food_log(body: FixRequest, current_user_id: str = Depends(get_curr
             """
             
             response = client.models.generate_content(
-                model='gemini-2.5-flash-lite',
+                model='gemini-flash-latest',
                 contents=prompt
             )
             raw_text = response.text
@@ -485,7 +485,7 @@ async def get_food_ingredients(
 
     try:
         response = client.models.generate_content(
-            model='gemini-2.5-flash-lite',
+            model='gemini-flash-latest',
             contents=prompt,
         )
         raw_text = response.text

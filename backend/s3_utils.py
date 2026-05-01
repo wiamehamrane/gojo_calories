@@ -30,10 +30,15 @@ def upload_image_to_s3(file_bytes: bytes, content_type: str) -> str:
             Bucket=bucket,
             Key=file_name,
             Body=file_bytes,
-            ContentType=content_type,
-            ACL='public-read'
+            ContentType=content_type
         )
-        url = f"https://{bucket}.s3.{os.getenv('AWS_REGION', 'us-east-1')}.amazonaws.com/{file_name}"
+        
+        # Generate a pre-signed URL since the bucket is private
+        url = s3.generate_presigned_url(
+            'get_object',
+            Params={'Bucket': bucket, 'Key': file_name},
+            ExpiresIn=604800 # 7 days
+        )
         return url
     except (NoCredentialsError, ClientError) as e:
         print(f"S3 Upload failed: {e}")
