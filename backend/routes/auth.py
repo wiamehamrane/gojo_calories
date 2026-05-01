@@ -100,18 +100,11 @@ def register(user: UserCreate, background_tasks: BackgroundTasks, db: Session = 
         db.add(referral_record)
         db.commit()
     
+    new_user.is_email_verified = True
+    db.commit()
+
     access_token = create_access_token(data={"sub": str(new_user.id)})
     
-    # Send verification OTP in background
-    otp = email_service.generate_verification_otp(new_user.email)
-    html_body = f"""
-    <h2>Welcome to GojoCalories!</h2>
-    <p>Your email verification code is:</p>
-    <h1 style="letter-spacing: 5px; color: #4CAF50;">{otp}</h1>
-    <p>This code will expire in 15 minutes.</p>
-    """
-    background_tasks.add_task(email_service.send_email, new_user.email, "Your GojoCalories Verification Code", html_body)
-
     return {
         "status": "success",
         "access_token": access_token,
@@ -136,43 +129,7 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
         "name": db_user.name
     }
 
-class VerifyOTP(BaseModel):
-    email: str
-    otp: str
 
-@router.post("/verify-otp")
-def verify_otp(body: VerifyOTP, db: Session = Depends(get_db)):
-    if not email_service.verify_email_otp(body.email, body.otp):
-        raise HTTPException(status_code=400, detail="Invalid or expired OTP")
-    
-    user = db.query(User).filter(User.email == body.email).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    user.is_email_verified = True
-    db.commit()
-    return {"status": "success", "message": "Email verified successfully"}
-
-class ResendVerification(BaseModel):
-    pass
-
-@router.post("/resend-verification")
-def resend_verification(background_tasks: BackgroundTasks, db: Session = Depends(get_db), current_user_id: str = Depends(get_current_user_id)):
-    user = db.query(User).filter(User.id == current_user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    if user.is_email_verified:
-        raise HTTPException(status_code=400, detail="Email is already verified")
-        
-    otp = email_service.generate_verification_otp(user.email)
-    html_body = f"""
-    <h2>Verify your email</h2>
-    <p>Your email verification code is:</p>
-    <h1 style="letter-spacing: 5px; color: #4CAF50;">{otp}</h1>
-    <p>This code will expire in 15 minutes.</p>
-    """
-    background_tasks.add_task(email_service.send_email, user.email, "Your GojoCalories Verification Code", html_body)
-    return {"status": "success", "message": "Verification email sent"}
 
 # ── SOCIAL LOGIN ─────────────────────────────────────────────────────────────
 
