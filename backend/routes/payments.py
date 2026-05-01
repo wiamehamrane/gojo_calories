@@ -41,18 +41,14 @@ async def stripe_webhook(request: Request, stripe_signature: str = Header(None),
             customer_id = data_object.get('customer')
             
             if client_reference_id:
-                try:
-                    user_id = int(client_reference_id)
-                    user = db.query(models.User).filter(models.User.id == user_id).first()
-                    if user:
-                        user.stripe_customer_id = customer_id
-                        user.has_paid = True
-                        db.commit()
-                        logger.info(f"User {user_id} subscribed via Stripe Checkout. Customer ID: {customer_id}")
-                    else:
-                        logger.warning(f"Webhook checkout.session.completed: User {user_id} not found.")
-                except ValueError:
-                    logger.warning(f"Webhook checkout.session.completed: Invalid client_reference_id {client_reference_id}")
+                user = db.query(models.User).filter(models.User.id == client_reference_id).first()
+                if user:
+                    user.stripe_customer_id = customer_id
+                    user.has_paid = True
+                    db.commit()
+                    logger.info(f"User {client_reference_id} subscribed via Stripe Checkout. Customer ID: {customer_id}")
+                else:
+                    logger.warning(f"Webhook checkout.session.completed: User {client_reference_id} not found.")
             else:
                 logger.warning("Webhook checkout.session.completed: Missing client_reference_id")
 
