@@ -6,18 +6,6 @@
 name: api
 type: Load Balanced Web Service
 
-# Grant the task permission to access the S3 bucket
-iam_policy_statements:
-  - effect: Allow
-    actions:
-      - s3:PutObject
-      - s3:PutObjectAcl
-      - s3:GetObject
-      - s3:ListBucket
-    resources:
-      - arn:aws:s3:::gojo-media-uploads
-      - arn:aws:s3:::gojo-media-uploads/*
-
 # Distribute traffic to your service.
 http:
   # Requests to this path will be forwarded to your service.
@@ -63,6 +51,18 @@ secrets:
   STRIPE_PUBLISHABLE_KEY: /copilot/gojocalories/prod/secrets/STRIPE_PUBLISHABLE_KEY
   FOODDATA_CENTRAL_API_KEY: /copilot/gojocalories/prod/secrets/FOODDATA_CENTRAL_API_KEY
 
+
+# Grant the task permission to access the S3 bucket
+iam_policy_statements:
+  - effect: Allow
+    actions:
+      - s3:PutObject
+      - s3:PutObjectAcl
+      - s3:GetObject
+      - s3:ListBucket
+    resources:
+      - arn:aws:s3:::gojo-media-uploads
+      - arn:aws:s3:::gojo-media-uploads/*
 
 # You can override any of the values defined above by environment.
 

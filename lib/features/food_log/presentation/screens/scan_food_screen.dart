@@ -244,7 +244,9 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
             'food/analyze/log',
             data: {
               'name': productName,
-              'name_en': productName,
+              'name_en': data['name_en'] ?? productName,
+              'name_fr': data['name_fr'],
+              'name_ar': data['name_ar'],
               'calories': calories,
               'protein': protein,
               'carbs': carbs,
@@ -267,8 +269,11 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
               carbs: carbs,
               fat: fat,
               name: productName,
+              nameEn: data['name_en']?.toString(),
+              nameFr: data['name_fr']?.toString(),
+              nameAr: data['name_ar']?.toString(),
               imageUrl: imageUrl,
-              ingredients: data['ingredients'],
+              ingredients: data['ingredients'] as List<dynamic>?,
             );
 
         await _redirectToHome();

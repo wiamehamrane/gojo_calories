@@ -1,7 +1,7 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Query
 from google import genai
 import os
-from typing import Optional
+from typing import Optional, Any, List
 from dotenv import load_dotenv
 import json
 from PIL import Image
@@ -45,6 +45,7 @@ def _resolve_local_date(local_date: Optional[str]) -> datetime.date:
 
 @router.post("/analyze")
 async def analyze_food_image(
+    request: Request,
     file: UploadFile = File(...),
     local_date: Optional[str] = Query(None, description="User's local date YYYY-MM-DD"),
     current_user_id: str = Depends(get_current_user_id),
@@ -82,9 +83,10 @@ async def analyze_food_image(
         s3_url = None
         try:
             from s3_utils import upload_image_to_s3
+            logger.info(f"Uploading vision scan image to S3 for user {current_user_id}")
             s3_url = upload_image_to_s3(contents, file.content_type or 'image/jpeg')
         except Exception as s3_err:
-            print(f"S3 upload skipped: {s3_err}")
+            logger.error(f"S3 upload error in vision scan: {s3_err}")
         
         # Save to DB using a single session
         from models import FoodLog, DailyStats, User
@@ -109,6 +111,8 @@ async def analyze_food_image(
             )
             db.add(log)
             db.flush()  # get log.id without committing yet
+            
+            logger.info(f"Created FoodLog {log.id} for user {current_user_id}. S3 URL: {s3_url}")
 
             # 2. Update (or create) the user's local-date DailyStats in the same session
             stat = db.query(DailyStats).filter(
@@ -166,8 +170,12 @@ async def analyze_food_image(
         except Exception:
             pass
 
-        if s3_url:
-            data['image_url'] = s3_url
+        data['image_url'] = s3_url
+        if s3_url and s3_url.startswith('/'):
+            # Convert relative path to absolute URL
+            base_url = str(request.base_url).rstrip('/')
+            data['image_url'] = f"{base_url}{s3_url}"
+
         data['log_id'] = log_id
         data['created_at'] = log_created_at
         return data
@@ -352,7 +360,7 @@ class LogItemModel(BaseModel):
     name_fr: Optional[str] = None
     name_ar: Optional[str] = None
     image_url: Optional[str] = None
-    ingredients: Optional[str] = None
+    ingredients: Optional[Any] = None
     calories: int
     protein: int
     carbs: int
@@ -428,6 +436,7 @@ async def get_barcode_nutrition(barcode: str, current_user_id: str = Depends(get
         nutriments = product.get('nutriments', {})
         
         def get_num(key: str) -> int:
+            # Try to get 100g values first as they are most standard
             for suffix in ['_100g', '_serving', '_value', '']:
                 k = f"{key}{suffix}"
                 if k in nutriments:
@@ -437,14 +446,16 @@ async def get_barcode_nutrition(barcode: str, current_user_id: str = Depends(get
                         pass
             return 0
 
-        raw_name = product.get('product_name', '')
+        # Extract names in different languages
+        name_en = product.get('product_name_en') or product.get('product_name')
+        name_fr = product.get('product_name_fr') or product.get('product_name')
+        name_ar = product.get('product_name_ar')
         brand = product.get('brands', '')
         
-        name = raw_name
-        if brand and brand not in raw_name:
-            name = f"{raw_name} ({brand})"
-        if not name:
-            name = "Scanned Product"
+        # Fallback logic for name
+        primary_name = name_en or name_fr or "Scanned Product"
+        if brand and brand.lower() not in primary_name.lower():
+            primary_name = f"{primary_name} ({brand})"
 
         calories = get_num('energy-kcal')
         if calories == 0:
@@ -452,16 +463,28 @@ async def get_barcode_nutrition(barcode: str, current_user_id: str = Depends(get
             if kj > 0:
                 calories = int(round(kj / 4.184))
 
-        ingredients_raw = product.get('ingredients_text_en') or product.get('ingredients_text') or ""
+        # Better ingredients parsing
+        ingredients_raw = product.get('ingredients_text_en') or product.get('ingredients_text_fr') or product.get('ingredients_text') or ""
         ingredients_list = []
         if ingredients_raw:
-            # Simple parsing for the response
-            parts = [p.strip() for p in ingredients_raw.replace('(', ',').replace(')', ',').split(',') if p.strip()]
-            for p in parts[:12]:
-                ingredients_list.append({"name": p.capitalize(), "amount": "", "calories": 0})
+            # Simple cleaning and splitting
+            cleaned = ingredients_raw.replace('(', ',').replace(')', ',').replace('[', ',').replace(']', ',').replace('*', '')
+            parts = [p.strip() for p in cleaned.split(',') if p.strip() and len(p.strip()) > 1]
+            # Deduplicate while preserving order
+            seen = set()
+            for p in parts:
+                p_cap = p.capitalize()
+                if p_cap not in seen:
+                    ingredients_list.append({"name": p_cap, "amount": "", "calories": 0})
+                    seen.add(p_cap)
+                if len(ingredients_list) >= 15:
+                    break
 
         return {
-            "name": name,
+            "name": primary_name,
+            "name_en": name_en,
+            "name_fr": name_fr,
+            "name_ar": name_ar,
             "calories": calories,
             "protein": get_num('proteins'),
             "carbs": get_num('carbohydrates'),
