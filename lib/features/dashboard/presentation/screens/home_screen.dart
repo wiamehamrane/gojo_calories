@@ -488,7 +488,7 @@ class _AnimatedMealCardState extends State<_AnimatedMealCard>
       final today = DateTime(now.year, now.month, now.day);
       final yesterday = today.subtract(const Duration(days: 1));
       final logDate = DateTime(date.year, date.month, date.day);
-      if (logDate == today) return Translations.t(lang, 'today');
+      if (logDate == today) return DateFormat('h:mm a').format(date);
       if (logDate == yesterday) return 'Yesterday';
       return DateFormat('MMM d').format(date);
     } catch (_) {

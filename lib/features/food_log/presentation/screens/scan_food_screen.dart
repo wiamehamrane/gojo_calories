@@ -192,6 +192,11 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
               ingredients: data['ingredients'] as List<dynamic>?,
             );
             
+        final selectedDate = ref.read(selectedDateProvider);
+        ref.invalidate(historyProvider(selectedDate));
+        ref.invalidate(weeklyStatsProvider);
+        ref.invalidate(dashboardProvider);
+
         if (!mounted) return;
         
         // Navigate to details screen instead of home

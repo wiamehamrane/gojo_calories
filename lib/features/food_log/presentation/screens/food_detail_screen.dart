@@ -544,7 +544,13 @@ class _FoodDetailScreenState extends ConsumerState<FoodDetailScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: GestureDetector(
-                  onTap: () => Navigator.of(context).pop(),
+                  onTap: () {
+                    final selectedDate = ref.read(selectedDateProvider);
+                    ref.invalidate(historyProvider(selectedDate));
+                    ref.invalidate(weeklyStatsProvider);
+                    ref.invalidate(dashboardProvider);
+                    Navigator.of(context).pop();
+                  },
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 15),
                     decoration: BoxDecoration(
@@ -573,12 +579,25 @@ class _FoodDetailScreenState extends ConsumerState<FoodDetailScreen> {
   Widget _buildHeroImage(String? imageUrl) {
     if (imageUrl != null && imageUrl.isNotEmpty) {
       // Local file path (camera/gallery before upload completes)
-      if (imageUrl.startsWith('/') || imageUrl.startsWith('file://')) {
+      if (imageUrl.startsWith('file://') || (imageUrl.startsWith('/') && !imageUrl.startsWith('/uploads/'))) {
         final path = imageUrl.replaceFirst('file://', '');
         return Image.file(
           File(path),
           fit: BoxFit.cover,
           errorBuilder: (_, e, s) => _placeholder(),
+        );
+      }
+      // Relative network path
+      if (imageUrl.startsWith('/uploads/')) {
+        final fullUrl = '${ApiClient.instance.options.baseUrl.replaceAll('/api/', '')}$imageUrl';
+        return Image.network(
+          fullUrl,
+          fit: BoxFit.cover,
+          errorBuilder: (_, e, s) => _placeholder(),
+          loadingBuilder: (ctx, child, progress) {
+            if (progress == null) return child;
+            return _ShimmerPlaceholder();
+          },
         );
       }
       // Network image — show shimmer while loading, never fallback to placeholder mid-load
