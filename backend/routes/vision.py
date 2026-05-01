@@ -352,6 +352,7 @@ class LogItemModel(BaseModel):
     name_fr: Optional[str] = None
     name_ar: Optional[str] = None
     image_url: Optional[str] = None
+    ingredients: Optional[str] = None
     calories: int
     protein: int
     carbs: int
@@ -379,6 +380,7 @@ async def log_food_item(
                 name_fr=body.name_fr,
                 name_ar=body.name_ar,
                 image_url=body.image_url,
+                ingredients=body.ingredients,
                 calories=body.calories,
                 protein=body.protein,
                 carbs=body.carbs,
@@ -450,6 +452,14 @@ async def get_barcode_nutrition(barcode: str, current_user_id: str = Depends(get
             if kj > 0:
                 calories = int(round(kj / 4.184))
 
+        ingredients_raw = product.get('ingredients_text_en') or product.get('ingredients_text') or ""
+        ingredients_list = []
+        if ingredients_raw:
+            # Simple parsing for the response
+            parts = [p.strip() for p in ingredients_raw.replace('(', ',').replace(')', ',').split(',') if p.strip()]
+            for p in parts[:12]:
+                ingredients_list.append({"name": p.capitalize(), "amount": "", "calories": 0})
+
         return {
             "name": name,
             "calories": calories,
@@ -457,7 +467,8 @@ async def get_barcode_nutrition(barcode: str, current_user_id: str = Depends(get
             "carbs": get_num('carbohydrates'),
             "fat": get_num('fat'),
             "brand": brand,
-            "image_url": product.get('image_url')
+            "image_url": product.get('image_front_url') or product.get('image_url'),
+            "ingredients": ingredients_list
         }
     except HTTPException:
         raise

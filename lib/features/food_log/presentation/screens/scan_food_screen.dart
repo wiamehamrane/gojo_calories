@@ -238,6 +238,7 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
         if (!mounted) return;
 
         // Post to backend — include the product image URL from Open Food Facts
+        final imageUrl = data['image_url'] as String?;
         try {
           await ApiClient.instance.post(
             'food/analyze/log',
@@ -248,7 +249,8 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
               'protein': protein,
               'carbs': carbs,
               'fat': fat,
-              // Don't include image_url for barcode items
+              'image_url': imageUrl,
+              'ingredients': data['ingredients'],
             },
             queryParameters: {'local_date': _localDateStr},
           );
@@ -265,7 +267,8 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
               carbs: carbs,
               fat: fat,
               name: productName,
-              // No imageUrl for barcode items — shows barcode icon instead
+              imageUrl: imageUrl,
+              ingredients: data['ingredients'],
             );
 
         await _redirectToHome();
