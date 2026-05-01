@@ -171,6 +171,18 @@ class _VerifyOTPScreenState extends ConsumerState<VerifyOTPScreen> {
               const SizedBox(height: 24),
               
               Center(
+                child: TextButton(
+                  onPressed: () => context.go('/onboarding/weight'),
+                  child: const Text(
+                    "Skip for now →",
+                    style: TextStyle(color: AppColors.textSecondary, fontSize: 14, fontWeight: FontWeight.w500),
+                  ),
+                ),
+              ).animate().fadeIn(delay: 450.ms),
+              
+              const SizedBox(height: 12),
+              
+              Center(
                 child: GestureDetector(
                   onTap: _resend,
                   child: const Text(
@@ -178,7 +190,7 @@ class _VerifyOTPScreenState extends ConsumerState<VerifyOTPScreen> {
                     style: TextStyle(color: AppColors.primary, fontSize: 14, fontWeight: FontWeight.w600),
                   ),
                 ),
-              ).animate().fadeIn(delay: 400.ms),
+              ).animate().fadeIn(delay: 500.ms),
             ],
           ),
         ),

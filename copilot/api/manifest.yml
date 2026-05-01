@@ -37,6 +37,7 @@ network:
 #
 variables:                    # Pass environment variables as key value pairs.
   LOG_LEVEL: info
+  WIPE_DB: "true"
   GOOGLE_WEB_CLIENT_ID: 980076580409-rgqujk89m5lhvsr3nfg24hhodk08uoeh.apps.googleusercontent.com
 
 secrets:

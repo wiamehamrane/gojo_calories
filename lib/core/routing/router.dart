@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../features/onboarding/presentation/screens/splash_screen.dart';
 import '../../features/onboarding/presentation/screens/auth_screen.dart';
-import '../../features/onboarding/presentation/screens/verify_otp_screen.dart';
 import '../../features/onboarding/presentation/screens/weight_setup_screen.dart';
 import '../../features/onboarding/presentation/screens/paywall_screen.dart';
 import '../../features/dashboard/presentation/screens/home_screen.dart';
@@ -46,13 +45,6 @@ final GoRouter appRouter = GoRouter(
 
     // New Auth / Onboarding Flow
     GoRoute(path: '/auth', builder: (context, state) => const AuthScreen()),
-    GoRoute(
-      path: '/onboarding/verify',
-      builder: (context, state) {
-        final email = state.extra as String? ?? '';
-        return VerifyOTPScreen(email: email);
-      },
-    ),
     GoRoute(
       path: '/onboarding/weight',
       builder: (context, state) => const WeightSetupScreen(),

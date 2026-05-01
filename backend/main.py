@@ -19,9 +19,14 @@ os.makedirs("uploads", exist_ok=True)
 from routes import vision, auth, stats, groups, referrals, payments, notifications, exercises, recipes
 
 if os.getenv("WIPE_DB") == "true":
-    logger.warning("WIPE_DB is true. Dropping all tables...")
-    Base.metadata.drop_all(bind=engine)
-    logger.warning("Tables dropped.")
+    logger.warning("WIPE_DB is true. Dropping all tables via SCHEMA wipe...")
+    with engine.begin() as conn:
+        from sqlalchemy import text
+        conn.execute(text("DROP SCHEMA public CASCADE;"))
+        conn.execute(text("CREATE SCHEMA public;"))
+        conn.execute(text("GRANT ALL ON SCHEMA public TO postgres;"))
+        conn.execute(text("GRANT ALL ON SCHEMA public TO public;"))
+    logger.warning("Database wiped successfully.")
 
 Base.metadata.create_all(bind=engine)
 

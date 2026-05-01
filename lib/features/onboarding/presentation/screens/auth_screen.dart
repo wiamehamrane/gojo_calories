@@ -57,9 +57,7 @@ class _AuthScreenState extends State<AuthScreen>
       if (res.statusCode == 200) {
         final data = res.data;
         if (!mounted) return;
-        if (data['is_email_verified'] != true) {
-          context.go('/onboarding/verify', extra: data['email']);
-        } else if (data['current_weight'] == null) {
+        if (data['current_weight'] == null) {
           context.go('/onboarding/weight');
         } else if (data['has_paid'] != true) {
           context.go('/onboarding/paywall');
