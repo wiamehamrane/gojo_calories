@@ -50,6 +50,7 @@ class User(Base):
     withdrawals = relationship("Withdrawal", back_populates="user")
     exercise_logs = relationship("ExerciseLog", back_populates="user")
     recipes = relationship("Recipe", back_populates="user")
+    saved_foods = relationship("SavedFood", back_populates="user")
 
 class DailyStats(Base):
     __tablename__ = "daily_stats"
@@ -170,3 +171,24 @@ class Recipe(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     
     user = relationship("User", back_populates="recipes")
+
+class SavedFood(Base):
+    __tablename__ = "saved_foods"
+    
+    id = Column(String(36), primary_key=True, default=generate_uuid, index=True)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    name = Column(String, index=True)
+    name_en = Column(String, nullable=True)
+    name_fr = Column(String, nullable=True)
+    name_ar = Column(String, nullable=True)
+    image_url = Column(String, nullable=True)
+    
+    calories = Column(Integer)
+    protein = Column(Integer)
+    carbs = Column(Integer)
+    fat = Column(Integer)
+    ingredients = Column(JSON, nullable=True)
+    
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    user = relationship("User", back_populates="saved_foods")

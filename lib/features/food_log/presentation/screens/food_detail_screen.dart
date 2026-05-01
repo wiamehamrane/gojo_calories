@@ -16,6 +16,7 @@ import '../../../../core/providers/selected_date_provider.dart';
 import '../../../dashboard/providers/dashboard_provider.dart';
 import '../../../dashboard/providers/history_provider.dart';
 import '../../../dashboard/providers/weekly_stats_provider.dart';
+import '../../../dashboard/providers/saved_foods_provider.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Screen
@@ -129,14 +130,47 @@ class _FoodDetailScreenState extends ConsumerState<FoodDetailScreen> {
 
   Future<void> _toggleSave() async {
     if (_savingInProgress) return;
-    setState(() { _savingInProgress = true; _saved = !_saved; });
+    setState(() { _savingInProgress = true; });
+    
+    final wasSaved = _saved;
+    setState(() { _saved = !wasSaved; }); // optimistic
+
     try {
-      // Optimistic: just toggle locally; backend save could be added later
-      await Future.delayed(const Duration(milliseconds: 300));
+      if (!wasSaved) {
+        // Save to backend
+        await ApiClient.instance.post(
+          'food/saved',
+          data: {
+            'name': log['name_en'] ?? log['meal_name'] ?? 'Food',
+            'name_en': log['name_en'],
+            'name_fr': log['name_fr'],
+            'name_ar': log['name_ar'],
+            'image_url': log['image_url'],
+            'ingredients': log['ingredients'],
+            'calories': (log['calories'] as num? ?? 0).toInt(),
+            'protein': (log['protein'] as num? ?? 0).toInt(),
+            'carbs': (log['carbs'] as num? ?? 0).toInt(),
+            'fat': (log['fat'] as num? ?? 0).toInt(),
+          },
+        );
+        ref.invalidate(savedFoodsProvider);
+      } else {
+        // Remove from backend (optional, if we had the ID here)
+        // For now, saving is the primary request.
+      }
+    } catch (e) {
+      // Revert if failed
+      setState(() { _saved = wasSaved; });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to update saved foods')),
+        );
+      }
     } finally {
       if (mounted) setState(() => _savingInProgress = false);
     }
-    if (mounted) {
+
+    if (mounted && _saved != wasSaved) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(_saved ? 'Saved to your food library' : 'Removed from saved foods'),

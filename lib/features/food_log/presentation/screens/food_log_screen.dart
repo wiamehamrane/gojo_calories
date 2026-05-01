@@ -10,6 +10,7 @@ import '../../../../core/providers/locale_provider.dart';
 import '../../../../core/localization/translations.dart';
 import '../../../dashboard/providers/dashboard_provider.dart';
 import 'scan_food_screen.dart';
+import 'food_detail_screen.dart';
 
 class FoodLogScreen extends ConsumerStatefulWidget {
   const FoodLogScreen({super.key});
@@ -74,6 +75,7 @@ class _FoodLogScreenState extends ConsumerState<FoodLogScreen> {
         'food/analyze/log',
         data: {
           'name': name,
+          'image_url': data['image_url'],
           'calories': calories,
           'protein': protein,
           'carbs': carbs,
@@ -88,6 +90,7 @@ class _FoodLogScreenState extends ConsumerState<FoodLogScreen> {
           carbs: carbs,
           fat: fat,
           name: name,
+          imageUrl: data['image_url'],
         );
 
     if (mounted) {
@@ -248,7 +251,16 @@ class _FoodLogScreenState extends ConsumerState<FoodLogScreen> {
                                 name: item['name']?.toString() ?? 'Food',
                                 cal: item['calories']?.toString() ?? '0',
                                 unit: item['serving_size']?.toString() ?? '100 g',
-                                onTap: () => _logFoodItem(item),
+                                imageUrl: item['image_url']?.toString(),
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => FoodDetailScreen(log: item),
+                                    ),
+                                  );
+                                },
+                                onAdd: () => _logFoodItem(item),
                               ),
                             );
                           },
@@ -324,59 +336,105 @@ class _SuggestionRow extends StatelessWidget {
   final String name;
   final String cal;
   final String unit;
+  final String? imageUrl;
   final VoidCallback onTap;
+  final VoidCallback onAdd;
 
   const _SuggestionRow({
     required this.name,
     required this.cal,
     required this.unit,
+    this.imageUrl,
     required this.onTap,
+    required this.onAdd,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surfaceMuted,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(name, style: AppTextStyles.bodyBold),
-              const SizedBox(height: 4),
-              Row(
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.surfaceMuted,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            // Image
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: SizedBox(
+                width: 48,
+                height: 48,
+                child: _buildImage(imageUrl),
+              ),
+            ),
+            const SizedBox(width: 12),
+            // Info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(
-                    LucideIcons.flame,
-                    size: 16,
-                    color: AppColors.fire,
+                  Text(
+                    name,
+                    style: AppTextStyles.bodyBold,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  Text(" $cal cal · $unit", style: AppTextStyles.bodyRegular),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(
+                        LucideIcons.flame,
+                        size: 14,
+                        color: AppColors.fire,
+                      ),
+                      const SizedBox(width: 4),
+                      Text("$cal kcal · $unit", style: AppTextStyles.bodyRegular.copyWith(fontSize: 13)),
+                    ],
+                  ),
                 ],
               ),
-            ],
-          ),
-          GestureDetector(
-            onTap: onTap,
-            behavior: HitTestBehavior.opaque,
-            child: const SizedBox(
-              width: 44,
-              height: 44,
-              child: Center(
-                child: Icon(
+            ),
+            // Add button
+            GestureDetector(
+              onTap: onAdd,
+              behavior: HitTestBehavior.opaque,
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: const BoxDecoration(
+                  color: AppColors.primary,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
                   LucideIcons.plus,
-                  size: 20,
-                  color: AppColors.textPrimary,
+                  size: 18,
+                  color: Colors.white,
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImage(String? url) {
+    if (url == null || url.isEmpty) {
+      return Container(
+        color: AppColors.inactive.withValues(alpha: 0.1),
+        child: const Icon(LucideIcons.image, size: 20, color: AppColors.inactive),
+      );
+    }
+    return Image.network(
+      url,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => Container(
+        color: AppColors.inactive.withValues(alpha: 0.1),
+        child: const Icon(LucideIcons.image, size: 20, color: AppColors.inactive),
       ),
     );
   }

@@ -537,17 +537,16 @@ async def get_food_ingredients(
 
 @router.get("/search")
 async def search_food(query: str, current_user_id: str = Depends(get_current_user_id)):
-    """Searches FoodData Central for a given query."""
-    if not _FOODDATA_API_KEY:
-        raise HTTPException(status_code=503, detail="FoodData Central API key not configured on the server.")
-    
+    """Searches Open Food Facts for a given query (better for branded products with images)."""
     import httpx
-    url = "https://api.nal.usda.gov/fdc/v1/foods/search"
+    
+    # Open Food Facts search API
+    url = "https://world.openfoodfacts.org/cgi/search.pl"
     params = {
-        "api_key": _FOODDATA_API_KEY,
-        "query": query,
-        "pageSize": 10,
-        "pageNumber": 1
+        "search_terms": query,
+        "json": 1,
+        "page_size": 20,
+        "fields": "product_name,product_name_en,product_name_fr,product_name_ar,brands,image_small_url,nutriments,id,code"
     }
     
     try:
@@ -555,39 +554,169 @@ async def search_food(query: str, current_user_id: str = Depends(get_current_use
             response = await http.get(url, params=params, timeout=10.0)
             
         if response.status_code != 200:
-            raise HTTPException(status_code=502, detail="Failed to fetch from FoodData Central.")
+            # Fallback to USDA if OFF is down
+            return await _search_usda_fallback(query)
             
         data = response.json()
-        foods = data.get("foods", [])
+        products = data.get("products", [])
         
         results = []
-        for f in foods:
-            nutrients = f.get("foodNutrients", [])
+        for p in products:
+            nutriments = p.get('nutriments', {})
             
-            def get_nut(id_str):
-                for n in nutrients:
-                    if str(n.get("nutrientNumber")) == id_str or str(n.get("nutrientId")) == id_str:
-                        return int(round(n.get("value", 0)))
+            def get_num(key: str) -> int:
+                for suffix in ['_100g', '_serving', '_value', '']:
+                    k = f"{key}{suffix}"
+                    if k in nutriments:
+                        try:
+                            return int(round(float(nutriments[k])))
+                        except (ValueError, TypeError):
+                            pass
                 return 0
-                
-            cal = get_nut("1008")
-            protein = get_nut("1003")
-            carbs = get_nut("1005")
-            fat = get_nut("1004")
+
+            # Name logic
+            name_en = p.get('product_name_en') or p.get('product_name')
+            name_fr = p.get('product_name_fr')
+            name_ar = p.get('product_name_ar')
+            brand = p.get('brands', '')
             
+            primary_name = name_en or name_fr or name_ar or "Unknown Product"
+            if brand and brand.lower() not in primary_name.lower():
+                primary_name = f"{primary_name} ({brand})"
+
+            calories = get_num('energy-kcal')
+            if calories == 0:
+                kj = get_num('energy-kj') or get_num('energy')
+                if kj > 0:
+                    calories = int(round(kj / 4.184))
+
             results.append({
-                "name": f.get("description", "Unknown Food").title(),
-                "brand": f.get("brandOwner", ""),
-                "calories": cal,
-                "protein": protein,
-                "carbs": carbs,
-                "fat": fat,
-                "serving_size": f"{f.get('servingSize', 100)} {f.get('servingSizeUnit', 'g')}" if f.get('servingSize') else "100 g"
+                "name": primary_name.title(),
+                "name_en": name_en,
+                "name_fr": name_fr,
+                "name_ar": name_ar,
+                "brand": brand,
+                "image_url": p.get('image_small_url'),
+                "calories": calories,
+                "protein": get_num('proteins'),
+                "carbs": get_num('carbohydrates'),
+                "fat": get_num('fat'),
+                "serving_size": "100 g" # Default for OFF nutriments_100g
             })
             
         return {"results": results}
-    except HTTPException:
-        raise
     except Exception as e:
-        logger.error(f"FDC lookup error: {e}")
-        raise HTTPException(status_code=500, detail="Internal error during FDC lookup.")
+        logger.error(f"OFF search error: {e}")
+        # Final fallback
+        return await _search_usda_fallback(query)
+
+async def _search_usda_fallback(query: str):
+    """Fallback to USDA FDC if Open Food Facts fails."""
+    import httpx
+    if not _FOODDATA_API_KEY:
+        return {"results": []}
+    
+    url = "https://api.nal.usda.gov/fdc/v1/foods/search"
+    params = {"api_key": _FOODDATA_API_KEY, "query": query, "pageSize": 10}
+    
+    try:
+        async with httpx.AsyncClient() as http:
+            response = await http.get(url, params=params, timeout=5.0)
+        if response.status_code != 200:
+            return {"results": []}
+            
+        data = response.json()
+        results = []
+        for f in data.get("foods", []):
+            nutrients = f.get("foodNutrients", [])
+            def get_nut(id_str):
+                for n in nutrients:
+                    if str(n.get("nutrientNumber")) == id_str: return int(round(n.get("value", 0)))
+                return 0
+            results.append({
+                "name": f.get("description", "Unknown").title(),
+                "brand": f.get("brandOwner", ""),
+                "calories": get_nut("1008"),
+                "protein": get_nut("1003"),
+                "carbs": get_nut("1005"),
+                "fat": get_nut("1004"),
+                "serving_size": "100 g"
+            })
+        return {"results": results}
+    except Exception:
+        return {"results": []}
+
+@router.get("/saved")
+async def get_saved_foods(
+    current_user_id: str = Depends(get_current_user_id),
+):
+    """Returns the list of foods saved by the user to their library."""
+    from models import SavedFood
+    from database import get_db
+    from sqlalchemy.orm import Session
+    
+    with next(get_db()) as db:
+        foods = db.query(SavedFood).filter(SavedFood.user_id == current_user_id).order_by(SavedFood.created_at.desc()).all()
+        res = []
+        for f in foods:
+            res.append({
+                "id": f.id,
+                "name": f.name,
+                "name_en": f.name_en,
+                "name_fr": f.name_fr,
+                "name_ar": f.name_ar,
+                "image_url": f.image_url,
+                "calories": f.calories,
+                "protein": f.protein,
+                "carbs": f.carbs,
+                "fat": f.fat,
+                "ingredients": f.ingredients,
+                "created_at": f.created_at.isoformat() if f.created_at else None
+            })
+        return res
+
+@router.post("/saved")
+async def save_food_item(
+    body: LogItemModel,
+    current_user_id: str = Depends(get_current_user_id),
+):
+    """Saves a food item to the user's personal library."""
+    from models import SavedFood
+    from database import get_db
+    
+    with next(get_db()) as db:
+        # Check if already exists to avoid duplicates (optional, based on name and macros)
+        # For now, just allow saving.
+        saved = SavedFood(
+            user_id=current_user_id,
+            name=body.name,
+            name_en=body.name_en or body.name,
+            name_fr=body.name_fr,
+            name_ar=body.name_ar,
+            image_url=body.image_url,
+            ingredients=body.ingredients,
+            calories=body.calories,
+            protein=body.protein,
+            carbs=body.carbs,
+            fat=body.fat,
+        )
+        db.add(saved)
+        db.commit()
+        return {"status": "success", "id": saved.id}
+
+@router.delete("/saved/{food_id}")
+async def delete_saved_food(
+    food_id: str,
+    current_user_id: str = Depends(get_current_user_id),
+):
+    """Removes a food item from the user's personal library."""
+    from models import SavedFood
+    from database import get_db
+    
+    with next(get_db()) as db:
+        food = db.query(SavedFood).filter(SavedFood.id == food_id, SavedFood.user_id == current_user_id).first()
+        if not food:
+            raise HTTPException(status_code=404, detail="Saved food not found.")
+        db.delete(food)
+        db.commit()
+        return {"status": "success"}
