@@ -30,7 +30,8 @@ def upload_image_to_s3(file_bytes: bytes, content_type: str) -> str:
             Bucket=bucket,
             Key=file_name,
             Body=file_bytes,
-            ContentType=content_type
+            ContentType=content_type,
+            ACL='public-read'
         )
         url = f"https://{bucket}.s3.{os.getenv('AWS_REGION', 'us-east-1')}.amazonaws.com/{file_name}"
         return url
