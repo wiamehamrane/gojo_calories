@@ -422,7 +422,10 @@ async def get_barcode_nutrition(barcode: str, current_user_id: str = Depends(get
     url = f"https://world.openfoodfacts.org/api/v2/product/{barcode}.json"
     
     try:
-        async with httpx.AsyncClient(headers={"User-Agent": "GojoCalories/1.0 (https://gojocalories.com)"}) as http:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+        }
+        async with httpx.AsyncClient(headers=headers) as http:
             response = await http.get(url, timeout=10.0)
             
         if response.status_code != 200:
@@ -480,6 +483,14 @@ async def get_barcode_nutrition(barcode: str, current_user_id: str = Depends(get
                 if len(ingredients_list) >= 15:
                     break
 
+        # Robust image extraction
+        image_url = (
+            product.get('image_small_url') or 
+            product.get('image_front_small_url') or 
+            product.get('image_url') or
+            product.get('image_front_url')
+        )
+
         return {
             "name": primary_name,
             "name_en": name_en,
@@ -490,7 +501,7 @@ async def get_barcode_nutrition(barcode: str, current_user_id: str = Depends(get
             "carbs": get_num('carbohydrates'),
             "fat": get_num('fat'),
             "brand": brand,
-            "image_url": product.get('image_front_url') or product.get('image_url'),
+            "image_url": image_url,
             "ingredients": ingredients_list
         }
     except HTTPException:
@@ -546,15 +557,19 @@ async def search_food(query: str, current_user_id: str = Depends(get_current_use
         "search_terms": query,
         "json": 1,
         "page_size": 20,
-        "fields": "product_name,product_name_en,product_name_fr,product_name_ar,brands,image_small_url,nutriments,id,code"
+        # Requesting more fields to ensure we get ingredients and all possible images
+        "fields": "product_name,product_name_en,product_name_fr,product_name_ar,brands,image_small_url,image_url,image_front_small_url,image_front_url,nutriments,id,code,ingredients_text,ingredients_text_en,ingredients_text_fr"
     }
     
     try:
-        async with httpx.AsyncClient(headers={"User-Agent": "GojoCalories/1.0 (https://gojocalories.com)"}) as http:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+        }
+        async with httpx.AsyncClient(headers=headers) as http:
             response = await http.get(url, params=params, timeout=10.0)
             
         if response.status_code != 200:
-            # Fallback to USDA if OFF is down
+            logger.warning(f"OFF Search failed with status {response.status_code}. Falling back to USDA.")
             return await _search_usda_fallback(query)
             
         data = response.json()
@@ -590,18 +605,35 @@ async def search_food(query: str, current_user_id: str = Depends(get_current_use
                 if kj > 0:
                     calories = int(round(kj / 4.184))
 
+            # Robust image extraction
+            image_url = (
+                p.get('image_small_url') or 
+                p.get('image_front_small_url') or 
+                p.get('image_url') or
+                p.get('image_front_url')
+            )
+
+            # Ingredients extraction
+            ingredients = (
+                p.get('ingredients_text_en') or 
+                p.get('ingredients_text') or 
+                p.get('ingredients_text_fr') or
+                ""
+            )
+
             results.append({
                 "name": primary_name.title(),
                 "name_en": name_en,
                 "name_fr": name_fr,
                 "name_ar": name_ar,
                 "brand": brand,
-                "image_url": p.get('image_small_url'),
+                "image_url": image_url,
+                "ingredients": ingredients,
                 "calories": calories,
                 "protein": get_num('proteins'),
                 "carbs": get_num('carbohydrates'),
                 "fat": get_num('fat'),
-                "serving_size": "100 g" # Default for OFF nutriments_100g
+                "serving_size": "100 g"
             })
             
         return {"results": results}

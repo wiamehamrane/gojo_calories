@@ -26,59 +26,67 @@ class StatsResponse(BaseModel):
 @router.get("/", response_model=List[StatsResponse])
 def get_user_stats(
     date: Optional[str] = None,
+    tz_offset: Optional[int] = Query(0, description="Timezone offset in minutes"),
     db: Session = Depends(get_db), 
     current_user_id: str = Depends(get_current_user_id)
 ):
+    """Returns daily stats computed live from FoodLog (source of truth) for the requested date."""
     import datetime as dt
-    try:
-        cache_key = f"stats_{current_user_id}_{date or 'latest'}"
-        cached_stats = redis_db.get(cache_key)
-        if cached_stats:
-            return json.loads(cached_stats)
-    except Exception:
-        pass
+    from models import FoodLog
 
-    query = db.query(DailyStats).filter(DailyStats.user_id == current_user_id)
-    
+    # Determine the target date
     if date:
         try:
             target_date = dt.datetime.strptime(date, "%Y-%m-%d").date()
-            query = query.filter(
-                DailyStats.date >= dt.datetime.combine(target_date, dt.time.min),
-                DailyStats.date < dt.datetime.combine(target_date + dt.timedelta(days=1), dt.time.min)
-            )
         except ValueError:
-            pass
-            
-    stats = query.order_by(DailyStats.date.desc()).limit(7).all()
-    
-    # Check if we have today's record. If not, synthesize it (and maybe persist it)
-    today_utc = dt.datetime.utcnow().date()
-    has_today = any(s.date.date() == today_utc for s in stats)
-    
-    if not has_today:
-        from utils.stats_utils import get_or_create_daily_stats
-        new_stat = get_or_create_daily_stats(db, current_user_id, today_utc)
-        stats.insert(0, new_stat)
-    
-    stats_data = [{
-        "user_id": s.user_id, 
-        "calorie_budget": s.calorie_budget, 
-        "calories_consumed": s.calories_consumed, 
-        "protein_consumed": s.protein_consumed, 
-        "carbs_consumed": s.carbs_consumed, 
-        "fat_consumed": s.fat_consumed,
-        "protein_target": s.protein_target,
-        "carbs_target": s.carbs_target,
-        "fat_target": s.fat_target
-    } for s in stats]
-    
-    try:
-        redis_db.setex(cache_key, 300, json.dumps(stats_data))
-    except Exception:
-        pass
-    
-    return stats_data
+            target_date = dt.datetime.utcnow().date()
+    else:
+        target_date = dt.datetime.utcnow().date()
+
+    # Get or create DailyStats for budget/targets (these are set by user profile)
+    from utils.stats_utils import get_or_create_daily_stats
+    stat = get_or_create_daily_stats(db, current_user_id, target_date)
+
+    # Compute actual consumed macros by summing FoodLog entries for that local date
+    # Convert local date window to UTC window using tz_offset
+    offset = tz_offset or 0
+    local_midnight = dt.datetime.combine(target_date, dt.time.min)
+    window_start = local_midnight - dt.timedelta(minutes=offset)
+    window_end = window_start + dt.timedelta(days=1)
+
+    logs = db.query(FoodLog).filter(
+        FoodLog.user_id == current_user_id,
+        FoodLog.created_at >= window_start,
+        FoodLog.created_at < window_end,
+    ).all()
+
+    calories_consumed = sum(log.calories or 0 for log in logs)
+    protein_consumed = sum(log.protein or 0 for log in logs)
+    carbs_consumed = sum(log.carbs or 0 for log in logs)
+    fat_consumed = sum(log.fat or 0 for log in logs)
+
+    # Update DailyStats so streak/history stays accurate
+    if stat.calories_consumed != calories_consumed:
+        stat.calories_consumed = calories_consumed
+        stat.protein_consumed = protein_consumed
+        stat.carbs_consumed = carbs_consumed
+        stat.fat_consumed = fat_consumed
+        db.commit()
+        db.refresh(stat)
+
+    result = [{
+        "user_id": stat.user_id,
+        "calorie_budget": stat.calorie_budget,
+        "calories_consumed": calories_consumed,
+        "protein_consumed": protein_consumed,
+        "carbs_consumed": carbs_consumed,
+        "fat_consumed": fat_consumed,
+        "protein_target": stat.protein_target,
+        "carbs_target": stat.carbs_target,
+        "fat_target": stat.fat_target,
+    }]
+
+    return result
 
 
 @router.get("/weekly")
@@ -140,27 +148,49 @@ def get_weekly_stats(
 
 
 @router.get("/streak")
-def get_streak(db: Session = Depends(get_db), current_user_id: str = Depends(get_current_user_id)):
-    """Return the user's current logging streak (consecutive days with calories_consumed > 0)."""
+def get_streak(
+    tz_offset: Optional[int] = Query(0, description="Timezone offset in minutes"),
+    db: Session = Depends(get_db),
+    current_user_id: str = Depends(get_current_user_id)
+):
+    """Return the user's current logging streak computed from FoodLog (source of truth).
+    A day counts if at least one food item was logged on that local date."""
     import datetime as dt
-    today = dt.datetime.utcnow().date()
+    from models import FoodLog
+
+    offset = tz_offset or 0
+    today_local = (dt.datetime.utcnow() + dt.timedelta(minutes=offset)).date()
+
     streak = 0
-    check_date = today
+    check_date = today_local
+    # Allow today to not count yet (don't break the streak if user hasn't logged today)
+    skip_today_check = True
 
     while True:
-        stat = db.query(DailyStats).filter(
-            DailyStats.user_id == current_user_id,
-            DailyStats.date >= dt.datetime.combine(check_date, dt.time.min),
-            DailyStats.date < dt.datetime.combine(check_date + dt.timedelta(days=1), dt.time.min),
-        ).first()
+        # Build UTC window for this local date
+        local_midnight = dt.datetime.combine(check_date, dt.time.min)
+        window_start = local_midnight - dt.timedelta(minutes=offset)
+        window_end = window_start + dt.timedelta(days=1)
 
-        if stat and stat.calories_consumed > 0:
+        count = db.query(FoodLog).filter(
+            FoodLog.user_id == current_user_id,
+            FoodLog.created_at >= window_start,
+            FoodLog.created_at < window_end,
+        ).count()
+
+        if count > 0:
             streak += 1
+            skip_today_check = False
             check_date -= dt.timedelta(days=1)
-        # If it's today and they haven't logged yet, don't break the streak from yesterday
-        elif check_date == today:
+        elif skip_today_check:
+            # Today hasn't been logged yet — check yesterday before giving up
+            skip_today_check = False
             check_date -= dt.timedelta(days=1)
         else:
+            break
+
+        # Safety: stop after 365 days
+        if (today_local - check_date).days > 365:
             break
 
     return {"streak": streak}

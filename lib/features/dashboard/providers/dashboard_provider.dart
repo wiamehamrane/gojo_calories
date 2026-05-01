@@ -27,10 +27,11 @@ class DashboardNotifier extends Notifier<models.DailyStats> {
   Future<void> _loadData(DateTime date) async {
     final dateStr =
         "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+    final tzOffset = date.timeZoneOffset.inMinutes;
     try {
       final response = await ApiClient.instance.get(
         'stats/',
-        queryParameters: {'date': dateStr},
+        queryParameters: {'date': dateStr, 'tz_offset': tzOffset},
       );
       if (response.data is List && response.data.isNotEmpty) {
         final latest = response.data.first;
@@ -137,7 +138,11 @@ final dashboardProvider =
 
 final streakProvider = FutureProvider<int>((ref) async {
   try {
-    final response = await ApiClient.instance.get('stats/streak');
+    final tzOffset = DateTime.now().timeZoneOffset.inMinutes;
+    final response = await ApiClient.instance.get(
+      'stats/streak',
+      queryParameters: {'tz_offset': tzOffset},
+    );
     if (response.statusCode == 200) {
       return response.data['streak'] as int;
     }
