@@ -12,6 +12,10 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/providers/locale_provider.dart';
 import '../../../../core/localization/translations.dart';
+import '../../../../core/providers/selected_date_provider.dart';
+import '../../../dashboard/providers/dashboard_provider.dart';
+import '../../../dashboard/providers/history_provider.dart';
+import '../../../dashboard/providers/weekly_stats_provider.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Screen

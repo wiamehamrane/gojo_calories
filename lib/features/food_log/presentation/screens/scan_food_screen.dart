@@ -11,6 +11,8 @@ import 'package:dio/dio.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../dashboard/providers/dashboard_provider.dart';
 import '../../../dashboard/providers/history_provider.dart';
+import '../../../dashboard/providers/weekly_stats_provider.dart';
+import '../../../../core/providers/selected_date_provider.dart';
 import 'package:go_router/go_router.dart';
 import 'food_detail_screen.dart';
 
