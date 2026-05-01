@@ -24,7 +24,6 @@ if os.getenv("WIPE_DB") == "true":
         from sqlalchemy import text
         conn.execute(text("DROP SCHEMA public CASCADE;"))
         conn.execute(text("CREATE SCHEMA public;"))
-        conn.execute(text("GRANT ALL ON SCHEMA public TO postgres;"))
         conn.execute(text("GRANT ALL ON SCHEMA public TO public;"))
     logger.warning("Database wiped successfully.")
 
