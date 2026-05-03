@@ -8,7 +8,7 @@
                 "ssm:GetParameter"
             ],
             "Resource": [
-                "arn:aws:ssm:us-east-1:353284254035:parameter/copilot/gojocalories/prod/secrets/*"
+                "arn:aws:ssm:us-east-1:368306127521:parameter/copilot/gojocalories/prod/secrets/*"
             ]
         }
     ]

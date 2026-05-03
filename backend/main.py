@@ -141,6 +141,10 @@ app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 def read_root():
     return {"status": "GojoCalories MVP API is running natively."}
 
+@app.get("/health")
+def health_check():
+    return {"status": "healthy"}
+
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(payments.router, prefix="/api/payments", tags=["Payments"])
 

@@ -1,0 +1,26 @@
+{
+  "Parameters": {
+    "AddonsTemplateURL": "",
+    "AppName": "gojocalories",
+    "ArtifactKeyARN": "arn:aws:kms:us-east-1:368306127521:key/4d4037b9-2097-4ae6-b8fa-50bc2cdd8586",
+    "ContainerImage": "",
+    "ContainerPort": "5000",
+    "DNSDelegated": "false",
+    "EnvFileARN": "",
+    "EnvName": "prod",
+    "HTTPSEnabled": "false",
+    "LogRetention": "30",
+    "RulePath": "/",
+    "TargetContainer": "api",
+    "TargetPort": "5000",
+    "TaskCPU": "256",
+    "TaskCount": "1",
+    "TaskMemory": "512",
+    "WorkloadName": "api"
+  },
+  "Tags": {
+    "copilot-application": "gojocalories",
+    "copilot-environment": "prod",
+    "copilot-service": "api"
+  }
+}

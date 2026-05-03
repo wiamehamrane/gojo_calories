@@ -8,11 +8,15 @@ type: Load Balanced Web Service
 
 # Distribute traffic to your service.
 http:
-  # Requests to this path will be forwarded to your service.
-  # To match all requests you can use the "/" path.
   path: '/'
-  # You can specify a custom health check path. The default is "/".
-  # healthcheck: '/'
+  alias: api.gojocalories.com
+  hosted_zone: Z0346355R6ZEM25G0C0T
+  healthcheck:
+    path: /
+    healthy_threshold: 2
+    unhealthy_threshold: 3
+    interval: 15s
+    timeout: 10s
 
 # Configuration for your containers and service.
 image:
@@ -29,6 +33,9 @@ count: 1       # Number of tasks that should be running in your service.
 exec: true     # Enable running commands in your container.
 network:
   connect: true # Enable Service Connect for intra-environment traffic between services.
+  vpc:
+    security_groups:
+      - from_cfn: ${COPILOT_APPLICATION_NAME}-${COPILOT_ENVIRONMENT_NAME}-gojodbSecurityGroup
 
 # storage:
   # readonly_fs: true       # Limit to read-only access to mounted root filesystems.
@@ -41,15 +48,17 @@ variables:                    # Pass environment variables as key value pairs.
   GOOGLE_WEB_CLIENT_ID: 980076580409-rgqujk89m5lhvsr3nfg24hhodk08uoeh.apps.googleusercontent.com
 
 secrets:
-  GEMINI_API_KEY: /copilot/gojocalories/prod/secrets/GEMINI_API_KEY
-  SECRET_KEY: /copilot/gojocalories/prod/secrets/SECRET_KEY
-  ALLOWED_ORIGINS: /copilot/gojocalories/prod/secrets/ALLOWED_ORIGINS
-  AWS_BUCKET_NAME: /copilot/gojocalories/prod/secrets/AWS_BUCKET_NAME
-  DATABASE_URL: /copilot/gojocalories/prod/secrets/DATABASE_URL
-  STRIPE_SECRET_KEY: /copilot/gojocalories/prod/secrets/STRIPE_SECRET_KEY
-  STRIPE_WEBHOOK_SECRET: /copilot/gojocalories/prod/secrets/STRIPE_WEBHOOK_SECRET
-  STRIPE_PUBLISHABLE_KEY: /copilot/gojocalories/prod/secrets/STRIPE_PUBLISHABLE_KEY
-  FOODDATA_CENTRAL_API_KEY: /copilot/gojocalories/prod/secrets/FOODDATA_CENTRAL_API_KEY
+  GEMINI_API_KEY: /copilot/${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/secrets/GEMINI_API_KEY
+  SECRET_KEY: /copilot/${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/secrets/SECRET_KEY
+  ALLOWED_ORIGINS: /copilot/${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/secrets/ALLOWED_ORIGINS
+  AWS_BUCKET_NAME: /copilot/${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/secrets/AWS_BUCKET_NAME
+  DB_SECRET:
+    from_cfn: ${COPILOT_APPLICATION_NAME}-${COPILOT_ENVIRONMENT_NAME}-gojodbAuroraSecret
+  STRIPE_SECRET_KEY: /copilot/${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/secrets/STRIPE_SECRET_KEY
+  STRIPE_WEBHOOK_SECRET: /copilot/${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/secrets/STRIPE_WEBHOOK_SECRET
+  STRIPE_PUBLISHABLE_KEY: /copilot/${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/secrets/STRIPE_PUBLISHABLE_KEY
+  FOODDATA_CENTRAL_API_KEY: /copilot/${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/secrets/FOODDATA_CENTRAL_API_KEY
+
 
 
 # Grant the task permission to access the S3 bucket
@@ -61,8 +70,14 @@ iam_policy_statements:
       - s3:GetObject
       - s3:ListBucket
     resources:
-      - arn:aws:s3:::gojo-media-uploads
-      - arn:aws:s3:::gojo-media-uploads/*
+      - arn:aws:s3:::gojocalories-media-uploads
+      - arn:aws:s3:::gojocalories-media-uploads/*
+  - effect: Allow
+    actions:
+      - ssm:GetParameters
+      - ssm:GetParameter
+    resources:
+      - arn:aws:ssm:us-east-1:368306127521:parameter/copilot/gojocalories/prod/secrets/*
 
 # You can override any of the values defined above by environment.
 
