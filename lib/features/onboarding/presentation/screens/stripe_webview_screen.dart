@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:go_router/go_router.dart';
@@ -17,6 +16,7 @@ class StripeWebViewScreen extends StatefulWidget {
 class _StripeWebViewScreenState extends State<StripeWebViewScreen> {
   late final WebViewController _controller;
   bool _isLoading = true;
+  bool _hasNavigatedToStripe = false;
 
   @override
   void initState() {
@@ -34,24 +34,41 @@ class _StripeWebViewScreenState extends State<StripeWebViewScreen> {
           },
           onPageFinished: (String url) {
             setState(() => _isLoading = false);
-            
-            // Check for success or cancel URLs if Stripe redirects there.
-            // Note: In our current setup, Stripe handles the flow on its domain.
-            // If we had success_url set to a specific path, we could intercept it here.
           },
           onWebResourceError: (WebResourceError error) {
             debugPrint('WebView error: ${error.description}');
           },
+          onUrlChange: (UrlChange change) {
+            final url = change.url?.toLowerCase() ?? '';
+            if (url.contains('checkout.stripe.com')) {
+              _hasNavigatedToStripe = true;
+            } else if (_hasNavigatedToStripe && url.contains('gojocalories.com')) {
+              if (mounted) context.pop(true);
+            }
+          },
           onNavigationRequest: (NavigationRequest request) {
+            final url = request.url.toLowerCase();
+            
+            if (url.contains('checkout.stripe.com')) {
+              _hasNavigatedToStripe = true;
+            }
+
             // Intercept success/cancel if they contain specific markers
-            if (request.url.contains('success') || request.url.contains('completed')) {
+            if (url.contains('success') || url.contains('completed') || url.contains('session_id')) {
               context.pop(true); // Return true to indicate completion
               return NavigationDecision.prevent;
             }
-            if (request.url.contains('cancel')) {
+            if (url.contains('cancel')) {
               context.pop(false);
               return NavigationDecision.prevent;
             }
+            
+            // If returning to our domain after checkout
+            if (_hasNavigatedToStripe && url.contains('gojocalories.com')) {
+              context.pop(true);
+              return NavigationDecision.prevent;
+            }
+            
             return NavigationDecision.navigate;
           },
         ),
