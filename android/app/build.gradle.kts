@@ -12,9 +12,8 @@ val keystorePropertiesFile = rootProject.file("key.properties")
 val keystoreProperties = Properties()
 if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
-} else {
-    throw GradleException("key.properties file not found at ${keystorePropertiesFile.absolutePath}")
 }
+
 
 android {
     namespace = "com.gojocalories.gojocalories"
@@ -43,18 +42,18 @@ android {
 
     signingConfigs {
         create("release") {
-            keyAlias = keystoreProperties.getProperty("keyAlias")
-            keyPassword = keystoreProperties.getProperty("keyPassword")
-            val storePath = keystoreProperties.getProperty("storeFile")
+            keyAlias = System.getenv("CM_KEY_ALIAS") ?: keystoreProperties.getProperty("keyAlias")
+            keyPassword = System.getenv("CM_KEY_PASSWORD") ?: keystoreProperties.getProperty("keyPassword")
+            val storePath = System.getenv("CM_KEYSTORE_PATH") ?: keystoreProperties.getProperty("storeFile")
             if (storePath == null) {
-                throw GradleException("storeFile not found in key.properties")
+                throw GradleException("storeFile not found in key.properties and CM_KEYSTORE_PATH is not set")
             }
             val keystoreFile = file(storePath)
             if (!keystoreFile.exists()) {
                 throw GradleException("Keystore file not found at ${keystoreFile.absolutePath}")
             }
             storeFile = keystoreFile
-            storePassword = keystoreProperties.getProperty("storePassword")
+            storePassword = System.getenv("CM_KEYSTORE_PASSWORD") ?: keystoreProperties.getProperty("storePassword")
         }
     }
 
