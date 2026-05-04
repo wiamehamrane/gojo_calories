@@ -160,7 +160,7 @@ workflows:
     environment:
       flutter: stable
       groups:
-        - android_keystore
+        - android_credentials
     scripts:
       - name: Set up keystore
         script: |
