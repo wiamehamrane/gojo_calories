@@ -5,7 +5,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:gojocalories/core/network/api_client.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:gojocalories/core/theme/app_colors.dart';
 
 class PaywallScreen extends StatefulWidget {
   const PaywallScreen({super.key});
@@ -14,10 +13,12 @@ class PaywallScreen extends StatefulWidget {
   State<PaywallScreen> createState() => _PaywallScreenState();
 }
 
-class _PaywallScreenState extends State<PaywallScreen> with WidgetsBindingObserver {
+class _PaywallScreenState extends State<PaywallScreen>
+    with WidgetsBindingObserver {
   bool _isLoading = false;
-  bool _browserOpened = false; // tracks if user already opened Stripe browser
-  bool _isVerifying = false;   // tracks if we're polling backend for payment
+  bool _browserOpened = false;
+  bool _isVerifying = false;
+  String _selectedPlan = 'yearly'; // 'yearly' or 'monthly'
 
   @override
   void initState() {
@@ -31,7 +32,6 @@ class _PaywallScreenState extends State<PaywallScreen> with WidgetsBindingObserv
     final opened = prefs.getBool('stripe_browser_opened') ?? false;
     if (opened && mounted) {
       setState(() => _browserOpened = true);
-      // Auto-verify if they just returned and the flag is set
       _verifyPayment();
     }
   }
@@ -52,49 +52,32 @@ class _PaywallScreenState extends State<PaywallScreen> with WidgetsBindingObserv
   Future<void> _subscribe() async {
     setState(() => _isLoading = true);
     try {
-      // 1. Get user ID for reference
-      final res = await ApiClient.instance.get('auth/me');
-      if (res.statusCode != 200) throw Exception('Failed to get user info');
-      final userId = res.data['user_id'].toString();
-      final userEmail = res.data['email']?.toString() ?? '';
+      final res = await ApiClient.instance.post(
+        'payments/create-checkout-session',
+        data: {'plan': _selectedPlan},
+      );
+      if (res.statusCode != 200) {
+        throw Exception('Failed to create checkout session');
+      }
 
-      // 2. Build Pricing Table HTML
-      final pricingTableHtml = """
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Pricing Table</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script async src="https://js.stripe.com/v3/pricing-table.js"></script>
-  <style>
-    body { background-color: #0A0A0A; margin: 0; padding: 0; }
-  </style>
-</head>
-<body>
-  <stripe-pricing-table 
-    pricing-table-id="prctbl_1TTAg4GkYdm9mdqzTV8XQisQ"
-    publishable-key="pk_live_51SxSM6GkYdm9mdqzm28mrh81g9APbvlhQc06fBUKac3ZDiM6gRTWKP5b0XoT7MyWZ8B95u0eZa26Ct2atQ08Dth900ovPfEVB7"
-    client-reference-id="$userId"
-    customer-email="$userEmail"
-  >
-  </stripe-pricing-table>
-</body>
-</html>
-""";
+      final url = res.data['url']?.toString();
+      if (url == null || url.isEmpty) {
+        throw Exception('No checkout URL returned');
+      }
 
-      // 3. Open HTML in WebView
       if (mounted) {
-        final result = await context.push('/stripe-checkout', extra: {
-          'htmlContent': pricingTableHtml,
-        });
-        
-        // 3. If they returned, check state
+        final result = await context.push(
+          '/stripe-checkout',
+          extra: {'url': url},
+        );
+
         final prefs = await SharedPreferences.getInstance();
         await prefs.setBool('stripe_browser_opened', true);
         setState(() => _browserOpened = true);
 
-        // If result was true (completed), auto-verify
-        if (result == true) {
+        if (result is String && result.isNotEmpty) {
+          _completeCheckout(result);
+        } else if (result == true) {
           _verifyPayment();
         }
       }
@@ -111,8 +94,38 @@ class _PaywallScreenState extends State<PaywallScreen> with WidgetsBindingObserv
     }
   }
 
-  /// Polls auth/me up to 5 times (every 2s) checking has_paid == true.
-  /// Only navigates to /home if the backend confirms the payment.
+  Future<void> _completeCheckout(String sessionId) async {
+    setState(() => _isVerifying = true);
+    try {
+      final res = await ApiClient.instance.post(
+        'payments/complete-checkout',
+        data: {'session_id': sessionId},
+      );
+
+      if (res.statusCode == 200 && res.data['status'] == 'success') {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('is_onboarded', true);
+        await prefs.remove('stripe_browser_opened');
+        if (!mounted) return;
+        context.go('/home');
+        return;
+      } else {
+        throw Exception(res.data['detail'] ?? 'Failed to complete checkout');
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Verification failed: ${e.toString()}'),
+          backgroundColor: Colors.redAccent,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isVerifying = false);
+    }
+  }
+
   Future<void> _verifyPayment() async {
     setState(() => _isVerifying = true);
     try {
@@ -122,19 +135,16 @@ class _PaywallScreenState extends State<PaywallScreen> with WidgetsBindingObserv
         if (res.statusCode == 200 && res.data['has_paid'] == true) {
           final prefs = await SharedPreferences.getInstance();
           await prefs.setBool('is_onboarded', true);
-          await prefs.remove('stripe_browser_opened'); // Clear the flag on success
+          await prefs.remove('stripe_browser_opened');
           if (!mounted) return;
           context.go('/home');
           return;
         }
       }
-      // Payment not confirmed after 5 attempts (~10 seconds)
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'Payment not confirmed yet — it may take a moment. Please try again.',
-          ),
+          content: Text('Payment not confirmed yet. Please try again.'),
           backgroundColor: Colors.orange,
           duration: Duration(seconds: 4),
         ),
@@ -154,100 +164,134 @@ class _PaywallScreenState extends State<PaywallScreen> with WidgetsBindingObserv
 
   @override
   Widget build(BuildContext context) {
+    // Design Tokens
+    const Color background = Colors.white;
+    const Color primaryDark = Color(0xFF1E3A1A); // Very dark green
+    const Color primaryMedium = Color(0xFF6B8B67); // Medium muted green
+    const Color featureBg = Color(0xFFF8FDF7); // Very light green
+    const Color selectedPlanBg = Color(0xFFEDF3EA);
+    const Color unselectedPlanBorder = Color(0xFFE3EBE1);
+    // const Color badgeBg = Color(0xFF89A982); // Unused for now, but good to have token
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: background,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(LucideIcons.x, color: AppColors.textPrimary),
-          onPressed: (_isLoading || _isVerifying) ? null : () async {
-            final prefs = await SharedPreferences.getInstance();
-            await prefs.remove('access_token');
-            await prefs.remove('stripe_browser_opened'); // clear flag on logout
-            if (context.mounted) context.go('/auth');
-          },
+          icon: const Icon(LucideIcons.x, color: primaryDark),
+          onPressed: (_isLoading || _isVerifying)
+              ? null
+              : () async {
+                  final prefs = await SharedPreferences.getInstance();
+                  await prefs.remove('access_token');
+                  await prefs.remove('stripe_browser_opened');
+                  if (context.mounted) context.go('/auth');
+                },
         ),
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Spacer(),
-              
-              // Icon / Hero Image
-              Center(
-                child: Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  child: const Center(
-                    child: Text('🥑', style: TextStyle(fontSize: 40)),
-                  ),
-                ),
+              // Icon
+              const Center(
+                child: Text('🥑', style: TextStyle(fontSize: 48)),
               ).animate().scale(duration: 500.ms, curve: Curves.easeOutBack),
-              const SizedBox(height: 32),
-              
+              const SizedBox(height: 24),
+
               // Headline
               const Text(
-                'Unlock GojoCalories Pro',
+                'GojoCalories',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 32,
                   fontWeight: FontWeight.w800,
-                  color: AppColors.textPrimary,
+                  color: primaryDark,
                   letterSpacing: -0.5,
                 ),
               ).animate().slideY(begin: 0.1, duration: 400.ms).fadeIn(),
-              const SizedBox(height: 16),
-              
+              const SizedBox(height: 8),
+
               // Subtitle
               const Text(
-                'Get full access to personalized AI nutrition tracking and advanced stats.',
+                'Your AI-Powered Nutrition Coach',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 16,
-                  color: AppColors.textSecondary,
-                  height: 1.5,
+                  color: primaryMedium,
+                  fontWeight: FontWeight.w500,
                 ),
               ).animate().fadeIn(delay: 150.ms),
-              const SizedBox(height: 48),
+              const SizedBox(height: 32),
 
               // Feature List
-              _buildFeatureRow('AI-Powered Food Logging', 200),
-              _buildFeatureRow('Advanced Macro Analytics', 250),
-              _buildFeatureRow('Personalized Meal Plans', 300),
-              _buildFeatureRow('Priority Support', 350),
-              
-              const Spacer(),
+              _buildFeatureRow(
+                'AI Food Scanner',
+                'Snap a photo, get instant calories & macros',
+                featureBg,
+                primaryMedium,
+                200,
+              ),
+              _buildFeatureRow(
+                'Smart Daily Tracking',
+                'Stay on target with personalized goals',
+                featureBg,
+                primaryMedium,
+                250,
+              ),
+              _buildFeatureRow(
+                'Unlimited Meal History',
+                'Track your journey, day by day',
+                featureBg,
+                primaryMedium,
+                300,
+              ),
 
-              // Pricing Text
-              const Text(
-                '3 Days Free, then \$4.20/month',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
-                ),
-              ).animate().fadeIn(delay: 400.ms),
-              const SizedBox(height: 16),
+              const SizedBox(height: 24),
 
-              // CTA Button — changes to "I've Completed Payment" after browser opens
+              // Plan Cards
+              _buildPlanCard(
+                    title: 'Yearly',
+                    price: '\$15.50',
+                    value: 'yearly',
+                    isSelected: _selectedPlan == 'yearly',
+                    badgeText: 'Best Value',
+                    selectedBg: selectedPlanBg,
+                    unselectedBorder: unselectedPlanBorder,
+                    primaryMedium: primaryMedium,
+                  )
+                  .animate()
+                  .slideX(begin: 0.1, duration: 400.ms)
+                  .fadeIn(delay: 350.ms),
+              const SizedBox(height: 12),
+              _buildPlanCard(
+                    title: 'Monthly',
+                    price: '\$3.00',
+                    value: 'monthly',
+                    isSelected: _selectedPlan == 'monthly',
+                    selectedBg: selectedPlanBg,
+                    unselectedBorder: unselectedPlanBorder,
+                    primaryMedium: primaryMedium,
+                  )
+                  .animate()
+                  .slideX(begin: 0.1, duration: 400.ms)
+                  .fadeIn(delay: 400.ms),
+
+              const SizedBox(height: 32),
+
+              // CTA Button
               if (!_browserOpened)
                 ElevatedButton(
                   onPressed: _isLoading ? null : _subscribe,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryDark,
+                    backgroundColor: primaryDark,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 20),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(24),
                     ),
                     elevation: 0,
                   ),
@@ -261,7 +305,7 @@ class _PaywallScreenState extends State<PaywallScreen> with WidgetsBindingObserv
                           ),
                         )
                       : const Text(
-                          'Start 3-Day Free Trial',
+                          'Start My Journey',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -269,29 +313,30 @@ class _PaywallScreenState extends State<PaywallScreen> with WidgetsBindingObserv
                         ),
                 )
               else ...[
-                // Step 1: Reopen Stripe (in case user closed it)
                 OutlinedButton(
                   onPressed: _isVerifying ? null : _subscribe,
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.white70,
-                    side: const BorderSide(color: Colors.white30),
+                    foregroundColor: primaryDark,
+                    side: const BorderSide(color: primaryDark),
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(24),
                     ),
                   ),
-                  child: const Text('Reopen Payment Page'),
+                  child: const Text(
+                    'Reopen Payment Page',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
                 const SizedBox(height: 12),
-                // Step 2: Confirm payment after completing checkout in browser
                 ElevatedButton(
                   onPressed: _isVerifying ? null : _verifyPayment,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.greenAccent.shade700,
+                    backgroundColor: primaryDark,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 20),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(24),
                     ),
                     elevation: 0,
                   ),
@@ -315,16 +360,20 @@ class _PaywallScreenState extends State<PaywallScreen> with WidgetsBindingObserv
               ],
 
               const SizedBox(height: 16),
-              
-              // Terms/Privacy
+
+              // Footer
               const Text(
-                'Cancel anytime. Secure checkout via Stripe.',
+                'Cancel anytime. No commitment.',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: AppColors.textPlaceholder,
-                ),
+                style: TextStyle(fontSize: 14, color: Colors.grey),
               ),
+              const SizedBox(height: 16),
+              const Text(
+                'Restore Purchase | Privacy Policy | Terms of Use',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 10, color: Colors.grey),
+              ),
+              const SizedBox(height: 24),
             ],
           ),
         ),
@@ -332,30 +381,145 @@ class _PaywallScreenState extends State<PaywallScreen> with WidgetsBindingObserv
     );
   }
 
-  Widget _buildFeatureRow(String text, int delayMs) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
+  Widget _buildFeatureRow(
+    String title,
+    String subtitle,
+    Color bgColor,
+    Color textColor,
+    int delayMs,
+  ) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12.0),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(16),
+      ),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(4),
-            decoration: const BoxDecoration(
-              color: AppColors.primary,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(LucideIcons.check, color: Colors.white, size: 16),
-          ),
+          Icon(LucideIcons.check, color: textColor, size: 20),
           const SizedBox(width: 16),
-          Text(
-            text,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: textColor,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: textColor.withValues(alpha: 0.8),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
-      ).animate().slideX(begin: 0.1, duration: 400.ms).fadeIn(delay: delayMs.ms),
+      ),
+    ).animate().slideX(begin: 0.1, duration: 400.ms).fadeIn(delay: delayMs.ms);
+  }
+
+  Widget _buildPlanCard({
+    required String title,
+    required String price,
+    required String value,
+    required bool isSelected,
+    required Color selectedBg,
+    required Color unselectedBorder,
+    required Color primaryMedium,
+    String? badgeText,
+  }) {
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedPlan = value;
+        });
+      },
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: isSelected ? selectedBg : Colors.white,
+              border: Border.all(
+                color: isSelected ? primaryMedium : unselectedBorder,
+                width: isSelected ? 2 : 1,
+              ),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: primaryMedium,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      price,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: primaryMedium,
+                      ),
+                    ),
+                  ],
+                ),
+                Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: isSelected ? primaryMedium : Colors.grey.shade400,
+                      width: isSelected ? 6 : 2, // Gives the checked appearance
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (badgeText != null)
+            Positioned(
+              top: -12,
+              right: 16,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF89A982),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  badgeText,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

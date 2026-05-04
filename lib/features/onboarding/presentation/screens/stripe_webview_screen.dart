@@ -43,7 +43,15 @@ class _StripeWebViewScreenState extends State<StripeWebViewScreen> {
             if (url.contains('checkout.stripe.com')) {
               _hasNavigatedToStripe = true;
             } else if (_hasNavigatedToStripe && url.contains('gojocalories.com')) {
-              if (mounted) context.pop(true);
+              if (mounted) {
+                try {
+                  final uri = Uri.parse(change.url!);
+                  final sessionId = uri.queryParameters['session_id'];
+                  context.pop(sessionId ?? true);
+                } catch (e) {
+                  context.pop(true);
+                }
+              }
             }
           },
           onNavigationRequest: (NavigationRequest request) {
@@ -55,7 +63,13 @@ class _StripeWebViewScreenState extends State<StripeWebViewScreen> {
 
             // Intercept success/cancel if they contain specific markers
             if (url.contains('success') || url.contains('completed') || url.contains('session_id')) {
-              context.pop(true); // Return true to indicate completion
+              try {
+                final uri = Uri.parse(request.url);
+                final sessionId = uri.queryParameters['session_id'];
+                context.pop(sessionId ?? true); // Return sessionId if available, else true
+              } catch (e) {
+                context.pop(true);
+              }
               return NavigationDecision.prevent;
             }
             if (url.contains('cancel')) {

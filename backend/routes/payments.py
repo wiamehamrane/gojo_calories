@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Header, status
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from database import get_db
 import models
@@ -96,12 +97,20 @@ async def create_portal_session(
         logger.error(f"Error creating Stripe portal session: {str(e)}", exc_info=True)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
+class CreateCheckoutSessionRequest(BaseModel):
+    plan: str = "yearly"
+
 @router.post("/create-checkout-session")
 async def create_checkout_session(
+    request: CreateCheckoutSessionRequest,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     try:
+        is_yearly = request.plan == "yearly"
+        unit_amount = 1550 if is_yearly else 300
+        interval = "year" if is_yearly else "month"
+        
         checkout_session = stripe.checkout.Session.create(
             customer_email=current_user.email,
             payment_method_types=['card'],
@@ -113,13 +122,16 @@ async def create_checkout_session(
                             'name': 'GojoCalories Premium',
                             'description': 'AI Nutrition Tracking & Analysis',
                         },
-                        'unit_amount': 999, # $9.99
-                        'recurring': {'interval': 'month'},
+                        'unit_amount': unit_amount, 
+                        'recurring': {'interval': interval},
                     },
                     'quantity': 1,
                 },
             ],
             mode='subscription',
+            subscription_data={
+                'trial_period_days': 3,
+            },
             success_url="https://gojocalories.com/success?session_id={CHECKOUT_SESSION_ID}",
             cancel_url="https://gojocalories.com/cancel",
             client_reference_id=current_user.id,
@@ -128,3 +140,85 @@ async def create_checkout_session(
     except Exception as e:
         logger.error(f"Error creating Stripe checkout session: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+class CompleteCheckoutRequest(BaseModel):
+    session_id: str
+
+@router.post("/complete-checkout")
+async def complete_checkout(
+    request: CompleteCheckoutRequest,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    try:
+        # Retrieve the session with subscription and default_payment_method expanded
+        session = stripe.checkout.Session.retrieve(
+            request.session_id,
+            expand=['subscription.default_payment_method', 'setup_intent.payment_method']
+        )
+
+        if session.client_reference_id != current_user.id:
+            raise HTTPException(status_code=400, detail="Invalid session reference")
+            
+        if session.payment_status not in ['paid', 'no_payment_required'] and session.status != 'complete':
+            raise HTTPException(status_code=400, detail="Payment not completed")
+
+        fingerprint = None
+        payment_method = None
+
+        if session.subscription and getattr(session.subscription, 'default_payment_method', None):
+            payment_method = session.subscription.default_payment_method
+        elif session.setup_intent and getattr(session.setup_intent, 'payment_method', None):
+            payment_method = session.setup_intent.payment_method
+
+        if payment_method and hasattr(payment_method, 'card') and payment_method.card:
+            fingerprint = payment_method.card.fingerprint
+
+        if fingerprint:
+            existing_trial = db.query(models.TrialFingerprint).filter(
+                models.TrialFingerprint.fingerprint == fingerprint,
+                models.TrialFingerprint.user_id != current_user.id
+            ).first()
+
+            if existing_trial:
+                # Cancel the subscription immediately
+                if session.subscription:
+                    sub_id = session.subscription if isinstance(session.subscription, str) else session.subscription.id
+                    stripe.Subscription.cancel(sub_id)
+                raise HTTPException(
+                    status_code=400, 
+                    detail="This card has already been used for a free trial on another account."
+                )
+
+            # Record fingerprint if not exists for this user
+            user_trial = db.query(models.TrialFingerprint).filter(
+                models.TrialFingerprint.fingerprint == fingerprint,
+                models.TrialFingerprint.user_id == current_user.id
+            ).first()
+            
+            if not user_trial:
+                new_trial = models.TrialFingerprint(
+                    fingerprint=fingerprint,
+                    user_id=current_user.id
+                )
+                db.add(new_trial)
+
+        # Update user status
+        current_user.has_paid = True
+        
+        # We might also want to set stripe_customer_id if it's not set
+        if session.customer and not current_user.stripe_customer_id:
+            current_user.stripe_customer_id = session.customer if isinstance(session.customer, str) else session.customer.id
+            
+        db.commit()
+
+        return {"status": "success", "trialActive": True}
+
+    except stripe.StripeError as e:
+        logger.error(f"Stripe Error in complete-checkout: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error completing checkout session: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")

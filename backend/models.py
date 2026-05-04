@@ -192,3 +192,13 @@ class SavedFood(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     user = relationship("User", back_populates="saved_foods")
+
+class TrialFingerprint(Base):
+    __tablename__ = "trial_fingerprints"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid, index=True)
+    fingerprint = Column(String, unique=True, index=True, nullable=False)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    user = relationship("User")
