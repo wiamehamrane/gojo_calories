@@ -56,6 +56,7 @@ class _PaywallScreenState extends State<PaywallScreen> with WidgetsBindingObserv
       final res = await ApiClient.instance.get('auth/me');
       if (res.statusCode != 200) throw Exception('Failed to get user info');
       final userId = res.data['user_id'].toString();
+      final userEmail = res.data['email']?.toString() ?? '';
 
       // 2. Build Pricing Table HTML
       final pricingTableHtml = """
@@ -74,6 +75,7 @@ class _PaywallScreenState extends State<PaywallScreen> with WidgetsBindingObserv
     pricing-table-id="prctbl_1TTAg4GkYdm9mdqzTV8XQisQ"
     publishable-key="pk_live_51SxSM6GkYdm9mdqzm28mrh81g9APbvlhQc06fBUKac3ZDiM6gRTWKP5b0XoT7MyWZ8B95u0eZa26Ct2atQ08Dth900ovPfEVB7"
     client-reference-id="$userId"
+    customer-email="$userEmail"
   >
   </stripe-pricing-table>
 </body>

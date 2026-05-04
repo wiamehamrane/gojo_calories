@@ -56,15 +56,16 @@ class _StripeWebViewScreenState extends State<StripeWebViewScreen> {
           },
         ),
       )
-      ..loadRequest(
-        widget.htmlContent != null
-            ? Uri.dataFromString(
-                widget.htmlContent!,
-                mimeType: 'text/html',
-                encoding: Encoding.getByName('utf-8'),
-              )
-            : Uri.parse(widget.url!),
+      ..setJavaScriptMode(JavaScriptMode.unrestricted);
+
+    if (widget.htmlContent != null) {
+      _controller.loadHtmlString(
+        widget.htmlContent!,
+        baseUrl: 'https://gojocalories.com',
       );
+    } else if (widget.url != null) {
+      _controller.loadRequest(Uri.parse(widget.url!));
+    }
   }
 
   @override
