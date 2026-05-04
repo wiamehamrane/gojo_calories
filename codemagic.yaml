@@ -168,12 +168,8 @@ workflows:
           if [ -n "$CM_KEYSTORE" ]; then
             echo "Setting up keystore from environment variables..."
             echo $CM_KEYSTORE | base64 --decode > /tmp/keystore.jks
-            cat <<EOF > android/key.properties
-storePassword=$CM_STORE_PASSWORD
-keyPassword=$CM_KEY_PASSWORD
-keyAlias=$CM_KEY_ALIAS
-storeFile=/tmp/keystore.jks
-EOF
+            printf "storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=/tmp/keystore.jks\n" \
+              "$CM_STORE_PASSWORD" "$CM_KEY_PASSWORD" "$CM_KEY_ALIAS" > android/key.properties
           else
             echo "Using keystore from repository..."
           fi
