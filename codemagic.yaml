@@ -169,11 +169,11 @@ workflows:
             echo "Setting up keystore from environment variables..."
             echo $CM_KEYSTORE | base64 --decode > /tmp/keystore.jks
             cat <<EOF > android/key.properties
-          storePassword=$CM_STORE_PASSWORD
-          keyPassword=$CM_KEY_PASSWORD
-          keyAlias=$CM_KEY_ALIAS
-          storeFile=codemagic.keystore
-          EOF
+storePassword=$CM_STORE_PASSWORD
+keyPassword=$CM_KEY_PASSWORD
+keyAlias=$CM_KEY_ALIAS
+storeFile=/tmp/keystore.jks
+EOF
           else
             echo "Using keystore from repository..."
           fi
