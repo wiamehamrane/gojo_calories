@@ -164,9 +164,13 @@ workflows:
     scripts:
       - name: Set up keystore
         script: |
-          # If Codemagic Environment Variables are set, override the local key.properties
-          if [ -n "$CM_KEYSTORE" ]; then
-            echo "Setting up keystore from environment variables..."
+          if [ -n "$FCI_KEYSTORE" ]; then
+            echo "Setting up keystore from Codemagic signing configuration..."
+            echo $FCI_KEYSTORE | base64 --decode > /tmp/keystore.jks
+            printf "storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=/tmp/keystore.jks\n" \
+              "$FCI_KEYSTORE_PASSWORD" "$FCI_KEY_PASSWORD" "$FCI_KEY_ALIAS" > android/key.properties
+          elif [ -n "$CM_KEYSTORE" ]; then
+            echo "Setting up keystore from custom environment variables..."
             echo $CM_KEYSTORE | base64 --decode > /tmp/keystore.jks
             printf "storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=/tmp/keystore.jks\n" \
               "$CM_STORE_PASSWORD" "$CM_KEY_PASSWORD" "$CM_KEY_ALIAS" > android/key.properties
