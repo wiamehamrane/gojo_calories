@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:url_launcher/url_launcher.dart';
 import 'package:gojocalories/core/network/api_client.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -53,43 +52,48 @@ class _PaywallScreenState extends State<PaywallScreen> with WidgetsBindingObserv
   Future<void> _subscribe() async {
     setState(() => _isLoading = true);
     try {
-      // 1. Fetch user info to pass to Stripe
+      // 1. Get user ID for reference
       final res = await ApiClient.instance.get('auth/me');
-      if (res.statusCode == 200) {
-        final userId = res.data['user_id'].toString();
-        final userEmail = res.data['email'].toString();
+      if (res.statusCode != 200) throw Exception('Failed to get user info');
+      final userId = res.data['user_id'].toString();
 
-        // 2. Build Stripe URL safely — Uri.https constructor handles all encoding
-        //    This prevents malformed URLs from breaking the Stripe checkout page.
-        final Uri stripeUrl = Uri.https(
-          'pay.gojocalories.com',
-          '/b/fZu6oHeuzdvU5nQfyW0co02',
-          {
-            'client_reference_id': userId,
-            'prefilled_email': userEmail,
-          },
-        );
+      // 2. Build Pricing Table HTML
+      final pricingTableHtml = """
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Pricing Table</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script async src="https://js.stripe.com/v3/pricing-table.js"></script>
+  <style>
+    body { background-color: #0A0A0A; margin: 0; padding: 0; }
+  </style>
+</head>
+<body>
+  <stripe-pricing-table 
+    pricing-table-id="prctbl_1TTAg4GkYdm9mdqzTV8XQisQ"
+    publishable-key="pk_live_51SxSM6GkYdm9mdqzm28mrh81g9APbvlhQc06fBUKac3ZDiM6gRTWKP5b0XoT7MyWZ8B95u0eZa26Ct2atQ08Dth900ovPfEVB7"
+    client-reference-id="$userId"
+  >
+  </stripe-pricing-table>
+</body>
+</html>
+""";
 
-        // 3. Open URL in external browser
-        final launched = await launchUrl(
-          stripeUrl,
-          mode: LaunchMode.externalApplication,
-        );
-
-        if (!launched) {
-          throw Exception('Could not launch Stripe URL');
-        }
-
-        // 4. Save state so that if the app is killed in the background,
-        //    we remember they opened the browser.
+      // 3. Open HTML in WebView
+      if (mounted) {
+        final result = await context.push('/stripe-checkout', extra: {
+          'htmlContent': pricingTableHtml,
+        });
+        
+        // 3. If they returned, check state
         final prefs = await SharedPreferences.getInstance();
         await prefs.setBool('stripe_browser_opened', true);
+        setState(() => _browserOpened = true);
 
-        // 5. Show "I've completed payment" button — do NOT redirect yet.
-        //    Payment is only confirmed when the Stripe webhook fires and
-        //    sets has_paid = true on the backend.
-        if (mounted) {
-          setState(() => _browserOpened = true);
+        // If result was true (completed), auto-verify
+        if (result == true) {
+          _verifyPayment();
         }
       }
     } catch (e) {

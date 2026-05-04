@@ -432,7 +432,7 @@ class _SuggestionRow extends StatelessWidget {
     return Image.network(
       url,
       fit: BoxFit.cover,
-      errorBuilder: (_, __, ___) => Container(
+      errorBuilder: (_, _, _) => Container(
         color: AppColors.inactive.withValues(alpha: 0.1),
         child: const Icon(LucideIcons.image, size: 20, color: AppColors.inactive),
       ),

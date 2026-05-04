@@ -96,3 +96,35 @@ async def create_portal_session(
         logger.error(f"Error creating Stripe portal session: {str(e)}", exc_info=True)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
+@router.post("/create-checkout-session")
+async def create_checkout_session(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    try:
+        checkout_session = stripe.checkout.Session.create(
+            customer_email=current_user.email,
+            payment_method_types=['card'],
+            line_items=[
+                {
+                    'price_data': {
+                        'currency': 'usd',
+                        'product_data': {
+                            'name': 'GojoCalories Premium',
+                            'description': 'AI Nutrition Tracking & Analysis',
+                        },
+                        'unit_amount': 999, # $9.99
+                        'recurring': {'interval': 'month'},
+                    },
+                    'quantity': 1,
+                },
+            ],
+            mode='subscription',
+            success_url="https://gojocalories.com/success?session_id={CHECKOUT_SESSION_ID}",
+            cancel_url="https://gojocalories.com/cancel",
+            client_reference_id=current_user.id,
+        )
+        return {"url": checkout_session.url}
+    except Exception as e:
+        logger.error(f"Error creating Stripe checkout session: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))

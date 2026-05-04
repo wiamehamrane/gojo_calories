@@ -49,7 +49,7 @@ class SavedFoodsScreen extends ConsumerWidget {
           return ListView.separated(
             padding: const EdgeInsets.all(20),
             itemCount: foods.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            separatorBuilder: (_, _) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
               final food = foods[index] as Map<String, dynamic>;
               return _FoodItemTile(food: food);

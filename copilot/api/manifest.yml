@@ -2,11 +2,9 @@
 # Read the full specification for the "Load Balanced Web Service" type at:
 #  https://aws.github.io/copilot-cli/docs/manifest/lb-web-service/
 
-# Your service name will be used in naming your resources like log groups, ECS services, etc.
 name: api
 type: Load Balanced Web Service
 
-# Distribute traffic to your service.
 http:
   path: '/'
   alias: api.gojocalories.com
@@ -18,31 +16,24 @@ http:
     interval: 15s
     timeout: 10s
 
-# Configuration for your containers and service.
 image:
-  # Docker build arguments. For additional overrides: https://aws.github.io/copilot-cli/docs/manifest/lb-web-service/#image-build
   build:
     dockerfile: backend/Dockerfile
     context: backend
-  # Port exposed through your container to route traffic to it.
   port: 5000
 
-cpu: 256       # Number of CPU units for the task.
-memory: 512    # Amount of memory in MiB used by the task.
-count: 1       # Number of tasks that should be running in your service.
-exec: true     # Enable running commands in your container.
+cpu: 256
+memory: 512
+count: 1
+exec: true
+
 network:
-  connect: true # Enable Service Connect for intra-environment traffic between services.
+  connect: true
   vpc:
     security_groups:
       - from_cfn: ${COPILOT_APPLICATION_NAME}-${COPILOT_ENVIRONMENT_NAME}-gojodbSecurityGroup
 
-# storage:
-  # readonly_fs: true       # Limit to read-only access to mounted root filesystems.
-
-# Optional fields for more advanced use-cases.
-#
-variables:                    # Pass environment variables as key value pairs.
+variables:
   LOG_LEVEL: info
   WIPE_DB: "false"
   GOOGLE_WEB_CLIENT_ID: 980076580409-rgqujk89m5lhvsr3nfg24hhodk08uoeh.apps.googleusercontent.com
@@ -59,30 +50,4 @@ secrets:
   STRIPE_PUBLISHABLE_KEY: /copilot/${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/secrets/STRIPE_PUBLISHABLE_KEY
   FOODDATA_CENTRAL_API_KEY: /copilot/${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/secrets/FOODDATA_CENTRAL_API_KEY
 
-
-
-# Grant the task permission to access the S3 bucket
-iam_policy_statements:
-  - effect: Allow
-    actions:
-      - s3:PutObject
-      - s3:PutObjectAcl
-      - s3:GetObject
-      - s3:ListBucket
-    resources:
-      - arn:aws:s3:::gojocalories-media-uploads
-      - arn:aws:s3:::gojocalories-media-uploads/*
-  - effect: Allow
-    actions:
-      - ssm:GetParameters
-      - ssm:GetParameter
-    resources:
-      - arn:aws:ssm:us-east-1:368306127521:parameter/copilot/gojocalories/prod/secrets/*
-
-# You can override any of the values defined above by environment.
-
-#environments:
-#  test:
-#    count: 2               # Number of tasks to run for the "test" environment.
-#    deployment:            # The deployment strategy for the "test" environment.
-#       rolling: 'recreate' # Stops existing tasks before new ones are started for faster deployments.
+# IAM permissions are managed via addons/s3-ssm-policy.yml
