@@ -172,7 +172,7 @@ workflows:
           storePassword=$CM_STORE_PASSWORD
           keyPassword=$CM_KEY_PASSWORD
           keyAlias=$CM_KEY_ALIAS
-          storeFile=/tmp/keystore.jks
+          storeFile=codemagic.keystore
           EOF
           else
             echo "Using keystore from repository..."

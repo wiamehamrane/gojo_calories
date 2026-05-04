@@ -43,7 +43,15 @@ android {
         create("release") {
             keyAlias = keystoreProperties.getProperty("keyAlias")
             keyPassword = keystoreProperties.getProperty("keyPassword")
-            storeFile = keystoreProperties.getProperty("storeFile")?.let { file(it) }
+            val storePath = keystoreProperties.getProperty("storeFile")
+            if (storePath == null) {
+                throw GradleException("storeFile not found in key.properties")
+            }
+            val keystoreFile = file(storePath)
+            if (!keystoreFile.exists()) {
+                throw GradleException("Keystore file not found at ${keystoreFile.absolutePath}")
+            }
+            storeFile = keystoreFile
             storePassword = keystoreProperties.getProperty("storePassword")
         }
     }
