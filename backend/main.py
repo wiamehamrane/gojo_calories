@@ -16,7 +16,7 @@ load_dotenv()
 
 os.makedirs("uploads", exist_ok=True)
 
-from routes import vision, auth, stats, groups, referrals, payments, notifications, exercises, recipes
+from routes import vision, auth, stats, groups, referrals, payments, notifications, exercises, recipes, events
 
 if os.getenv("WIPE_DB") == "true":
     logger.warning("WIPE_DB is true. Dropping all tables via SCHEMA wipe...")
@@ -156,6 +156,7 @@ app.include_router(referrals.router, prefix="/api/referrals", tags=["Referrals"]
 app.include_router(notifications.router, prefix="/api/notifications", tags=["Notifications"])
 app.include_router(exercises.router, prefix="/api/exercises", tags=["Exercises"])
 app.include_router(recipes.router, prefix="/api/recipes", tags=["Recipes"])
+app.include_router(events.router, prefix="/api/events", tags=["Events"])
 
 # Apple Sign-In callback — must be at root path to match the redirectUri
 # configured in the Flutter app: https://api.gojocalories.com/callbacks/sign_in_with_apple

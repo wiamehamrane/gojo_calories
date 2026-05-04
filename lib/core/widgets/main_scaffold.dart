@@ -16,7 +16,8 @@ class MainScaffold extends ConsumerWidget {
   static int _calculateSelectedIndex(BuildContext context) {
     final String location = GoRouterState.of(context).uri.path;
     if (location.startsWith('/home')) return 0;
-    if (location.startsWith('/profile')) return 1;
+    if (location.startsWith('/events')) return 1;
+    if (location.startsWith('/profile')) return 2;
     return -1;
   }
 
@@ -31,6 +32,9 @@ class MainScaffold extends ConsumerWidget {
         context.go('/home');
         break;
       case 1:
+        context.go('/events');
+        break;
+      case 2:
         context.go('/profile');
         break;
     }
@@ -205,10 +209,16 @@ class _FloatingNavBar extends StatelessWidget {
             onTap: () => onTap(0),
           ),
           _PillNavItem(
-            icon: LucideIcons.user,
-            label: Translations.t(lang, 'nav_profile'),
+            icon: LucideIcons.compass,
+            label: 'Events',
             isActive: currentIndex == 1,
             onTap: () => onTap(1),
+          ),
+          _PillNavItem(
+            icon: LucideIcons.user,
+            label: Translations.t(lang, 'nav_profile'),
+            isActive: currentIndex == 2,
+            onTap: () => onTap(2),
           ),
         ],
       ),

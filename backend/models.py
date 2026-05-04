@@ -51,6 +51,8 @@ class User(Base):
     exercise_logs = relationship("ExerciseLog", back_populates="user")
     recipes = relationship("Recipe", back_populates="user")
     saved_foods = relationship("SavedFood", back_populates="user")
+    created_events = relationship("Event", back_populates="creator")
+    joined_events = relationship("EventParticipant", back_populates="user")
 
 class DailyStats(Base):
     __tablename__ = "daily_stats"
@@ -202,3 +204,32 @@ class TrialFingerprint(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     user = relationship("User")
+
+class Event(Base):
+    __tablename__ = "events"
+    
+    id = Column(String(36), primary_key=True, default=generate_uuid, index=True)
+    creator_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    title = Column(String, nullable=False, index=True)
+    description = Column(Text, nullable=True)
+    event_type = Column(String, nullable=False, index=True) # e.g. soccer, marathon, walk
+    location_name = Column(String, nullable=True)
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
+    start_time = Column(DateTime, nullable=False)
+    whatsapp_link = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    
+    creator = relationship("User", back_populates="created_events")
+    participants = relationship("EventParticipant", back_populates="event", cascade="all, delete-orphan")
+
+class EventParticipant(Base):
+    __tablename__ = "event_participants"
+    
+    id = Column(String(36), primary_key=True, default=generate_uuid, index=True)
+    event_id = Column(String(36), ForeignKey("events.id"), nullable=False, index=True)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    joined_at = Column(DateTime, default=datetime.datetime.utcnow)
+    
+    event = relationship("Event", back_populates="participants")
+    user = relationship("User", back_populates="joined_events")

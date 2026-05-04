@@ -6,6 +6,7 @@ import '../../features/onboarding/presentation/screens/weight_setup_screen.dart'
 import '../../features/onboarding/presentation/screens/paywall_screen.dart';
 import '../../features/onboarding/presentation/screens/stripe_webview_screen.dart';
 import '../../features/dashboard/presentation/screens/home_screen.dart';
+import '../../features/events/presentation/screens/events_feed_screen.dart';
 
 // Import shell/layout widget
 import '../widgets/main_scaffold.dart';
@@ -80,6 +81,10 @@ final GoRouter appRouter = GoRouter(
         GoRoute(
           path: '/log',
           builder: (context, state) => const FoodLogScreen(),
+        ),
+        GoRoute(
+          path: '/events',
+          builder: (context, state) => const EventsFeedScreen(),
         ),
 
         GoRoute(
