@@ -10,6 +10,7 @@ import '../../../../core/theme/app_shadows.dart';
 import '../../../../core/providers/locale_provider.dart';
 import '../../../../core/localization/translations.dart';
 import '../../../../core/network/api_client.dart';
+import '../../../../core/services/iap_service.dart';
 
 
 
@@ -152,24 +153,51 @@ class ProfileScreen extends ConsumerWidget {
                     label: 'Manage Subscription',
                     onTap: () async {
                       try {
-                        final res = await ApiClient.instance.post('payments/create-portal-session');
-                        if (res.statusCode == 200 && res.data['url'] != null) {
-                          final uri = Uri.parse(res.data['url']);
-                          if (await canLaunchUrl(uri)) {
-                            await launchUrl(uri, mode: LaunchMode.externalApplication);
-                          }
-                        } else {
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Could not load billing portal.')),
-                            );
-                          }
+                        final uri = Uri.parse(
+                          'https://apps.apple.com/account/subscriptions',
+                        );
+                        if (await canLaunchUrl(uri)) {
+                          await launchUrl(
+                            uri,
+                            mode: LaunchMode.externalApplication,
+                          );
                         }
                       } catch (e) {
-                        debugPrint('Portal error: $e');
+                        debugPrint('Subscription management error: $e');
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('No active subscription found.')),
+                            const SnackBar(
+                              content: Text(
+                                'Could not open subscription settings.',
+                              ),
+                            ),
+                          );
+                        }
+                      }
+                    },
+                  ),
+                  _SettingsRow(
+                    icon: LucideIcons.refreshCw,
+                    label: 'Restore Purchases',
+                    onTap: () async {
+                      try {
+                        final iapService = IAPService();
+                        await iapService.initialize();
+                        await iapService.restorePurchases();
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Restore initiated. Please wait...'),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        debugPrint('Restore error: $e');
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Failed to restore purchases.'),
+                            ),
                           );
                         }
                       }

@@ -16,7 +16,7 @@ load_dotenv()
 
 os.makedirs("uploads", exist_ok=True)
 
-from routes import vision, auth, stats, groups, referrals, payments, notifications, exercises, recipes, events
+from routes import vision, auth, stats, groups, referrals, payments, notifications, exercises, recipes, events, apple_iap
 
 if os.getenv("WIPE_DB") == "true":
     logger.warning("WIPE_DB is true. Dropping all tables via SCHEMA wipe...")
@@ -55,6 +55,10 @@ try:
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS activity_level VARCHAR;"))
         # Referred by column (referral system)
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by VARCHAR;"))
+        # Apple IAP columns
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_source VARCHAR;"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS apple_original_transaction_id VARCHAR;"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_expires_at TIMESTAMP;"))
         # Multilingual food names
         conn.execute(text("ALTER TABLE food_logs ADD COLUMN IF NOT EXISTS name_en VARCHAR;"))
         conn.execute(text("ALTER TABLE food_logs ADD COLUMN IF NOT EXISTS name_fr VARCHAR;"))
@@ -147,6 +151,7 @@ def health_check():
 
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(payments.router, prefix="/api/payments", tags=["Payments"])
+app.include_router(apple_iap.router, prefix="/api/payments/apple", tags=["Apple IAP"])
 
 # Hard Paywall temporarily suspended for AWS testing mode
 app.include_router(vision.router, prefix="/api/food", tags=["Food Vision AI"])

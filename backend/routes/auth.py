@@ -274,6 +274,7 @@ def get_me(db: Session = Depends(get_db), current_user_id: str = Depends(get_cur
         "gender": user.gender,
         "activity_level": user.activity_level,
         "stripe_customer_id": user.stripe_customer_id,
+        "subscription_source": getattr(user, 'subscription_source', None),
         "referral_code": user.referral_code,
         "is_email_verified": getattr(user, 'is_email_verified', False),
     }

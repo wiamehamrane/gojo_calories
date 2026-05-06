@@ -4,7 +4,6 @@ import '../../features/onboarding/presentation/screens/splash_screen.dart';
 import '../../features/onboarding/presentation/screens/auth_screen.dart';
 import '../../features/onboarding/presentation/screens/weight_setup_screen.dart';
 import '../../features/onboarding/presentation/screens/paywall_screen.dart';
-import '../../features/onboarding/presentation/screens/stripe_webview_screen.dart';
 import '../../features/dashboard/presentation/screens/home_screen.dart';
 import '../../features/events/presentation/screens/events_feed_screen.dart';
 
@@ -54,16 +53,6 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/onboarding/paywall',
       builder: (context, state) => const PaywallScreen(),
-    ),
-    GoRoute(
-      path: '/stripe-checkout',
-      builder: (context, state) {
-        final data = state.extra as Map<String, dynamic>;
-        return StripeWebViewScreen(
-          url: data['url'] as String?,
-          htmlContent: data['htmlContent'] as String?,
-        );
-      },
     ),
 
     // App Shell

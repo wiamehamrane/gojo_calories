@@ -1,182 +1,125 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-import 'package:gojocalories/core/network/api_client.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
-class PaywallScreen extends StatefulWidget {
+import 'package:gojocalories/core/providers/iap_provider.dart';
+import 'package:gojocalories/core/services/iap_service.dart';
+
+class PaywallScreen extends ConsumerStatefulWidget {
   const PaywallScreen({super.key});
 
   @override
-  State<PaywallScreen> createState() => _PaywallScreenState();
+  ConsumerState<PaywallScreen> createState() => _PaywallScreenState();
 }
 
-class _PaywallScreenState extends State<PaywallScreen>
-    with WidgetsBindingObserver {
-  bool _isLoading = false;
-  bool _browserOpened = false;
-  bool _isVerifying = false;
+class _PaywallScreenState extends ConsumerState<PaywallScreen> {
+  String? _selectedProductId;
+  late final IAPService _iapService;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    _checkBrowserOpenedState();
-  }
-
-  Future<void> _checkBrowserOpenedState() async {
-    final prefs = await SharedPreferences.getInstance();
-    final opened = prefs.getBool('stripe_browser_opened') ?? false;
-    if (opened && mounted) {
-      setState(() => _browserOpened = true);
-      _verifyPayment();
-    }
+    _iapService = ref.read(iapServiceProvider);
+    _iapService.status.addListener(_onIAPStatusChanged);
   }
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
+    _iapService.status.removeListener(_onIAPStatusChanged);
     super.dispose();
   }
 
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && _browserOpened && !_isVerifying) {
-      _verifyPayment();
-    }
-  }
+  void _onIAPStatusChanged() {
+    final iapStatus = _iapService.status.value;
 
-  Future<void> _openPricingTable() async {
-    setState(() => _isLoading = true);
-    try {
-      final res = await ApiClient.instance.get('auth/me');
-      final userId = res.data['user_id']?.toString() ?? '';
-      final email = res.data['email']?.toString() ?? '';
+    if (!mounted) return;
 
-      final htmlContent = '''
-<!DOCTYPE html>
-<html>
-<head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <style>
-    body { margin: 0; padding: 0; background-color: #FFFFFF; }
-  </style>
-</head>
-<body>
-  <script async src="https://js.stripe.com/v3/pricing-table.js"></script>
-  <stripe-pricing-table 
-    pricing-table-id="prctbl_1TTAg4GkYdm9mdqzTV8XQisQ"
-    publishable-key="pk_live_51SxSM6GkYdm9mdqzm28mrh81g9APbvlhQc06fBUKac3ZDiM6gRTWKP5b0XoT7MyWZ8B95u0eZa26Ct2atQ08Dth900ovPfEVB7"
-    client-reference-id="$userId"
-    customer-email="$email">
-  </stripe-pricing-table>
-</body>
-</html>
-''';
-
-      if (mounted) {
-        final result = await context.push('/stripe-checkout', extra: {
-          'htmlContent': htmlContent,
-        });
-
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setBool('stripe_browser_opened', true);
-        setState(() => _browserOpened = true);
-
-        if (result is String && result.isNotEmpty) {
-          _completeCheckout(result);
-        } else if (result == true) {
-          _verifyPayment();
+    switch (iapStatus.state) {
+      case IAPState.success:
+      case IAPState.restored:
+        _onPurchaseSuccess(iapStatus.state == IAPState.restored);
+        break;
+      case IAPState.error:
+        if (iapStatus.errorMessage != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(iapStatus.errorMessage!),
+              backgroundColor: Colors.redAccent,
+              duration: const Duration(seconds: 4),
+            ),
+          );
         }
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: \${e.toString()}'),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
+        break;
+      default:
+        break;
     }
+
+    // Trigger rebuild for loading states
+    if (mounted) setState(() {});
   }
 
-  Future<void> _completeCheckout(String sessionId) async {
-    setState(() => _isVerifying = true);
-    try {
-      final res = await ApiClient.instance.post('payments/complete-checkout', data: {
-        'session_id': sessionId,
-      });
+  Future<void> _onPurchaseSuccess(bool isRestore) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('is_onboarded', true);
+    if (!mounted) return;
 
-      if (res.statusCode == 200 && res.data['status'] == 'success') {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setBool('is_onboarded', true);
-        await prefs.remove('stripe_browser_opened');
-        if (!mounted) return;
-        context.go('/home');
-        return;
-      } else {
-        throw Exception(res.data['detail'] ?? 'Failed to complete checkout');
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Verification failed: \${e.toString()}'),
-          backgroundColor: Colors.redAccent,
-          duration: const Duration(seconds: 4),
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          isRestore
+              ? 'Purchase restored successfully!'
+              : 'Subscription activated! 🎉',
         ),
-      );
-    } finally {
-      if (mounted) setState(() => _isVerifying = false);
-    }
+        backgroundColor: const Color(0xFF1E3A1A),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+
+    await Future.delayed(const Duration(milliseconds: 500));
+    if (mounted) context.go('/home');
   }
 
-  Future<void> _verifyPayment() async {
-    setState(() => _isVerifying = true);
-    try {
-      for (int attempt = 1; attempt <= 5; attempt++) {
-        await Future.delayed(const Duration(seconds: 2));
-        final res = await ApiClient.instance.get('auth/me');
-        if (res.statusCode == 200 && res.data['has_paid'] == true) {
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setBool('is_onboarded', true);
-          await prefs.remove('stripe_browser_opened');
-          if (!mounted) return;
-          context.go('/home');
-          return;
-        }
-      }
-      if (!mounted) return;
+  Future<void> _handlePurchase() async {
+    if (_selectedProductId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Payment not confirmed yet. Please try again.'),
+          content: Text('Please select a plan'),
           backgroundColor: Colors.orange,
-          duration: Duration(seconds: 4),
         ),
       );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text('Verification error: \${e.toString()}'),
-            backgroundColor: Colors.redAccent),
-      );
-    } finally {
-      if (mounted) setState(() => _isVerifying = false);
+      return;
     }
+
+    final product = _iapService.products.firstWhere(
+      (p) => p.id == _selectedProductId,
+    );
+    await _iapService.buySubscription(product);
+  }
+
+  Future<void> _handleRestore() async {
+    await _iapService.restorePurchases();
+  }
+
+  bool get _isProcessing {
+    final state = _iapService.status.value.state;
+    return state == IAPState.purchasing ||
+        state == IAPState.verifying ||
+        state == IAPState.loading;
   }
 
   @override
   Widget build(BuildContext context) {
     // Design Tokens
     const Color background = Colors.white;
-    const Color primaryDark = Color(0xFF1E3A1A); // Very dark green
-    const Color primaryMedium = Color(0xFF6B8B67); // Medium muted green
-    const Color featureBg = Color(0xFFF8FDF7); // Very light green
+    const Color primaryDark = Color(0xFF1E3A1A);
+    const Color primaryMedium = Color(0xFF6B8B67);
+    const Color featureBg = Color(0xFFF8FDF7);
+
+    final productsAsync = ref.watch(iapProductsProvider);
 
     return Scaffold(
       backgroundColor: background,
@@ -185,12 +128,11 @@ class _PaywallScreenState extends State<PaywallScreen>
         elevation: 0,
         leading: IconButton(
           icon: const Icon(LucideIcons.x, color: primaryDark),
-          onPressed: (_isLoading || _isVerifying)
+          onPressed: _isProcessing
               ? null
               : () async {
                   final prefs = await SharedPreferences.getInstance();
                   await prefs.remove('access_token');
-                  await prefs.remove('stripe_browser_opened');
                   if (context.mounted) context.go('/auth');
                 },
         ),
@@ -202,49 +144,163 @@ class _PaywallScreenState extends State<PaywallScreen>
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Expanded(
-                child: Center(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // Icon
-                        const Center(
-                          child: Text('🥑', style: TextStyle(fontSize: 48)),
-                        ).animate().scale(duration: 500.ms, curve: Curves.easeOutBack),
-                        const SizedBox(height: 24),
-                        
-                        // Headline
-                        const Text(
-                          'GojoCalories',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.w800,
-                            color: primaryDark,
-                            letterSpacing: -0.5,
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Icon
+                      const Center(
+                        child: Text('🥑', style: TextStyle(fontSize: 48)),
+                      ).animate().scale(
+                            duration: 500.ms,
+                            curve: Curves.easeOutBack,
                           ),
-                        ).animate().slideY(begin: 0.1, duration: 400.ms).fadeIn(),
-                        const SizedBox(height: 8),
-                        
-                        // Subtitle
-                        const Text(
-                          'Your AI-Powered Nutrition Coach',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: primaryMedium,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ).animate().fadeIn(delay: 150.ms),
-                        const SizedBox(height: 40),
+                      const SizedBox(height: 24),
 
-                        // Feature List
-                        _buildFeatureRow('AI Food Scanner', 'Snap a photo, get instant calories & macros', featureBg, primaryMedium, 200),
-                        _buildFeatureRow('Smart Daily Tracking', 'Stay on target with personalized goals', featureBg, primaryMedium, 250),
-                        _buildFeatureRow('Unlimited Meal History', 'Track your journey, day by day', featureBg, primaryMedium, 300),
-                      ],
-                    ),
+                      // Headline
+                      const Text(
+                        'GojoCalories',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.w800,
+                          color: primaryDark,
+                          letterSpacing: -0.5,
+                        ),
+                      )
+                          .animate()
+                          .slideY(begin: 0.1, duration: 400.ms)
+                          .fadeIn(),
+                      const SizedBox(height: 8),
+
+                      // Subtitle
+                      const Text(
+                        'Your AI-Powered Nutrition Coach',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: primaryMedium,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ).animate().fadeIn(delay: 150.ms),
+                      const SizedBox(height: 40),
+
+                      // Feature List
+                      _buildFeatureRow(
+                        'AI Food Scanner',
+                        'Snap a photo, get instant calories & macros',
+                        featureBg,
+                        primaryMedium,
+                        200,
+                      ),
+                      _buildFeatureRow(
+                        'Smart Daily Tracking',
+                        'Stay on target with personalized goals',
+                        featureBg,
+                        primaryMedium,
+                        250,
+                      ),
+                      _buildFeatureRow(
+                        'Unlimited Meal History',
+                        'Track your journey, day by day',
+                        featureBg,
+                        primaryMedium,
+                        300,
+                      ),
+
+                      const SizedBox(height: 32),
+
+                      // Plan Selection Cards
+                      productsAsync.when(
+                        data: (products) {
+                          if (products.isEmpty) {
+                            return const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(16.0),
+                                child: Text(
+                                  'Subscription plans are loading...\nPlease try again shortly.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Color(0xFF6B8B67),
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }
+
+                          // Auto-select yearly if nothing selected
+                          if (_selectedProductId == null) {
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (mounted) {
+                                setState(() {
+                                  _selectedProductId =
+                                      products.any(
+                                            (p) => p.id == kYearlyProductId,
+                                          )
+                                          ? kYearlyProductId
+                                          : products.first.id;
+                                });
+                              }
+                            });
+                          }
+
+                          return Column(
+                            children: products.map((product) {
+                              return _buildPlanCard(
+                                product: product,
+                                isSelected:
+                                    _selectedProductId == product.id,
+                                primaryDark: primaryDark,
+                                primaryMedium: primaryMedium,
+                                onTap: () {
+                                  setState(() {
+                                    _selectedProductId = product.id;
+                                  });
+                                },
+                              );
+                            }).toList(),
+                          );
+                        },
+                        loading: () => const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(24.0),
+                            child: CircularProgressIndicator(
+                              color: Color(0xFF1E3A1A),
+                            ),
+                          ),
+                        ),
+                        error: (e, _) => Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              children: [
+                                Icon(
+                                  LucideIcons.circleAlert,
+                                  color: Colors.redAccent,
+                                  size: 32,
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Could not load plans.\n${e.toString()}',
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    color: Colors.redAccent,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                TextButton(
+                                  onPressed: () =>
+                                      ref.refresh(iapProductsProvider),
+                                  child: const Text('Retry'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -252,67 +308,36 @@ class _PaywallScreenState extends State<PaywallScreen>
               const SizedBox(height: 16),
 
               // CTA Button
-              if (!_browserOpened)
-                ElevatedButton(
-                  onPressed: _isLoading ? null : _openPricingTable,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryDark,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 20),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    elevation: 0,
+              ElevatedButton(
+                onPressed: _isProcessing ? null : _handlePurchase,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryDark,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
                   ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 24,
-                          width: 24,
-                          child: CircularProgressIndicator(
-                              color: Colors.white, strokeWidth: 2),
-                        )
-                      : const Text(
-                          'View Pricing & Start Journey',
-                          style: TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.bold),
+                  elevation: 0,
+                ),
+                child: _isProcessing
+                    ? const SizedBox(
+                        height: 24,
+                        width: 24,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
                         ),
-                )
-              else ...[
-                OutlinedButton(
-                  onPressed: _isVerifying ? null : _openPricingTable,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: primaryDark,
-                    side: const BorderSide(color: primaryDark),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(24)),
-                  ),
-                  child: const Text('Reopen Payment Page',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
-                ),
-                const SizedBox(height: 12),
-                ElevatedButton(
-                  onPressed: _isVerifying ? null : _verifyPayment,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryDark,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 20),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(24)),
-                    elevation: 0,
-                  ),
-                  child: _isVerifying
-                      ? const SizedBox(
-                          height: 24,
-                          width: 24,
-                          child: CircularProgressIndicator(
-                              color: Colors.white, strokeWidth: 2),
-                        )
-                      : const Text("I've Completed Payment ✓",
-                          style: TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.bold)),
-                ),
-              ],
+                      )
+                    : Text(
+                        _iapService.status.value.state == IAPState.verifying
+                            ? 'Verifying...'
+                            : 'Start Your Journey',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+              ),
 
               const SizedBox(height: 16),
 
@@ -322,11 +347,40 @@ class _PaywallScreenState extends State<PaywallScreen>
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 14, color: Colors.grey),
               ),
-              const SizedBox(height: 16),
-              const Text(
-                'Restore Purchase | Privacy Policy | Terms of Use',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 10, color: Colors.grey),
+              const SizedBox(height: 8),
+
+              // Restore & Legal Links
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  GestureDetector(
+                    onTap: _isProcessing ? null : _handleRestore,
+                    child: const Text(
+                      'Restore Purchase',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey,
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  ),
+                  const Text(
+                    '  |  ',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  const Text(
+                    'Privacy Policy',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  const Text(
+                    '  |  ',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  const Text(
+                    'Terms of Use',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
               ),
               const SizedBox(height: 8),
             ],
@@ -336,8 +390,133 @@ class _PaywallScreenState extends State<PaywallScreen>
     );
   }
 
-  Widget _buildFeatureRow(String title, String subtitle, Color bgColor,
-      Color textColor, int delayMs) {
+  Widget _buildPlanCard({
+    required ProductDetails product,
+    required bool isSelected,
+    required Color primaryDark,
+    required Color primaryMedium,
+    required VoidCallback onTap,
+  }) {
+    final isYearly = product.id == kYearlyProductId;
+    final label = isYearly ? 'Yearly' : 'Monthly';
+    final subtitle = isYearly ? 'Best Value — Save 57%' : 'Flexible month-to-month';
+
+    return GestureDetector(
+      onTap: _isProcessing ? null : onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? primaryDark.withValues(alpha: 0.06)
+              : const Color(0xFFF8FDF7),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected ? primaryDark : const Color(0xFFE8E8E8),
+            width: isSelected ? 2.0 : 1.0,
+          ),
+        ),
+        child: Row(
+          children: [
+            // Radio indicator
+            Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: isSelected ? primaryDark : Colors.grey,
+                  width: 2,
+                ),
+              ),
+              child: isSelected
+                  ? Center(
+                      child: Container(
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: primaryDark,
+                        ),
+                      ),
+                    )
+                  : null,
+            ),
+            const SizedBox(width: 16),
+
+            // Plan info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        label,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: isSelected ? primaryDark : Colors.black87,
+                        ),
+                      ),
+                      if (isYearly) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF4CAF50),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text(
+                            'BEST VALUE',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: primaryMedium,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Price
+            Text(
+              product.price,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: isSelected ? primaryDark : Colors.black87,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ).animate().fadeIn(delay: (isYearly ? 350 : 400).ms);
+  }
+
+  Widget _buildFeatureRow(
+    String title,
+    String subtitle,
+    Color bgColor,
+    Color textColor,
+    int delayMs,
+  ) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12.0),
       padding: const EdgeInsets.all(16),

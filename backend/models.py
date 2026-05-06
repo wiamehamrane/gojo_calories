@@ -38,6 +38,12 @@ class User(Base):
     stripe_customer_id = Column(String, unique=True, nullable=True, index=True)
     has_paid = Column(Boolean, default=False, nullable=False)
 
+    # Subscription source tracking ("apple" | "stripe" | None)
+    subscription_source = Column(String, nullable=True)
+    # Apple In-App Purchase
+    apple_original_transaction_id = Column(String, nullable=True, index=True)
+    subscription_expires_at = Column(DateTime, nullable=True)
+
     # Referral system
     referral_code = Column(String, unique=True, nullable=True, index=True)
     referral_balance = Column(Float, default=0.0, nullable=False)
