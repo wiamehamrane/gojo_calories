@@ -1,28 +1,28 @@
 import 'package:flutter/material.dart';
+import '../../../core/theme/app_colors.dart';
 
 class EventsTheme {
-  // Vibrant Rose
-  static const Color primary = Color(0xFFE11D48);
-  static const Color onPrimary = Color(0xFFFFFFFF);
-  // Engagement Blue
-  static const Color accent = Color(0xFF2563EB);
+  // Brand Teal
+  static const Color primary = AppColors.primary;
+  static const Color onPrimary = Colors.white;
+  static const Color accent = AppColors.primaryMid;
   
-  static const Color destructive = Color(0xFFDC2626);
+  static const Color destructive = AppColors.danger;
 
-  // Dark Mode specific colors (inspired by Whop screenshot)
-  static const Color darkBackground = Color(0xFF121212); // Deep dark
-  static const Color darkCardBackground = Color(0xFF1E1E1E); // Elevated dark
-  static const Color darkCardStroke = Color(0xFF333333); // Border
-  static const Color darkForeground = Color(0xFFFAFAFA);
-  static const Color darkMuted = Color(0xFFA0A0A0);
+  // Adaptive palette (Light mode foundation)
+  static const Color background = AppColors.background;
+  static const Color cardBackground = AppColors.surface;
+  static const Color cardStroke = AppColors.border;
+  static const Color foreground = AppColors.textPrimary;
+  static const Color muted = AppColors.textSecondary;
 
-  // Typography
-  static const String headingFont = 'Barlow Condensed';
-  static const String bodyFont = 'Barlow';
+  // Typography (Standardized to Inter)
+  static const String headingFont = 'Inter';
+  static const String bodyFont = 'Inter';
   
-  // Gradients
-  static const LinearGradient orangeGradient = LinearGradient(
-    colors: [Color(0xFFFF8C00), Color(0xFFFF5F00)],
+  // Brand Gradient
+  static const LinearGradient brandGradient = LinearGradient(
+    colors: [AppColors.primary, Color(0xFF00D1ED)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );

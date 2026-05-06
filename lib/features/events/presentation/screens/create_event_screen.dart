@@ -67,12 +67,12 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: EventsTheme.darkBackground,
+      backgroundColor: EventsTheme.background,
       appBar: AppBar(
-        backgroundColor: EventsTheme.darkBackground,
+        backgroundColor: EventsTheme.background,
         elevation: 0,
-        iconTheme: const IconThemeData(color: EventsTheme.darkForeground),
-        title: const Text('Create Event', style: TextStyle(color: EventsTheme.darkForeground, fontFamily: EventsTheme.headingFont)),
+        iconTheme: const IconThemeData(color: EventsTheme.foreground),
+        title: const Text('Create Event', style: TextStyle(color: EventsTheme.foreground, fontFamily: EventsTheme.headingFont, fontWeight: FontWeight.w700, fontSize: 20)),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
@@ -129,17 +129,17 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                         decoration: BoxDecoration(
-                          color: EventsTheme.darkCardBackground,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: EventsTheme.darkCardStroke),
+                          color: EventsTheme.cardBackground,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: EventsTheme.cardStroke),
                         ),
                         child: Row(
                           children: [
-                            Icon(LucideIcons.calendar, color: EventsTheme.darkMuted, size: 20),
+                            Icon(LucideIcons.calendar, color: EventsTheme.muted, size: 20),
                             const SizedBox(width: 12),
                             Text(
                               _selectedDate == null ? 'Select Date' : DateFormat('MMM d, yyyy').format(_selectedDate!),
-                              style: TextStyle(color: _selectedDate == null ? EventsTheme.darkMuted : EventsTheme.darkForeground),
+                              style: TextStyle(color: _selectedDate == null ? EventsTheme.muted : EventsTheme.foreground, fontWeight: FontWeight.w500),
                             ),
                           ],
                         ),
@@ -159,17 +159,17 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                         decoration: BoxDecoration(
-                          color: EventsTheme.darkCardBackground,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: EventsTheme.darkCardStroke),
+                          color: EventsTheme.cardBackground,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: EventsTheme.cardStroke),
                         ),
                         child: Row(
                           children: [
-                            Icon(LucideIcons.clock, color: EventsTheme.darkMuted, size: 20),
+                            Icon(LucideIcons.clock, color: EventsTheme.muted, size: 20),
                             const SizedBox(width: 12),
                             Text(
                               _selectedTime == null ? 'Time' : _selectedTime!.format(context),
-                              style: TextStyle(color: _selectedTime == null ? EventsTheme.darkMuted : EventsTheme.darkForeground),
+                              style: TextStyle(color: _selectedTime == null ? EventsTheme.muted : EventsTheme.foreground, fontWeight: FontWeight.w500),
                             ),
                           ],
                         ),
@@ -208,14 +208,15 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                   onPressed: _isLoading ? null : _submit,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: EventsTheme.primary,
-                    padding: const EdgeInsets.symmetric(vertical: 18),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   child: _isLoading 
                     ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                     : const Text(
-                        'Launch Event',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 1),
+                        'Create Event',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white),
                       ),
                 ),
               ),
@@ -232,10 +233,10 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
       child: Text(
         text,
         style: const TextStyle(
-          color: EventsTheme.darkForeground,
+          color: EventsTheme.foreground,
           fontFamily: EventsTheme.headingFont,
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
+          fontSize: 15,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );
@@ -248,24 +249,25 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
     String? Function(String?)? validator,
   }) {
     return TextFormField(
-      style: const TextStyle(color: EventsTheme.darkForeground),
+      style: const TextStyle(color: EventsTheme.foreground, fontSize: 15),
       maxLines: maxLines,
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: EventsTheme.darkMuted),
+        hintStyle: const TextStyle(color: EventsTheme.muted),
         filled: true,
-        fillColor: EventsTheme.darkCardBackground,
+        fillColor: EventsTheme.cardBackground,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: EventsTheme.darkCardStroke),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: EventsTheme.cardStroke),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: EventsTheme.darkCardStroke),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: EventsTheme.cardStroke),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: EventsTheme.primary),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: EventsTheme.primary, width: 2),
         ),
       ),
       onSaved: onSaved,
@@ -277,17 +279,17 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: EventsTheme.darkCardBackground,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: EventsTheme.darkCardStroke),
+        color: EventsTheme.cardBackground,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: EventsTheme.cardStroke),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: _eventType,
-          dropdownColor: EventsTheme.darkCardBackground,
-          icon: Icon(LucideIcons.chevronDown, color: EventsTheme.darkMuted),
+          dropdownColor: EventsTheme.cardBackground,
+          icon: Icon(LucideIcons.chevronDown, color: EventsTheme.muted),
           isExpanded: true,
-          style: const TextStyle(color: EventsTheme.darkForeground, fontSize: 16),
+          style: const TextStyle(color: EventsTheme.foreground, fontSize: 15, fontWeight: FontWeight.w500),
           items: ['Running', 'Walking', 'Soccer', 'Cycling', 'Other'].map((String value) {
             return DropdownMenuItem<String>(
               value: value,

@@ -67,35 +67,36 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const Scaffold(
-        backgroundColor: EventsTheme.darkBackground,
+        backgroundColor: EventsTheme.background,
         body: Center(child: CircularProgressIndicator(color: EventsTheme.primary)),
       );
     }
 
     if (_event == null) {
       return Scaffold(
-        backgroundColor: EventsTheme.darkBackground,
-        appBar: AppBar(backgroundColor: EventsTheme.darkBackground, elevation: 0),
-        body: const Center(child: Text('Event not found', style: TextStyle(color: EventsTheme.darkForeground))),
+        backgroundColor: EventsTheme.background,
+        appBar: AppBar(backgroundColor: EventsTheme.background, elevation: 0),
+        body: const Center(child: Text('Event not found', style: TextStyle(color: EventsTheme.foreground))),
       );
     }
 
     final dateFormat = DateFormat('EEEE, MMMM d • h:mm a');
 
     return Scaffold(
-      backgroundColor: EventsTheme.darkBackground,
+      backgroundColor: EventsTheme.background,
       body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
         slivers: [
           SliverAppBar(
-            backgroundColor: EventsTheme.darkBackground,
-            expandedHeight: 250,
+            backgroundColor: EventsTheme.primary,
+            expandedHeight: 200,
             pinned: true,
             iconTheme: const IconThemeData(color: Colors.white),
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
-                decoration: const BoxDecoration(gradient: EventsTheme.orangeGradient),
+                decoration: const BoxDecoration(gradient: EventsTheme.brandGradient),
                 child: Center(
-                  child: Icon(LucideIcons.calendarDays, size: 80, color: Colors.white.withValues(alpha: 0.3)),
+                  child: Icon(LucideIcons.calendar, size: 60, color: Colors.white.withValues(alpha: 0.2)),
                 ),
               ),
             ),
@@ -105,18 +106,18 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
             sliver: SliverList(
               delegate: SliverChildListDelegate([
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: EventsTheme.darkCardStroke,
-                    borderRadius: BorderRadius.circular(12),
+                    color: EventsTheme.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     _event!.eventType.toUpperCase(),
                     style: const TextStyle(
-                      color: EventsTheme.darkForeground,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1,
-                      fontSize: 12,
+                      color: EventsTheme.primary,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.5,
+                      fontSize: 11,
                     ),
                   ),
                 ),
@@ -124,10 +125,10 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                 Text(
                   _event!.title,
                   style: const TextStyle(
-                    color: EventsTheme.darkForeground,
+                    color: EventsTheme.foreground,
                     fontFamily: EventsTheme.headingFont,
-                    fontSize: 40,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 32,
+                    fontWeight: FontWeight.w800,
                     height: 1.1,
                   ),
                 ),
@@ -146,20 +147,20 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                   const Text(
                     'About this event',
                     style: TextStyle(
-                      color: EventsTheme.darkForeground,
+                      color: EventsTheme.foreground,
                       fontFamily: EventsTheme.headingFont,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                   const SizedBox(height: 12),
                   Text(
                     _event!.description!,
                     style: const TextStyle(
-                      color: EventsTheme.darkMuted,
+                      color: EventsTheme.muted,
                       fontFamily: EventsTheme.bodyFont,
-                      fontSize: 16,
-                      height: 1.5,
+                      fontSize: 15,
+                      height: 1.6,
                     ),
                   ),
                   const SizedBox(height: 48),
@@ -170,10 +171,17 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
         ],
       ),
       bottomNavigationBar: Container(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: EventsTheme.darkBackground,
-          border: Border(top: BorderSide(color: EventsTheme.darkCardStroke)),
+          color: EventsTheme.cardBackground,
+          border: Border(top: BorderSide(color: EventsTheme.cardStroke)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, -2),
+            ),
+          ],
         ),
         child: SafeArea(
           child: _buildActionButton(),
@@ -186,22 +194,22 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
     return Row(
       children: [
         Container(
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: EventsTheme.darkCardBackground,
+            color: EventsTheme.primary.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Icon(icon, color: EventsTheme.primary, size: 20),
+          child: Icon(icon, color: EventsTheme.primary, size: 22),
         ),
         const SizedBox(width: 16),
         Expanded(
           child: Text(
             text,
             style: const TextStyle(
-              color: EventsTheme.darkForeground,
+              color: EventsTheme.foreground,
               fontFamily: EventsTheme.bodyFont,
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ),
@@ -214,28 +222,30 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
       if (_event!.whatsappLink != null && _event!.whatsappLink!.isNotEmpty) {
         return ElevatedButton.icon(
           onPressed: _openWhatsApp,
-          icon: const Icon(LucideIcons.messageCircle, color: Colors.white),
+          icon: const Icon(LucideIcons.messageCircle, color: Colors.white, size: 20),
           label: const Text(
-            'Open WhatsApp Group',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+            'Join WhatsApp',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white),
           ),
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF25D366), // WhatsApp Green
+            backgroundColor: const Color(0xFF25D366),
             padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            elevation: 0,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         );
       } else {
         return ElevatedButton(
           onPressed: null,
           style: ElevatedButton.styleFrom(
-            disabledBackgroundColor: EventsTheme.darkCardStroke,
+            disabledBackgroundColor: EventsTheme.cardStroke,
             padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            elevation: 0,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
           child: const Text(
             'You are going',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: EventsTheme.darkMuted),
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: EventsTheme.muted),
           ),
         );
       }
@@ -246,13 +256,14 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
       style: ElevatedButton.styleFrom(
         backgroundColor: EventsTheme.primary,
         padding: const EdgeInsets.symmetric(vertical: 16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
       child: _isActionLoading
           ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
           : const Text(
               'Join Event',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 1),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white),
             ),
     );
   }

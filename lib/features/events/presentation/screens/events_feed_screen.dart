@@ -33,9 +33,10 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
     final eventsState = ref.watch(eventsProvider);
 
     return Scaffold(
-      backgroundColor: EventsTheme.darkBackground,
+      backgroundColor: EventsTheme.background,
       body: SafeArea(
         child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -44,13 +45,13 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
               _buildSegmentedControl(),
               const SizedBox(height: 32),
               _buildHeroSection(),
-              const SizedBox(height: 32),
+              const SizedBox(height: 40),
               _buildCreateEventPrompt(context),
               const SizedBox(height: 48),
               _buildSectionTitle('Upcoming Events'),
               const SizedBox(height: 16),
               _buildEventsList(eventsState),
-              const SizedBox(height: 40),
+              const SizedBox(height: 60),
             ],
           ),
         ),
@@ -63,29 +64,36 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       child: Row(
         children: [
-          Icon(LucideIcons.menu, color: EventsTheme.darkForeground),
+          Icon(LucideIcons.menu, color: EventsTheme.foreground),
           const SizedBox(width: 16),
           Expanded(
             child: Container(
-              height: 40,
+              height: 44,
               decoration: BoxDecoration(
-                color: EventsTheme.darkCardBackground,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: EventsTheme.darkCardStroke),
+                color: EventsTheme.cardBackground,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: EventsTheme.cardStroke),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Row(
                 children: [
-                  Icon(LucideIcons.search, color: EventsTheme.darkMuted, size: 18),
+                  Icon(LucideIcons.search, color: EventsTheme.muted, size: 20),
                   const SizedBox(width: 8),
                   Expanded(
                     child: TextField(
                       controller: _searchController,
                       onChanged: _onSearchChanged,
-                      style: const TextStyle(color: EventsTheme.darkForeground),
+                      style: TextStyle(color: EventsTheme.foreground, fontSize: 15),
                       decoration: InputDecoration(
                         hintText: 'Search events...',
-                        hintStyle: TextStyle(color: EventsTheme.darkMuted, fontFamily: EventsTheme.bodyFont),
+                        hintStyle: TextStyle(color: EventsTheme.muted, fontFamily: EventsTheme.bodyFont),
                         border: InputBorder.none,
                         isDense: true,
                         contentPadding: EdgeInsets.zero,
@@ -99,8 +107,8 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
           const SizedBox(width: 16),
           CircleAvatar(
             radius: 18,
-            backgroundColor: EventsTheme.darkCardStroke,
-            child: Text('ME', style: TextStyle(color: EventsTheme.darkForeground, fontSize: 12)),
+            backgroundColor: EventsTheme.cardStroke,
+            child: Text('ME', style: TextStyle(color: EventsTheme.foreground, fontSize: 12, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -111,8 +119,9 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
     return Center(
       child: Container(
         decoration: BoxDecoration(
-          color: EventsTheme.darkCardBackground,
-          borderRadius: BorderRadius.circular(20),
+          color: EventsTheme.cardBackground,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: EventsTheme.cardStroke),
         ),
         padding: const EdgeInsets.all(4),
         child: Row(
@@ -133,18 +142,20 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
           _isDiscover = text == 'Discover';
         });
       },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? EventsTheme.darkCardStroke : Colors.transparent,
-          borderRadius: BorderRadius.circular(16),
+          color: isSelected ? EventsTheme.primary.withValues(alpha: 0.1) : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
         ),
         child: Text(
           text,
           style: TextStyle(
-            color: isSelected ? EventsTheme.darkForeground : EventsTheme.darkMuted,
+            color: isSelected ? EventsTheme.primary : EventsTheme.muted,
             fontFamily: EventsTheme.bodyFont,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+            fontSize: 14,
           ),
         ),
       ),
@@ -153,31 +164,29 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
 
   Widget _buildHeroSection() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32.0),
+      padding: const EdgeInsets.symmetric(horizontal: 24.0),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'Find your next marathon.',
-            textAlign: TextAlign.center,
             style: TextStyle(
-              color: EventsTheme.darkForeground,
+              color: EventsTheme.foreground,
               fontFamily: EventsTheme.headingFont,
-              fontSize: 48,
-              fontWeight: FontWeight.w700,
+              fontSize: 36,
+              fontWeight: FontWeight.w800,
               height: 1.1,
-              letterSpacing: -1,
+              letterSpacing: -0.5,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           Text(
             'Join the community and get moving with over 1M+ members on GojoCalories.',
-            textAlign: TextAlign.center,
             style: TextStyle(
-              color: EventsTheme.darkMuted,
+              color: EventsTheme.muted,
               fontFamily: EventsTheme.bodyFont,
-              fontSize: 16,
-              height: 1.4,
+              fontSize: 15,
+              height: 1.5,
             ),
           ),
         ],
@@ -194,43 +203,51 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
         },
         child: Container(
           decoration: BoxDecoration(
-            color: EventsTheme.darkCardBackground,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: EventsTheme.darkCardStroke, width: 1),
+            color: EventsTheme.cardBackground,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: EventsTheme.cardStroke, width: 1),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 15,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Start a soccer match, marathon, or walk',
+                'Host a soccer match, marathon, or walk',
                 style: TextStyle(
-                  color: EventsTheme.darkMuted,
+                  color: EventsTheme.muted,
                   fontFamily: EventsTheme.bodyFont,
-                  fontSize: 16,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
               const SizedBox(height: 24),
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: EventsTheme.darkCardStroke,
+                      color: EventsTheme.primary,
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(LucideIcons.plus, color: EventsTheme.darkForeground, size: 20),
+                    child: const Icon(LucideIcons.plus, color: Colors.white, size: 20),
                   ),
                   const Spacer(),
-                  Icon(LucideIcons.mic, color: EventsTheme.darkMuted, size: 20),
+                  Icon(LucideIcons.mic, color: EventsTheme.muted.withValues(alpha: 0.5), size: 22),
                   const SizedBox(width: 16),
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: EventsTheme.darkCardStroke,
+                      color: EventsTheme.foreground,
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(LucideIcons.arrowUp, color: EventsTheme.darkForeground, size: 20),
+                    child: const Icon(LucideIcons.arrowUp, color: Colors.white, size: 20),
                   ),
                 ],
               )
@@ -247,10 +264,10 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
       child: Text(
         title,
         style: TextStyle(
-          color: EventsTheme.darkForeground,
+          color: EventsTheme.foreground,
           fontFamily: EventsTheme.headingFont,
-          fontSize: 24,
-          fontWeight: FontWeight.w600,
+          fontSize: 22,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );
@@ -260,13 +277,13 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
     return eventsState.when(
       data: (events) {
         if (events.isEmpty) {
-          return const Padding(
-            padding: EdgeInsets.all(16.0),
-            child: Text("No events found.", style: TextStyle(color: EventsTheme.darkMuted)),
+          return Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Text("No events found.", style: TextStyle(color: EventsTheme.muted, fontSize: 15)),
           );
         }
         return SizedBox(
-          height: 200,
+          height: 240,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -294,28 +311,42 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
       },
       child: Container(
         width: 280,
-        margin: const EdgeInsets.only(right: 16),
+        margin: const EdgeInsets.only(right: 16, bottom: 8),
         decoration: BoxDecoration(
-          gradient: EventsTheme.orangeGradient,
+          gradient: EventsTheme.brandGradient,
           borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: EventsTheme.primary.withValues(alpha: 0.3),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
+            ),
+          ],
         ),
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(LucideIcons.calendarDays, color: Colors.white.withValues(alpha: 0.9), size: 20),
-                const SizedBox(width: 8),
-                Text(
-                  event.eventType.toUpperCase(),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1,
-                    fontSize: 12,
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    event.eventType.toUpperCase(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.5,
+                      fontSize: 10,
+                    ),
                   ),
                 ),
+                const Spacer(),
+                Icon(LucideIcons.arrowRight, color: Colors.white, size: 18),
               ],
             ),
             const Spacer(),
@@ -326,19 +357,42 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
               style: TextStyle(
                 color: Colors.white,
                 fontFamily: EventsTheme.headingFont,
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
                 height: 1.1,
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              '${dateFormat.format(event.startTime)} • ${event.participantsCount} joined',
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.9),
-                fontFamily: EventsTheme.bodyFont,
-                fontSize: 14,
-              ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Icon(LucideIcons.calendar, color: Colors.white.withValues(alpha: 0.8), size: 14),
+                const SizedBox(width: 6),
+                Text(
+                  dateFormat.format(event.startTime),
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.9),
+                    fontFamily: EventsTheme.bodyFont,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(LucideIcons.users, color: Colors.white.withValues(alpha: 0.8), size: 14),
+                const SizedBox(width: 6),
+                Text(
+                  '${event.participantsCount} joined',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.9),
+                    fontFamily: EventsTheme.bodyFont,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
