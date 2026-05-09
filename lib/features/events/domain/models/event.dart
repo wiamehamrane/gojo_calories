@@ -9,6 +9,8 @@ class Event {
   final double? longitude;
   final DateTime startTime;
   final String? whatsappLink;
+  final String? imageUrl;
+  final int? maxParticipants;
   final DateTime createdAt;
   final int participantsCount;
   final bool isJoined;
@@ -24,6 +26,8 @@ class Event {
     this.longitude,
     required this.startTime,
     this.whatsappLink,
+    this.imageUrl,
+    this.maxParticipants,
     required this.createdAt,
     required this.participantsCount,
     required this.isJoined,
@@ -41,6 +45,8 @@ class Event {
       longitude: json['longitude'] != null ? (json['longitude'] as num).toDouble() : null,
       startTime: DateTime.parse(json['start_time'] as String),
       whatsappLink: json['whatsapp_link'] as String?,
+      imageUrl: json['image_url'] as String?,
+      maxParticipants: json['max_participants'] as int?,
       createdAt: DateTime.parse(json['created_at'] as String),
       participantsCount: json['participants_count'] as int,
       isJoined: json['is_joined'] as bool,
@@ -59,6 +65,8 @@ class Event {
       'longitude': longitude,
       'start_time': startTime.toIso8601String(),
       'whatsapp_link': whatsappLink,
+      'image_url': imageUrl,
+      'max_participants': maxParticipants,
       'created_at': createdAt.toIso8601String(),
       'participants_count': participantsCount,
       'is_joined': isJoined,

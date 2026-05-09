@@ -224,6 +224,8 @@ class Event(Base):
     longitude = Column(Float, nullable=True)
     start_time = Column(DateTime, nullable=False)
     whatsapp_link = Column(String, nullable=True)
+    image_url = Column(String, nullable=True)
+    max_participants = Column(Integer, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     
     creator = relationship("User", back_populates="created_events")

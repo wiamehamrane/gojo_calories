@@ -7,7 +7,7 @@ import re
 
 from database import get_db
 from models import User, Event, EventParticipant
-from services.auth_service import get_current_user
+from security import get_current_user
 from pydantic import BaseModel, HttpUrl
 
 router = APIRouter(prefix="/events", tags=["events"])
@@ -21,6 +21,7 @@ class EventCreate(BaseModel):
     longitude: Optional[float] = None
     start_time: datetime
     whatsapp_link: Optional[str] = None
+    max_participants: Optional[int] = None
 
 class EventResponse(BaseModel):
     id: str
@@ -33,6 +34,8 @@ class EventResponse(BaseModel):
     longitude: Optional[float]
     start_time: datetime
     whatsapp_link: Optional[str]
+    image_url: Optional[str]
+    max_participants: Optional[int]
     created_at: datetime
     participants_count: int
     is_joined: bool
@@ -60,7 +63,8 @@ def create_event(event: EventCreate, db: Session = Depends(get_db), current_user
         latitude=event.latitude,
         longitude=event.longitude,
         start_time=event.start_time,
-        whatsapp_link=event.whatsapp_link
+        whatsapp_link=event.whatsapp_link,
+        max_participants=event.max_participants
     )
     db.add(new_event)
     db.commit()
@@ -181,3 +185,28 @@ def leave_event(event_id: str, db: Session = Depends(get_db), current_user: User
     db.commit()
     
     return {"status": "success", "message": "Left event"}
+
+from fastapi import File, UploadFile
+from s3_utils import upload_image_to_s3
+
+@router.post("/{event_id}/image")
+async def upload_event_image(
+    event_id: str,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    event = db.query(Event).filter(Event.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    
+    if event.creator_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Only the creator can upload images")
+        
+    contents = await file.read()
+    image_url = upload_image_to_s3(contents, file.content_type)
+    
+    event.image_url = image_url
+    db.commit()
+    
+    return {"status": "success", "image_url": image_url}

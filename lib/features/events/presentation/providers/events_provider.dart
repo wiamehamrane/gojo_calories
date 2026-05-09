@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gojocalories/core/network/api_client.dart';
+import 'package:dio/dio.dart';
 import '../../domain/models/event.dart';
 
 class EventsNotifier extends Notifier<AsyncValue<List<Event>>> {
@@ -38,10 +40,26 @@ class EventsNotifier extends Notifier<AsyncValue<List<Event>>> {
     }
   }
 
-  Future<bool> createEvent(Map<String, dynamic> eventData) async {
+  Future<Event?> createEvent(Map<String, dynamic> eventData) async {
     try {
-      await ApiClient.instance.post('events', data: eventData);
-      fetchEvents(); // Refresh feed
+      final response = await ApiClient.instance.post('events', data: eventData);
+      await fetchEvents();
+      return Event.fromJson(response.data);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<bool> uploadEventImage(String eventId, File imageFile) async {
+    try {
+      final formData = FormData.fromMap({
+        'image': await MultipartFile.fromFile(
+          imageFile.path,
+          filename: 'event_image.jpg',
+        ),
+      });
+      await ApiClient.instance.post('events/$eventId/image', data: formData);
+      await fetchEvents();
       return true;
     } catch (e) {
       return false;
@@ -51,7 +69,7 @@ class EventsNotifier extends Notifier<AsyncValue<List<Event>>> {
   Future<bool> joinEvent(String eventId) async {
     try {
       await ApiClient.instance.post('events/$eventId/join');
-      fetchEvents(); // Refresh to update count & status
+      await fetchEvents();
       return true;
     } catch (e) {
       return false;
