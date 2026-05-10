@@ -16,7 +16,7 @@ load_dotenv()
 
 os.makedirs("uploads", exist_ok=True)
 
-from routes import vision, auth, stats, groups, referrals, payments, notifications, exercises, recipes, events, apple_iap
+from routes import vision, auth, stats, groups, referrals, payments, notifications, exercises, recipes, events, apple_iap, memories, feed, friends
 
 if os.getenv("WIPE_DB") == "true":
     logger.warning("WIPE_DB is true. Dropping all tables via SCHEMA wipe...")
@@ -93,6 +93,42 @@ try:
                 date DATE NOT NULL
             );
         """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS memories (
+                id VARCHAR(36) PRIMARY KEY,
+                user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+                image_url VARCHAR NOT NULL,
+                caption VARCHAR,
+                is_private BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS posts (
+                id VARCHAR(36) PRIMARY KEY,
+                user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+                content TEXT,
+                image_url VARCHAR,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS post_likes (
+                id VARCHAR(36) PRIMARY KEY,
+                post_id VARCHAR(36) NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+                user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS friendships (
+                id VARCHAR(36) PRIMARY KEY,
+                user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+                friend_id VARCHAR(36) NOT NULL REFERENCES users(id),
+                status VARCHAR DEFAULT 'accepted',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """))
         # Ensure daily_stats has all expected columns
         conn.execute(text("""
             DO $$ BEGIN
@@ -165,6 +201,9 @@ app.include_router(notifications.router, prefix="/api/notifications", tags=["Not
 app.include_router(exercises.router, prefix="/api/exercises", tags=["Exercises"])
 app.include_router(recipes.router, prefix="/api/recipes", tags=["Recipes"])
 app.include_router(events.router, prefix="/api/events", tags=["Events"])
+app.include_router(memories.router, prefix="/api/memories", tags=["Memories"])
+app.include_router(feed.router, prefix="/api/feed", tags=["Feed"])
+app.include_router(friends.router, prefix="/api/friends", tags=["Friends"])
 
 # Apple Sign-In callback — must be at root path to match the redirectUri
 # configured in the Flutter app: https://api.gojocalories.com/callbacks/sign_in_with_apple

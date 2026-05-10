@@ -4,6 +4,11 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
+import '../../providers/memories_provider.dart';
+import '../../providers/friends_provider.dart';
+import 'add_friend_screen.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_shadows.dart';
@@ -68,11 +73,11 @@ class ProfileScreen extends ConsumerWidget {
 
               const SizedBox(height: 24),
               _SectionLabel('Memories'),
-              _buildMemoriesGallery(),
+              _buildMemoriesGallery(ref),
 
               const SizedBox(height: 24),
               _SectionLabel('Circle of Friends'),
-              _buildCircleOfFriends(),
+              _buildCircleOfFriends(context, ref),
 
               const SizedBox(height: 24),
               _SectionLabel(t('invite_friends')),
@@ -487,48 +492,130 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildMemoriesGallery() {
-    return SizedBox(
+  Widget _buildMemoriesGallery(WidgetRef ref) {
+    final memoriesAsync = ref.watch(memoriesProvider);
+
+    return SizedBox( 
       height: 180,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        itemCount: 6,
-        separatorBuilder: (context, index) => const SizedBox(width: 12),
-        itemBuilder: (context, index) {
-          return Container(
-            width: 130,
-            decoration: BoxDecoration(
-              color: AppColors.surfaceMuted,
-              borderRadius: BorderRadius.circular(16),
-              image: DecorationImage(
-                image: NetworkImage('https://picsum.photos/seed/${index + 100}/300/400'),
-                fit: BoxFit.cover,
-              ),
-            ),
-            child: Stack(
-              children: [
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.3),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(LucideIcons.lock, size: 10, color: Colors.white),
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
+      child: memoriesAsync.when(
+        data: (memories) => ListView.separated(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          itemCount: memories.length + 1,
+          separatorBuilder: (context, index) => const SizedBox(width: 12),
+          itemBuilder: (context, index) {
+            if (index == 0) {
+              return _buildAddMemoryButton(context, ref);
+            }
+            final memory = memories[index - 1];
+            return _buildMemoryCard(memory);
+          },
+        ),
+        loading: () => const Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
+        error: (e, st) => Center(
+          child: Text(
+            'Failed to load memories',
+            style: TextStyle(color: AppColors.danger, fontSize: 12),
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildCircleOfFriends() {
+  Widget _buildAddMemoryButton(BuildContext context, WidgetRef ref) {
+    return GestureDetector(
+      onTap: () => _pickAndUploadMemory(context, ref),
+      child: Container(
+        width: 130,
+        decoration: BoxDecoration(
+          color: AppColors.surfaceMuted,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(LucideIcons.imagePlus, color: AppColors.primary, size: 20),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Add Photo',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.primary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMemoryCard(Memory memory) {
+    return Container(
+      width: 130,
+      decoration: BoxDecoration(
+        color: AppColors.surfaceMuted,
+        borderRadius: BorderRadius.circular(16),
+        image: DecorationImage(
+          image: NetworkImage(memory.imageUrl),
+          fit: BoxFit.cover,
+        ),
+      ),
+      child: Stack(
+        children: [
+          if (memory.isPrivate)
+            Positioned(
+              top: 8,
+              right: 8,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.3),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(LucideIcons.lock, size: 10, color: Colors.white),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pickAndUploadMemory(BuildContext context, WidgetRef ref) async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+    );
+
+    if (pickedFile != null) {
+      final file = File(pickedFile.path);
+      final success = await ref.read(memoriesProvider.notifier).uploadMemory(file);
+      
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(success ? 'Memory added! 🎉' : 'Upload failed. Try again.'),
+            backgroundColor: success ? Colors.green : AppColors.danger,
+          ),
+        );
+      }
+    }
+  }
+
+  Widget _buildCircleOfFriends(BuildContext context, WidgetRef ref) {
+    final friendsAsync = ref.watch(friendsProvider);
+
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -537,28 +624,50 @@ class ProfileScreen extends ConsumerWidget {
       ),
       padding: const EdgeInsets.all(16),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              ...List.generate(4, (i) => Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: CircleAvatar(
-                  radius: 18,
-                  backgroundColor: AppColors.primaryLight,
-                  child: Text(['🥑', '🏃', '💪', '🥗'][i]),
+          friendsAsync.when(
+            data: (friends) => Row(
+              children: [
+                ...friends.take(5).map((f) => Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: CircleAvatar(
+                    radius: 18,
+                    backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                    child: Text(
+                      f.name != null && f.name!.isNotEmpty ? f.name![0].toUpperCase() : '👤',
+                      style: const TextStyle(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                )),
+                GestureDetector(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const AddFriendScreen()),
+                  ),
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceMuted,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                    ),
+                    child: const Icon(LucideIcons.plus, size: 16, color: AppColors.primary),
+                  ),
                 ),
-              )),
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceMuted,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
-                ),
-                child: const Icon(LucideIcons.plus, size: 16, color: AppColors.primary),
-              ),
-            ],
+                if (friends.length > 5)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: Text(
+                      '+${friends.length - 5}',
+                      style: const TextStyle(fontSize: 12, color: AppColors.inactive, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+              ],
+            ),
+            loading: () => const SizedBox(height: 36, child: Center(child: CircularProgressIndicator(strokeWidth: 2))),
+            error: (e, st) => const Text('Failed to load circle', style: TextStyle(fontSize: 12, color: AppColors.danger)),
           ),
           const SizedBox(height: 12),
           const Text(

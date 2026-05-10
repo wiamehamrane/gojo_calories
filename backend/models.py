@@ -61,6 +61,8 @@ class User(Base):
     saved_foods = relationship("SavedFood", back_populates="user")
     created_events = relationship("Event", back_populates="creator")
     joined_events = relationship("EventParticipant", back_populates="user")
+    memories = relationship("Memory", back_populates="user", cascade="all, delete-orphan")
+    posts = relationship("Post", back_populates="user", cascade="all, delete-orphan")
 
 class DailyStats(Base):
     __tablename__ = "daily_stats"
@@ -243,3 +245,50 @@ class EventParticipant(Base):
     
     event = relationship("Event", back_populates="participants")
     user = relationship("User", back_populates="joined_events")
+
+class Memory(Base):
+    __tablename__ = "memories"
+    
+    id = Column(String(36), primary_key=True, default=generate_uuid, index=True)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    image_url = Column(String, nullable=False)
+    caption = Column(String, nullable=True)
+    is_private = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    
+    user = relationship("User", back_populates="memories")
+
+class Post(Base):
+    __tablename__ = "posts"
+    
+    id = Column(String(36), primary_key=True, default=generate_uuid, index=True)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    content = Column(Text, nullable=True)
+    image_url = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    
+    user = relationship("User", back_populates="posts")
+    likes = relationship("PostLike", back_populates="post", cascade="all, delete-orphan")
+
+class PostLike(Base):
+    __tablename__ = "post_likes"
+    
+    id = Column(String(36), primary_key=True, default=generate_uuid, index=True)
+    post_id = Column(String(36), ForeignKey("posts.id"), nullable=False, index=True)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    
+    post = relationship("Post", back_populates="likes")
+    user = relationship("User")
+
+class Friendship(Base):
+    __tablename__ = "friendships"
+    
+    id = Column(String(36), primary_key=True, default=generate_uuid, index=True)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    friend_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    status = Column(String, default="accepted") # pending, accepted
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    
+    user = relationship("User", foreign_keys=[user_id])
+    friend = relationship("User", foreign_keys=[friend_id])
