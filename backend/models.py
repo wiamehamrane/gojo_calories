@@ -27,6 +27,8 @@ class User(Base):
     age = Column(Integer, nullable=True)
     gender = Column(String, nullable=True)        # "male" | "female"
     activity_level = Column(String, default="sedentary")  # "sedentary" | "light" | "moderate" | "active" | "very_active"
+    phone = Column(String, nullable=True)
+    share_phone = Column(Boolean, default=False)
     
     # Manual overrides for nutrition goals
     manual_calories = Column(Integer, nullable=True)

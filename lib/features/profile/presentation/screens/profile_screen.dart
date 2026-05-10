@@ -66,7 +66,15 @@ class ProfileScreen extends ConsumerWidget {
                 ),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
+              _SectionLabel('Memories'),
+              _buildMemoriesGallery(),
+
+              const SizedBox(height: 24),
+              _SectionLabel('Circle of Friends'),
+              _buildCircleOfFriends(),
+
+              const SizedBox(height: 24),
               _SectionLabel(t('invite_friends')),
 
               // Invite card
@@ -417,6 +425,9 @@ class ProfileScreen extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(width: 6),
+                    if (data['phone'] != null)
+                      const Icon(LucideIcons.phone, size: 12, color: AppColors.textSecondary),
+                    const SizedBox(width: 4),
                     GestureDetector(
                       onTap: () =>
                           _showUpdateProfileBottomSheet(context, ref, data),
@@ -470,6 +481,89 @@ class ProfileScreen extends ConsumerWidget {
                 ],
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMemoriesGallery() {
+    return SizedBox(
+      height: 180,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        itemCount: 6,
+        separatorBuilder: (context, index) => const SizedBox(width: 12),
+        itemBuilder: (context, index) {
+          return Container(
+            width: 130,
+            decoration: BoxDecoration(
+              color: AppColors.surfaceMuted,
+              borderRadius: BorderRadius.circular(16),
+              image: DecorationImage(
+                image: NetworkImage('https://picsum.photos/seed/${index + 100}/300/400'),
+                fit: BoxFit.cover,
+              ),
+            ),
+            child: Stack(
+              children: [
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.3),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(LucideIcons.lock, size: 10, color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildCircleOfFriends() {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: AppShadows.cardShadow,
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              ...List.generate(4, (i) => Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: CircleAvatar(
+                  radius: 18,
+                  backgroundColor: AppColors.primaryLight,
+                  child: Text(['🥑', '🏃', '💪', '🥗'][i]),
+                ),
+              )),
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceMuted,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                ),
+                child: const Icon(LucideIcons.plus, size: 16, color: AppColors.primary),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Keep it tight. Share your progress only with people you trust.',
+            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
           ),
         ],
       ),
@@ -553,6 +647,8 @@ class _ProfileUpdateSheet extends StatefulWidget {
 class _ProfileUpdateSheetState extends State<_ProfileUpdateSheet> {
   late TextEditingController _nameCtrl;
   late TextEditingController _ageCtrl;
+  late TextEditingController _phoneCtrl;
+  bool _sharePhone = false;
   bool _loading = false;
 
   @override
@@ -560,12 +656,15 @@ class _ProfileUpdateSheetState extends State<_ProfileUpdateSheet> {
     super.initState();
     _nameCtrl = TextEditingController(text: widget.user['name']);
     _ageCtrl = TextEditingController(text: widget.user['age']?.toString());
+    _phoneCtrl = TextEditingController(text: widget.user['phone']);
+    _sharePhone = widget.user['share_phone'] ?? false;
   }
 
   @override
   void dispose() {
     _nameCtrl.dispose();
     _ageCtrl.dispose();
+    _phoneCtrl.dispose();
     super.dispose();
   }
 
@@ -574,7 +673,12 @@ class _ProfileUpdateSheetState extends State<_ProfileUpdateSheet> {
     try {
       await ApiClient.instance.put(
         'auth/me/profile',
-        data: {'name': _nameCtrl.text, 'age': int.tryParse(_ageCtrl.text)},
+        data: {
+          'name': _nameCtrl.text,
+          'age': int.tryParse(_ageCtrl.text),
+          'phone': _phoneCtrl.text,
+          'share_phone': _sharePhone,
+        },
       );
       widget.onSaved();
       if (mounted) Navigator.pop(context);
@@ -625,6 +729,25 @@ class _ProfileUpdateSheetState extends State<_ProfileUpdateSheet> {
                 labelText: 'Age',
                 border: OutlineInputBorder(),
               ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _phoneCtrl,
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(
+                labelText: 'Phone Number',
+                hintText: '+1 234 567 890',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 8),
+            SwitchListTile(
+              title: const Text('Share phone with friends'),
+              subtitle: const Text('Allow friends in your circle to see your number'),
+              value: _sharePhone,
+              onChanged: (val) => setState(() => _sharePhone = val),
+              activeThumbColor: AppColors.primary,
+              contentPadding: EdgeInsets.zero,
             ),
             const SizedBox(height: 24),
             ElevatedButton(

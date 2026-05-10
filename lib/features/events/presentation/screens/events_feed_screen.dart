@@ -24,7 +24,7 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen>
   final FocusNode _searchFocusNode = FocusNode();
 
   String _activeCategory = 'All';
-  bool _isMyEvents = false;
+  final bool _isMyEvents = false;
   bool _isSearchFocused = false;
   Timer? _debounce;
 
@@ -140,7 +140,7 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen>
                 ),
               ),
               const Spacer(),
-              _buildSegmentToggle(),
+              const Spacer(),
             ],
           ),
           const SizedBox(height: 12),
@@ -151,49 +151,7 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen>
     );
   }
 
-  Widget _buildSegmentToggle() {
-    return Container(
-      decoration: BoxDecoration(
-        color: EventsTheme.cardBackground,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: EventsTheme.cardStroke),
-      ),
-      padding: const EdgeInsets.all(3),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _buildToggleButton('Discover', !_isMyEvents),
-          _buildToggleButton('My Events', _isMyEvents),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildToggleButton(String label, bool active) {
-    return GestureDetector(
-      onTap: () {
-        setState(() => _isMyEvents = label == 'My Events');
-        _onRefresh();
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeInOut,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-        decoration: BoxDecoration(
-          color: active ? EventsTheme.primary : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: active ? Colors.white : EventsTheme.muted,
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
-    );
-  }
 
   Widget _buildSearchBar() {
     return AnimatedContainer(
@@ -367,7 +325,7 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen>
       child: Row(
         children: [
           Text(
-            _isMyEvents ? 'My Events' : (_activeCategory == 'All' ? 'Upcoming Events' : '$_activeCategory Events'),
+            _activeCategory == 'All' ? 'Upcoming Events' : '$_activeCategory Events',
             style: const TextStyle(
               color: EventsTheme.foreground,
               fontFamily: EventsTheme.headingFont,

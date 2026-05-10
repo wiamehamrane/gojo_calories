@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart' show DioException;
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -26,10 +27,8 @@ class _AuthScreenState extends State<AuthScreen>
 
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
-  final _nameCtrl = TextEditingController();
   final _emailFocus = FocusNode();
   final _passFocus = FocusNode();
-  final _nameFocus = FocusNode();
 
   @override
   void initState() {
@@ -42,10 +41,8 @@ class _AuthScreenState extends State<AuthScreen>
     _tab.dispose();
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
-    _nameCtrl.dispose();
     _emailFocus.dispose();
     _passFocus.dispose();
-    _nameFocus.dispose();
     super.dispose();
   }
 
@@ -77,9 +74,7 @@ class _AuthScreenState extends State<AuthScreen>
   Future<void> _submitEmail() async {
     final email = _emailCtrl.text.trim();
     final password = _passwordCtrl.text;
-    final name = _nameCtrl.text.trim();
     if (email.isEmpty || password.isEmpty) return;
-    if (_tab.index == 0 && name.isEmpty) return;
     if (_tab.index == 0 && !_agreedToPrivacy) {
       _showError('You must agree to the Privacy Policy to create an account.');
       return;
@@ -91,7 +86,6 @@ class _AuthScreenState extends State<AuthScreen>
       final body = _tab.index == 0
           ? {
               'email': email,
-              'name': name,
               'password': password,
             }
           : {'email': email, 'password': password};
@@ -207,34 +201,10 @@ class _AuthScreenState extends State<AuthScreen>
   Widget build(BuildContext context) {
     final bottom = MediaQuery.of(context).viewInsets.bottom;
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Colors.white,
       body: Stack(
         children: [
-          // Subtle decorative gradient blob
-          Positioned(
-            top: -120,
-            right: -80,
-            child: Container(
-              width: 320,
-              height: 320,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.primary.withValues(alpha: 0.12),
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: -60,
-            left: -60,
-            child: Container(
-              width: 220,
-              height: 220,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.primaryMid.withValues(alpha: 0.10),
-              ),
-            ),
-          ),
+          // Removed decorative blobs as per white-theme request
 
           SafeArea(
             child: GestureDetector(
@@ -352,21 +322,7 @@ class _AuthScreenState extends State<AuthScreen>
                           ),
                           child: Column(
                             children: [
-                              // Name field (sign up only)
-                              if (_tab.index == 0) ...[
-                                _buildField(
-                                  controller: _nameCtrl,
-                                  focusNode: _nameFocus,
-                                  label: 'Full name',
-                                  hint: 'John Doe',
-                                  icon: Icons.person_outline_rounded,
-                                  textInputAction: TextInputAction.next,
-                                  onSubmitted: (_) => FocusScope.of(
-                                    context,
-                                  ).requestFocus(_emailFocus),
-                                ),
-                                const SizedBox(height: 14),
-                              ],
+                              // Name field removed as per user request
 
                               _buildField(
                                 controller: _emailCtrl,
@@ -667,10 +623,10 @@ class _AuthScreenState extends State<AuthScreen>
   }
 
   Widget _googleIcon() {
-    return SizedBox(
+    return SvgPicture.asset(
+      'assets/icons/google_logo.svg',
       width: 20,
       height: 20,
-      child: CustomPaint(painter: _GoogleLogoPainter()),
     );
   }
 }
@@ -770,46 +726,4 @@ class _SocialButton extends StatelessWidget {
       ),
     );
   }
-}
-
-/// Simple Google "G" logo painter using 4-colour segments.
-class _GoogleLogoPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final c = size.center(Offset.zero);
-    final r = size.width / 2;
-    final paint = Paint()..style = PaintingStyle.fill;
-
-    final colors = [
-      const Color(0xFF4285F4),
-      const Color(0xFF34A853),
-      const Color(0xFFFBBC05),
-      const Color(0xFFEA4335),
-    ];
-    final starts = [-0.1, 0.4, 0.9, 1.4];
-    final sweeps = [0.5, 0.5, 0.5, 0.5];
-
-    for (int i = 0; i < 4; i++) {
-      paint.color = colors[i];
-      canvas.drawArc(
-        Rect.fromCircle(center: c, radius: r),
-        starts[i] * 3.14159,
-        sweeps[i] * 3.14159,
-        true,
-        paint,
-      );
-    }
-    // white center circle
-    paint.color = Colors.white;
-    canvas.drawCircle(c, r * 0.55, paint);
-    // G bar (simplified with blue rect)
-    paint.color = const Color(0xFF4285F4);
-    canvas.drawRect(
-      Rect.fromLTWH(c.dx, c.dy - r * 0.13, r * 0.9, r * 0.26),
-      paint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

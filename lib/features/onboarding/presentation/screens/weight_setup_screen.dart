@@ -16,7 +16,7 @@ class _WeightSetupScreenState extends State<WeightSetupScreen> {
   bool _isLoading = false;
   late PageController _pageCtrl;
   int _currentIndex = 0;
-  final int _totalPages = 7;
+  final int _totalPages = 8;
 
   String _gender = 'male';
   String _activityLevel = 'sedentary';
@@ -134,7 +134,18 @@ class _WeightSetupScreenState extends State<WeightSetupScreen> {
       );
 
       if (res.statusCode == 200) {
-        if (mounted) context.go('/onboarding/paywall');
+        if (mounted) {
+          // After saving, move to the loading page (step 7)
+          _pageCtrl.animateToPage(
+            7,
+            duration: const Duration(milliseconds: 600),
+            curve: Curves.easeInOut,
+          );
+          // Wait for 3 seconds then go to paywall
+          Future.delayed(const Duration(seconds: 3), () {
+            if (mounted) context.go('/onboarding/paywall');
+          });
+        }
       } else {
         _showError('Failed to save data. Please try again.');
       }
@@ -368,10 +379,12 @@ class _WeightSetupScreenState extends State<WeightSetupScreen> {
                       ],
                     ),
                   ),
+                  _buildLoadingStep(),
                 ],
               ),
             ),
             // Bottom Action Area
+            if (_currentIndex < 7)
             AnimatedPadding(
               duration: const Duration(milliseconds: 200),
               curve: Curves.easeOut,
@@ -410,7 +423,7 @@ class _WeightSetupScreenState extends State<WeightSetupScreen> {
                             ),
                           )
                         : Text(
-                            _currentIndex == _totalPages - 1
+                            _currentIndex == 6
                                 ? 'Finish Setup'
                                 : 'Continue',
                             style: const TextStyle(
@@ -426,6 +439,60 @@ class _WeightSetupScreenState extends State<WeightSetupScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildLoadingStep() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const SizedBox(height: 40),
+        SizedBox(
+          width: 120,
+          height: 120,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              CircularProgressIndicator(
+                strokeWidth: 8,
+                color: AppColors.primary.withValues(alpha: 0.2),
+                value: 1.0,
+              ),
+              const CircularProgressIndicator(
+                strokeWidth: 8,
+                color: AppColors.primaryDark,
+              ),
+              const Text(
+                '🥑',
+                style: TextStyle(fontSize: 48),
+              ).animate(onPlay: (controller) => controller.repeat())
+               .scale(duration: 1000.ms, begin: const Offset(0.8, 0.8), end: const Offset(1.2, 1.2))
+               .then()
+               .scale(duration: 1000.ms, begin: const Offset(1.2, 1.2), end: const Offset(0.8, 0.8)),
+            ],
+          ),
+        ),
+        const SizedBox(height: 48),
+        const Text(
+          'Perfecting your plan...',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.w800,
+            color: AppColors.textPrimary,
+            letterSpacing: -0.5,
+          ),
+        ).animate().fadeIn(duration: 600.ms).slideY(begin: 0.2),
+        const SizedBox(height: 12),
+        const Text(
+          'AI is calculating your custom nutritional needs.',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 16,
+            color: AppColors.textSecondary,
+          ),
+        ).animate().fadeIn(delay: 300.ms),
+      ],
     );
   }
 

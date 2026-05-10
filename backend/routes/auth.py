@@ -27,7 +27,7 @@ def _generate_code(length: int = 6) -> str:
 
 class UserCreate(BaseModel):
     email: str
-    name: str
+    name: Optional[str] = None
     password: str
     referral_code: Optional[str] = None
 
@@ -54,6 +54,8 @@ class UserProfileUpdate(BaseModel):
     protein_target: Optional[int] = None
     carbs_target: Optional[int] = None
     fat_target: Optional[int] = None
+    phone: Optional[str] = None
+    share_phone: Optional[bool] = None
 
 class UserLogin(BaseModel):
     email: str
@@ -66,6 +68,7 @@ def register(user: UserCreate, background_tasks: BackgroundTasks, db: Session = 
         raise HTTPException(status_code=400, detail="Email already registered")
     
     hashed_password = get_password_hash(user.password)
+    name = user.name or user.email.split("@")[0]
 
     while True:
         new_code = _generate_code()
@@ -74,7 +77,7 @@ def register(user: UserCreate, background_tasks: BackgroundTasks, db: Session = 
 
     new_user = User(
         email=user.email,
-        name=user.name,
+        name=name,
         hashed_password=hashed_password,
         referral_code=new_code,
         referral_balance=0.0,
@@ -277,6 +280,8 @@ def get_me(db: Session = Depends(get_db), current_user_id: str = Depends(get_cur
         "subscription_source": getattr(user, 'subscription_source', None),
         "referral_code": user.referral_code,
         "is_email_verified": getattr(user, 'is_email_verified', False),
+        "phone": user.phone,
+        "share_phone": user.share_phone,
     }
 
 @router.put("/me/profile")
@@ -316,6 +321,10 @@ def update_profile(
         user.manual_carbs = profile_data.carbs_target
     if profile_data.fat_target is not None:
         user.manual_fat = profile_data.fat_target
+    if profile_data.phone is not None:
+        user.phone = profile_data.phone
+    if profile_data.share_phone is not None:
+        user.share_phone = profile_data.share_phone
 
     db.commit()
     db.refresh(user)

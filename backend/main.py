@@ -59,6 +59,9 @@ try:
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_source VARCHAR;"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS apple_original_transaction_id VARCHAR;"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_expires_at TIMESTAMP;"))
+        # Social & Privacy
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR;"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS share_phone BOOLEAN DEFAULT FALSE;"))
         # Multilingual food names
         conn.execute(text("ALTER TABLE food_logs ADD COLUMN IF NOT EXISTS name_en VARCHAR;"))
         conn.execute(text("ALTER TABLE food_logs ADD COLUMN IF NOT EXISTS name_fr VARCHAR;"))

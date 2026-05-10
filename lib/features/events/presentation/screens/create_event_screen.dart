@@ -246,7 +246,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen>
           // Progress bar
           AnimatedBuilder(
             animation: _progressController,
-            builder: (_, __) {
+            builder: (context, child) {
               return Container(
                 height: 4,
                 decoration: BoxDecoration(

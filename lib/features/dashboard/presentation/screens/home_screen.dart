@@ -20,141 +20,185 @@ import '../widgets/calorie_ring_inner.dart';
 import '../widgets/macro_tile_inner.dart';
 import '../widgets/weekly_calendar.dart';
 import '../widgets/bmi_widget.dart';
+import '../widgets/feed_tab.dart';
+import 'package:gojocalories/features/events/presentation/screens/events_feed_screen.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    return DefaultTabController(
+      length: 3,
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              _buildHeader(context, ref),
+              _buildTabBar(context),
+              Expanded(
+                child: TabBarView(
+                  children: [
+                    _buildMacrosTab(context, ref),
+                    FeedTab(),
+                    EventsFeedScreen(),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTabBar(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      height: 40,
+      decoration: BoxDecoration(
+        color: const Color(0xFFF2F2F7),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: TabBar(
+        indicator: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        labelColor: AppColors.textPrimary,
+        unselectedLabelColor: AppColors.textSecondary,
+        labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+        unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+        indicatorSize: TabBarIndicatorSize.tab,
+        dividerColor: Colors.transparent,
+        padding: const EdgeInsets.all(3),
+        tabs: const [
+          Tab(text: 'Macros'),
+          Tab(text: 'Feed'),
+          Tab(text: 'Events'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMacrosTab(BuildContext context, WidgetRef ref) {
     final stats = ref.watch(dashboardProvider);
     final lang = ref.watch(localeProvider);
     final weeklyAsync = ref.watch(weeklyStatsProvider);
-
-    // Extract chart data if available
     final weeklyData = weeklyAsync.value;
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFFE8E8EC), AppColors.background],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 4),
+          const WeeklyCalendar(),
+          const SizedBox(height: 20),
+          // ─── Calorie Card (3 pages: Stats | Chart | BMI) ─────────
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.screenPadding,
+            ),
+            child: SizedBox(
+              height: 160,
+              child: SwipableStatCard(
+                title: 'Calories',
+                themeColor: AppColors.primaryMid,
+                chartData: weeklyData?.calorieSpots,
+                extraPage: const BmiWidget(),
+                primaryView: CalorieRingInner(stats: stats, lang: lang),
+              ),
+            ),
           ),
-        ),
-        child: SafeArea(
-          bottom: false,
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader(context, ref),
-                const SizedBox(height: 4),
-                const WeeklyCalendar(),
-                const SizedBox(height: 20),
-                // ─── Calorie Card (3 pages: Stats | Chart | BMI) ─────────
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.screenPadding,
-                  ),
-                  child: SizedBox(
-                    height: 160,
+          const SizedBox(height: AppSpacing.cardGap),
+          // ─── Macro Tiles Row ──────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.screenPadding,
+            ),
+            child: SizedBox(
+              height: 160,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
                     child: SwipableStatCard(
-                      title: 'Calories',
-                      themeColor: AppColors.primaryMid,
-                      chartData: weeklyData?.calorieSpots,
-                      extraPage: const BmiWidget(),
-                      primaryView: CalorieRingInner(stats: stats, lang: lang),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.cardGap),
-                // ─── Macro Tiles Row ──────────────────────────────────────
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.screenPadding,
-                  ),
-                  child: SizedBox(
-                    height: 160,
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Expanded(
-                          child: SwipableStatCard(
-                            title: 'Protein',
-                            themeColor: AppColors.protein,
-                            chartData: weeklyData?.proteinSpots,
-                            primaryView: MacroTileInner(
-                              macroName: Translations.t(lang, 'macro_protein'),
-                              total: stats.proteinTarget,
-                              consumed: stats.proteinConsumed,
-                              macroColor: AppColors.protein,
-                              macroIcon: LucideIcons.beef,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.macroTileGap),
-                        Expanded(
-                          child: SwipableStatCard(
-                            title: 'Carbs',
-                            themeColor: AppColors.carbs,
-                            chartData: weeklyData?.carbsSpots,
-                            primaryView: MacroTileInner(
-                              macroName: Translations.t(lang, 'macro_carbs'),
-                              total: stats.carbsTarget,
-                              consumed: stats.carbsConsumed,
-                              macroColor: AppColors.carbs,
-                              macroIcon: LucideIcons.wheat,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.macroTileGap),
-                        Expanded(
-                          child: SwipableStatCard(
-                            title: 'Fats',
-                            themeColor: AppColors.fats,
-                            chartData: weeklyData?.fatSpots,
-                            primaryView: MacroTileInner(
-                              macroName: Translations.t(lang, 'macro_fats'),
-                              total: stats.fatTarget,
-                              consumed: stats.fatConsumed,
-                              macroColor: AppColors.fats,
-                              macroIcon: LucideIcons.droplets,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 28),
-                // ─── Section Header ───────────────────────────────────────
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.screenPadding,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        Translations.t(lang, 'recently_uploaded'),
-                        style: AppTextStyles.sectionHeader
-                            .copyWith(color: Colors.black),
+                      title: 'Protein',
+                      themeColor: AppColors.protein,
+                      chartData: weeklyData?.proteinSpots,
+                      primaryView: MacroTileInner(
+                        macroName: Translations.t(lang, 'macro_protein'),
+                        total: stats.proteinTarget,
+                        consumed: stats.proteinConsumed,
+                        macroColor: AppColors.protein,
+                        macroIcon: LucideIcons.beef,
                       ),
-                    ],
+                    ),
                   ),
+                  const SizedBox(width: AppSpacing.macroTileGap),
+                  Expanded(
+                    child: SwipableStatCard(
+                      title: 'Carbs',
+                      themeColor: AppColors.carbs,
+                      chartData: weeklyData?.carbsSpots,
+                      primaryView: MacroTileInner(
+                        macroName: Translations.t(lang, 'macro_carbs'),
+                        total: stats.carbsTarget,
+                        consumed: stats.carbsConsumed,
+                        macroColor: AppColors.carbs,
+                        macroIcon: LucideIcons.wheat,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.macroTileGap),
+                  Expanded(
+                    child: SwipableStatCard(
+                      title: 'Fats',
+                      themeColor: AppColors.fats,
+                      chartData: weeklyData?.fatSpots,
+                      primaryView: MacroTileInner(
+                        macroName: Translations.t(lang, 'macro_fats'),
+                        total: stats.fatTarget,
+                        consumed: stats.fatConsumed,
+                        macroColor: AppColors.fats,
+                        macroIcon: LucideIcons.droplets,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 28),
+          // ─── Section Header ───────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.screenPadding,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  Translations.t(lang, 'recently_uploaded'),
+                  style: AppTextStyles.sectionHeader.copyWith(color: Colors.black),
                 ),
-                const SizedBox(height: 12),
-                _buildRecentMeals(context, ref, lang),
-                const SizedBox(height: 100),
               ],
             ),
           ),
-        ),
+          const SizedBox(height: 12),
+          _buildRecentMeals(context, ref, lang),
+          const SizedBox(height: 100),
+        ],
       ),
     );
   }
