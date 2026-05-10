@@ -54,9 +54,9 @@ class MemoriesNotifier extends Notifier<AsyncValue<List<Memory>>> {
       String fileName = imageFile.path.split('/').last;
       FormData formData = FormData.fromMap({
         "file": await MultipartFile.fromFile(imageFile.path, filename: fileName),
-        if (caption != null) "caption": caption,
+        "caption": caption,
         "is_private": isPrivate,
-      });
+      }..removeWhere((k, v) => v == null));
 
       final res = await ApiClient.instance.post(
         'memories',

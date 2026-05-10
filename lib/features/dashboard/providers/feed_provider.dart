@@ -98,13 +98,13 @@ class FeedNotifier extends Notifier<AsyncValue<List<Post>>> {
   Future<bool> createPost({String? content, File? imageFile}) async {
     try {
       FormData formData = FormData.fromMap({
-        if (content != null) "content": content,
+        "content": content,
         if (imageFile != null)
           "file": await MultipartFile.fromFile(
             imageFile.path,
             filename: imageFile.path.split('/').last,
           ),
-      });
+      }..removeWhere((k, v) => v == null));
 
       final res = await ApiClient.instance.post(
         'feed/posts',
