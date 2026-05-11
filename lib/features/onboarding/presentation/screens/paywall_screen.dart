@@ -5,6 +5,7 @@ import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:gojocalories/core/providers/iap_provider.dart';
 import 'package:gojocalories/core/services/iap_service.dart';
@@ -368,17 +369,23 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                     '  |  ',
                     style: TextStyle(fontSize: 12, color: Colors.grey),
                   ),
-                  const Text(
-                    'Privacy Policy',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  GestureDetector(
+                    onTap: () => launchUrl(Uri.parse('https://gojocalories.com/privacy')),
+                    child: const Text(
+                      'Privacy Policy',
+                      style: TextStyle(fontSize: 12, color: Colors.grey, decoration: TextDecoration.underline),
+                    ),
                   ),
                   const Text(
                     '  |  ',
                     style: TextStyle(fontSize: 12, color: Colors.grey),
                   ),
-                  const Text(
-                    'Terms of Use',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  GestureDetector(
+                    onTap: () => launchUrl(Uri.parse('https://gojocalories.com/tos')),
+                    child: const Text(
+                      'Terms of Use (EULA)',
+                      style: TextStyle(fontSize: 12, color: Colors.grey, decoration: TextDecoration.underline),
+                    ),
                   ),
                 ],
               ),
