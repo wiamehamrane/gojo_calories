@@ -5,7 +5,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:gojocalories/core/theme/app_colors.dart';
 import 'package:gojocalories/core/theme/app_radius.dart';
 import 'package:gojocalories/core/theme/app_spacing.dart';
-import 'package:gojocalories/core/theme/app_text_styles.dart';
+import 'package:gojocalories/features/profile/presentation/screens/profile_screen.dart';
 
 class EventsFeedScreen extends ConsumerStatefulWidget {
   const EventsFeedScreen({super.key});
@@ -16,71 +16,89 @@ class EventsFeedScreen extends ConsumerStatefulWidget {
 
 class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
   final TextEditingController _searchController = TextEditingController();
-  String _activeCategory = 'All';
-  final List<String> _categories = ['All', 'Running', 'Walking', 'Soccer', 'Cycling'];
 
   @override
   Widget build(BuildContext context) {
-    final List<Map<String, dynamic>> mockEvents = [
+    final profileAsync = ref.watch(profileProvider);
+    
+    // Default to 'mixed' if profile not loaded
+    final String userGender = profileAsync.maybeWhen(
+      data: (data) => data['gender']?.toString().toLowerCase() ?? 'male',
+      orElse: () => 'male',
+    );
+
+    // Mockup data for Events with gender requirements
+    final List<Map<String, dynamic>> allEvents = [
+      {
+        'title': 'Mens Heavy Lifting',
+        'gender': 'male',
+        'date': 'Sat, May 20 • 8:00 AM',
+        'location': 'Power Gym, NY',
+        'participants': 12,
+        'imageUrl': 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=800&auto=format&fit=crop',
+      },
       {
         'title': 'Morning Central Park Run',
-        'type': 'Running',
+        'gender': 'mixed',
         'date': 'Sat, May 20 • 8:00 AM',
         'location': 'Central Park, NY',
         'participants': 15,
         'imageUrl': 'https://images.unsplash.com/photo-1552674605-db6ffd4facb5?q=80&w=800&auto=format&fit=crop',
       },
       {
+        'title': 'Females Yoga Flow',
+        'gender': 'female',
+        'date': 'Sun, May 21 • 9:00 AM',
+        'location': 'Zen Studio',
+        'participants': 18,
+        'imageUrl': 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?q=80&w=800&auto=format&fit=crop',
+      },
+      {
         'title': 'Weekend Soccer Match',
-        'type': 'Soccer',
+        'gender': 'mixed',
         'date': 'Sun, May 21 • 10:00 AM',
         'location': 'Westside Fields',
         'participants': 22,
         'imageUrl': 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?q=80&w=800&auto=format&fit=crop',
       },
-      {
-        'title': 'Sunset Yoga & Walk',
-        'type': 'Walking',
-        'date': 'Tue, May 23 • 6:30 PM',
-        'location': 'Riverside Park',
-        'participants': 8,
-        'imageUrl': 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?q=80&w=800&auto=format&fit=crop',
-      },
     ];
+
+    // Filter events based on user gender
+    final filteredEvents = allEvents.where((e) {
+      final String eventGender = e['gender'];
+      if (eventGender == 'mixed') return true;
+      return eventGender == userGender;
+    }).toList();
 
     return Scaffold(
       backgroundColor: AppColors.background,
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
+          // Search Bar (No "Explore Events" title)
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(AppSpacing.screenPadding, 16, AppSpacing.screenPadding, 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Explore Events', style: AppTextStyles.screenTitle),
-                  const SizedBox(height: 16),
-                  _buildSearchBar(),
-                  const SizedBox(height: 20),
-                ],
+              child: _buildSearchBar(),
+            ),
+          ),
+
+          // Hero Section
+          SliverToBoxAdapter(
+            child: _buildHeroSection(),
+          ),
+
+          // Events List
+          SliverPadding(
+            padding: const EdgeInsets.only(top: 24),
+            sliver: SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) => _buildEventCardCompact(filteredEvents[index], index),
+                childCount: filteredEvents.length,
               ),
             ),
           ),
-          SliverToBoxAdapter(child: _buildCategoryChips()),
-          SliverToBoxAdapter(child: _buildHeroSection()),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(AppSpacing.screenPadding, 24, AppSpacing.screenPadding, 12),
-              child: Text('Upcoming for You', style: AppTextStyles.sectionHeader.copyWith(fontSize: 18)),
-            ),
-          ),
-          SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, index) => _buildEventCardOverlay(mockEvents[index], index),
-              childCount: mockEvents.length,
-            ),
-          ),
+
           const SliverToBoxAdapter(child: SizedBox(height: 100)),
         ],
       ),
@@ -123,69 +141,35 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
     );
   }
 
-  Widget _buildCategoryChips() {
-    return SizedBox(
-      height: 40,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenPadding),
-        itemCount: _categories.length,
-        itemBuilder: (context, index) {
-          final cat = _categories[index];
-          final isActive = _activeCategory == cat;
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: GestureDetector(
-              onTap: () => setState(() => _activeCategory = cat),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                decoration: BoxDecoration(
-                  color: isActive ? AppColors.primary : AppColors.surface,
-                  borderRadius: BorderRadius.circular(AppRadius.chip),
-                  border: Border.all(color: isActive ? AppColors.primary : AppColors.border),
-                ),
-                child: Text(
-                  cat,
-                  style: TextStyle(
-                    color: isActive ? Colors.white : AppColors.textSecondary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
   Widget _buildHeroSection() {
     return Container(
-      margin: const EdgeInsets.fromLTRB(AppSpacing.screenPadding, 24, AppSpacing.screenPadding, 0),
-      height: 160,
+      margin: const EdgeInsets.fromLTRB(AppSpacing.screenPadding, 20, AppSpacing.screenPadding, 0),
+      height: 140,
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [AppColors.primary, AppColors.primaryMid], begin: Alignment.topLeft, end: Alignment.bottomRight),
+        gradient: const LinearGradient(
+          colors: [AppColors.primary, AppColors.primaryMid],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        boxShadow: [BoxShadow(color: AppColors.primary.withValues(alpha: 0.3), blurRadius: 20, offset: const Offset(0, 8))],
       ),
       child: Stack(
         children: [
-          Positioned(right: -20, bottom: -20, child: Icon(LucideIcons.trophy, size: 140, color: Colors.white.withValues(alpha: 0.15))),
+          Positioned(right: -10, bottom: -10, child: Icon(LucideIcons.trophy, size: 100, color: Colors.white.withValues(alpha: 0.1))),
           Padding(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text('Community Challenge', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: 1)),
-                const SizedBox(height: 8),
-                const Text('Join the Mega Marathon\nthis Weekend!', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800, height: 1.2)),
-                const SizedBox(height: 16),
+                const Text('Featured Challenge', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600, letterSpacing: 0.5)),
+                const SizedBox(height: 4),
+                const Text('Mega Marathon 2024', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 12),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                   decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(AppRadius.chip)),
-                  child: const Text('Join Now', style: TextStyle(color: AppColors.primaryDark, fontWeight: FontWeight.bold, fontSize: 13)),
+                  child: const Text('Join Now', style: TextStyle(color: AppColors.primaryDark, fontWeight: FontWeight.bold, fontSize: 12)),
                 ),
               ],
             ),
@@ -195,17 +179,17 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
     );
   }
 
-  Widget _buildEventCardOverlay(Map<String, dynamic> event, int index) {
+  Widget _buildEventCardCompact(Map<String, dynamic> event, int index) {
     return Container(
-      margin: const EdgeInsets.fromLTRB(AppSpacing.screenPadding, 0, AppSpacing.screenPadding, 16),
-      height: 220,
+      margin: const EdgeInsets.fromLTRB(AppSpacing.screenPadding, 0, AppSpacing.screenPadding, 12),
+      height: 160, // Smaller height as requested
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(AppRadius.lg),
         image: DecorationImage(image: NetworkImage(event['imageUrl']), fit: BoxFit.cover),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 15, offset: const Offset(0, 5))],
       ),
       child: Stack(
         children: [
+          // Darker overlay for better contrast
           Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
@@ -213,42 +197,73 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [Colors.black.withValues(alpha: 0.3), Colors.transparent, Colors.black.withValues(alpha: 0.8)],
-                  stops: const [0.0, 0.4, 1.0],
+                  colors: [
+                    Colors.black.withValues(alpha: 0.2), 
+                    Colors.black.withValues(alpha: 0.8)
+                  ],
                 ),
               ),
             ),
           ),
+          
+          // Gender Badge (Bottom Right instead of Top Left Category)
           Positioned(
             top: 12,
-            left: 12,
+            right: 12,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.9), borderRadius: BorderRadius.circular(AppRadius.chip)),
-              child: Text(event['type'].toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(AppRadius.chip),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    event['gender'] == 'mixed' 
+                        ? LucideIcons.users 
+                        : (event['gender'] == 'male' ? LucideIcons.mars : LucideIcons.venus),
+                    size: 10,
+                    color: Colors.white,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    event['gender'].toString().toUpperCase(),
+                    style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
             ),
           ),
+
+          // Event Details (Bottom)
           Positioned(
             bottom: 12,
-            left: 12,
-            right: 12,
+            left: 16,
+            right: 16,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   event['title'],
-                  style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold, shadows: [Shadow(color: Colors.black, blurRadius: 8)]),
+                  style: const TextStyle(
+                    color: Colors.white, 
+                    fontSize: 16, 
+                    fontWeight: FontWeight.bold,
+                    shadows: [Shadow(color: Colors.black, blurRadius: 4)],
+                  ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
                 Row(
                   children: [
-                    const Icon(LucideIcons.calendar, size: 14, color: Colors.white),
+                    const Icon(LucideIcons.calendar, size: 12, color: Colors.white),
                     const SizedBox(width: 6),
-                    Text(event['date'], style: const TextStyle(color: Colors.white, fontSize: 12)),
+                    Text(event['date'], style: const TextStyle(color: Colors.white, fontSize: 11)),
                     const SizedBox(width: 12),
-                    const Icon(LucideIcons.users, size: 14, color: Colors.white),
+                    const Icon(LucideIcons.mapPin, size: 12, color: Colors.white),
                     const SizedBox(width: 6),
-                    Text('${event['participants']} joined', style: const TextStyle(color: Colors.white, fontSize: 12)),
+                    Text(event['location'], style: const TextStyle(color: Colors.white, fontSize: 11)),
                   ],
                 ),
               ],
@@ -256,6 +271,6 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
           ),
         ],
       ),
-    ).animate().fadeIn(delay: (index * 100).ms).slideY(begin: 0.05);
+    ).animate().fadeIn(delay: (index * 80).ms).slideY(begin: 0.05);
   }
 }
