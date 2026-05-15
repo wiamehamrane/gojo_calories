@@ -21,7 +21,6 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Mockup data for Events
     final List<Map<String, dynamic>> mockEvents = [
       {
         'title': 'Morning Central Park Run',
@@ -54,17 +53,13 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
-          // Header & Search
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(AppSpacing.screenPadding, 16, AppSpacing.screenPadding, 8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Explore Events',
-                    style: AppTextStyles.screenTitle,
-                  ),
+                  const Text('Explore Events', style: AppTextStyles.screenTitle),
                   const SizedBox(height: 16),
                   _buildSearchBar(),
                   const SizedBox(height: 20),
@@ -72,39 +67,20 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
               ),
             ),
           ),
-
-          // Categories
-          SliverToBoxAdapter(
-            child: _buildCategoryChips(),
-          ),
-
-          // Hero / Featured Section
-          SliverToBoxAdapter(
-            child: _buildHeroSection(),
-          ),
-
-          // Events Title
+          SliverToBoxAdapter(child: _buildCategoryChips()),
+          SliverToBoxAdapter(child: _buildHeroSection()),
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(AppSpacing.screenPadding, 24, AppSpacing.screenPadding, 12),
-              child: Text(
-                'Upcoming for You',
-                style: AppTextStyles.sectionHeader.copyWith(fontSize: 18),
-              ),
+              child: Text('Upcoming for You', style: AppTextStyles.sectionHeader.copyWith(fontSize: 18)),
             ),
           ),
-
-          // Events List
           SliverList(
             delegate: SliverChildBuilderDelegate(
-              (context, index) {
-                final event = mockEvents[index];
-                return _buildEventCard(event, index);
-              },
+              (context, index) => _buildEventCardOverlay(mockEvents[index], index),
               childCount: mockEvents.length,
             ),
           ),
-
           const SliverToBoxAdapter(child: SizedBox(height: 100)),
         ],
       ),
@@ -123,13 +99,7 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.md),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 2))],
       ),
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
@@ -140,7 +110,7 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
             child: TextField(
               controller: _searchController,
               decoration: const InputDecoration(
-                hintText: 'Search for fitness events...',
+                hintText: 'Search events...',
                 hintStyle: TextStyle(color: AppColors.textPlaceholder, fontSize: 14),
                 border: InputBorder.none,
                 isDense: true,
@@ -195,57 +165,27 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
       margin: const EdgeInsets.fromLTRB(AppSpacing.screenPadding, 24, AppSpacing.screenPadding, 0),
       height: 160,
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [AppColors.primary, AppColors.primaryMid],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        gradient: LinearGradient(colors: [AppColors.primary, AppColors.primaryMid], begin: Alignment.topLeft, end: Alignment.bottomRight),
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
+        boxShadow: [BoxShadow(color: AppColors.primary.withValues(alpha: 0.3), blurRadius: 20, offset: const Offset(0, 8))],
       ),
       child: Stack(
         children: [
-          Positioned(
-            right: -20,
-            bottom: -20,
-            child: Icon(
-              LucideIcons.trophy,
-              size: 140,
-              color: Colors.white.withValues(alpha: 0.15),
-            ),
-          ),
+          Positioned(right: -20, bottom: -20, child: Icon(LucideIcons.trophy, size: 140, color: Colors.white.withValues(alpha: 0.15))),
           Padding(
             padding: const EdgeInsets.all(24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text(
-                  'Community Challenge',
-                  style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: 1),
-                ),
+                const Text('Community Challenge', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: 1)),
                 const SizedBox(height: 8),
-                const Text(
-                  'Join the Mega Marathon\nthis Weekend!',
-                  style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800, height: 1.2),
-                ),
+                const Text('Join the Mega Marathon\nthis Weekend!', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800, height: 1.2)),
                 const SizedBox(height: 16),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(AppRadius.chip),
-                  ),
-                  child: const Text(
-                    'Join Now',
-                    style: TextStyle(color: AppColors.primaryDark, fontWeight: FontWeight.bold, fontSize: 13),
-                  ),
+                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(AppRadius.chip)),
+                  child: const Text('Join Now', style: TextStyle(color: AppColors.primaryDark, fontWeight: FontWeight.bold, fontSize: 13)),
                 ),
               ],
             ),
@@ -255,83 +195,60 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
     );
   }
 
-  Widget _buildEventCard(Map<String, dynamic> event, int index) {
+  Widget _buildEventCardOverlay(Map<String, dynamic> event, int index) {
     return Container(
       margin: const EdgeInsets.fromLTRB(AppSpacing.screenPadding, 0, AppSpacing.screenPadding, 16),
-      padding: const EdgeInsets.all(12), // Content inside padding
+      height: 220,
       decoration: BoxDecoration(
-        color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
-          ),
-        ],
+        image: DecorationImage(image: NetworkImage(event['imageUrl']), fit: BoxFit.cover),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 15, offset: const Offset(0, 5))],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(AppRadius.md), // Rounded internal image
-            child: Image.network(
-              event['imageUrl'],
-              height: 150,
-              width: double.infinity,
-              fit: BoxFit.cover,
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(AppRadius.lg),
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.black.withValues(alpha: 0.3), Colors.transparent, Colors.black.withValues(alpha: 0.8)],
+                  stops: const [0.0, 0.4, 1.0],
+                ),
+              ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(4, 16, 4, 4),
+          Positioned(
+            top: 12,
+            left: 12,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.9), borderRadius: BorderRadius.circular(AppRadius.chip)),
+              child: Text(event['type'].toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+            ),
+          ),
+          Positioned(
+            bottom: 12,
+            left: 12,
+            right: 12,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryLight,
-                        borderRadius: BorderRadius.circular(AppRadius.chip),
-                      ),
-                      child: Text(
-                        event['type'].toUpperCase(),
-                        style: const TextStyle(color: AppColors.primaryDark, fontSize: 10, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    Row(
-                      children: [
-                        const Icon(LucideIcons.users, size: 14, color: AppColors.inactive),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${event['participants']} joined',
-                          style: AppTextStyles.bodyRegular.copyWith(fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
                 Text(
                   event['title'],
-                  style: AppTextStyles.bodyBold.copyWith(fontSize: 17),
+                  style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold, shadows: [Shadow(color: Colors.black, blurRadius: 8)]),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 Row(
                   children: [
-                    const Icon(LucideIcons.calendar, size: 14, color: AppColors.primary),
-                    const SizedBox(width: 8),
-                    Text(event['date'], style: AppTextStyles.bodyRegular),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    const Icon(LucideIcons.mapPin, size: 14, color: AppColors.primary),
-                    const SizedBox(width: 8),
-                    Text(event['location'], style: AppTextStyles.bodyRegular),
+                    const Icon(LucideIcons.calendar, size: 14, color: Colors.white),
+                    const SizedBox(width: 6),
+                    Text(event['date'], style: const TextStyle(color: Colors.white, fontSize: 12)),
+                    const SizedBox(width: 12),
+                    const Icon(LucideIcons.users, size: 14, color: Colors.white),
+                    const SizedBox(width: 6),
+                    Text('${event['participants']} joined', style: const TextStyle(color: Colors.white, fontSize: 12)),
                   ],
                 ),
               ],
