@@ -90,7 +90,7 @@ class FeedTab extends ConsumerWidget {
             ),
           ),
           const SizedBox(width: 12),
-          Icon(LucideIcons.image, color: AppColors.primary, size: 22),
+          const Icon(LucideIcons.image, color: AppColors.primary, size: 22),
         ],
       ),
     );
@@ -137,7 +137,7 @@ class FeedTab extends ConsumerWidget {
                       style: AppTextStyles.bodyBold,
                     ),
                     Text(
-                      '2 hours ago', // Simplified for mockup
+                      '2 hours ago',
                       style: AppTextStyles.bodyRegular.copyWith(fontSize: 12),
                     ),
                   ],
@@ -148,7 +148,7 @@ class FeedTab extends ConsumerWidget {
             ),
           ),
 
-          // Post Content
+          // Post Content (Now inside the card flow)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Text(
@@ -157,15 +157,16 @@ class FeedTab extends ConsumerWidget {
             ),
           ),
 
-          // Post Image
+          // Post Image (Now inside the card flow)
           if (hasImage)
-            Container(
-              margin: const EdgeInsets.symmetric(vertical: 12),
-              height: 250,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                image: DecorationImage(
-                  image: NetworkImage(post['imageUrl']),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                child: Image.network(
+                  post['imageUrl'],
+                  height: 250,
+                  width: double.infinity,
                   fit: BoxFit.cover,
                 ),
               ),
@@ -226,7 +227,6 @@ class _PostAction extends StatelessWidget {
           icon,
           size: 22,
           color: color,
-          fill: isActive ? 1.0 : 0.0,
         ),
         if (label.isNotEmpty) ...[
           const SizedBox(width: 6),

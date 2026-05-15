@@ -147,7 +147,7 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
               ),
             ),
           ),
-          Icon(LucideIcons.slidersHorizontal, color: AppColors.primary, size: 20),
+          const Icon(LucideIcons.slidersHorizontal, color: AppColors.primary, size: 20),
         ],
       ),
     );
@@ -242,7 +242,7 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(AppRadius.chip),
                   ),
-                  child: Text(
+                  child: const Text(
                     'Join Now',
                     style: TextStyle(color: AppColors.primaryDark, fontWeight: FontWeight.bold, fontSize: 13),
                   ),
@@ -258,6 +258,7 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
   Widget _buildEventCard(Map<String, dynamic> event, int index) {
     return Container(
       margin: const EdgeInsets.fromLTRB(AppSpacing.screenPadding, 0, AppSpacing.screenPadding, 16),
+      padding: const EdgeInsets.all(12), // Content inside padding
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -273,7 +274,7 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
+            borderRadius: BorderRadius.circular(AppRadius.md), // Rounded internal image
             child: Image.network(
               event['imageUrl'],
               height: 150,
@@ -282,7 +283,7 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(4, 16, 4, 4),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -297,7 +298,7 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
                       ),
                       child: Text(
                         event['type'].toUpperCase(),
-                        style: TextStyle(color: AppColors.primaryDark, fontSize: 10, fontWeight: FontWeight.bold),
+                        style: const TextStyle(color: AppColors.primaryDark, fontSize: 10, fontWeight: FontWeight.bold),
                       ),
                     ),
                     Row(
