@@ -1,15 +1,11 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import '../providers/events_provider.dart';
-import '../../theme/events_theme.dart';
-import '../widgets/event_card.dart';
-import '../widgets/event_shimmer.dart';
-import 'create_event_screen.dart';
-import 'event_detail_screen.dart';
-
-const _kCategories = ['All', 'Running', 'Walking', 'Soccer', 'Cycling'];
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:gojocalories/core/theme/app_colors.dart';
+import 'package:gojocalories/core/theme/app_radius.dart';
+import 'package:gojocalories/core/theme/app_spacing.dart';
+import 'package:gojocalories/core/theme/app_text_styles.dart';
 
 class EventsFeedScreen extends ConsumerStatefulWidget {
   const EventsFeedScreen({super.key});
@@ -18,194 +14,140 @@ class EventsFeedScreen extends ConsumerStatefulWidget {
   ConsumerState<EventsFeedScreen> createState() => _EventsFeedScreenState();
 }
 
-class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen>
-    with SingleTickerProviderStateMixin {
+class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
   final TextEditingController _searchController = TextEditingController();
-  final FocusNode _searchFocusNode = FocusNode();
-
   String _activeCategory = 'All';
-  final bool _isMyEvents = false;
-  bool _isSearchFocused = false;
-  Timer? _debounce;
-
-  @override
-  void initState() {
-    super.initState();
-    _searchFocusNode.addListener(() {
-      setState(() => _isSearchFocused = _searchFocusNode.hasFocus);
-    });
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    _searchFocusNode.dispose();
-    _debounce?.cancel();
-    super.dispose();
-  }
-
-  void _onSearchChanged(String query) {
-    _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 350), () {
-      ref.read(eventsProvider.notifier).fetchEvents(
-            search: query.isNotEmpty ? query : null,
-            type: _activeCategory == 'All' ? null : _activeCategory.toLowerCase(),
-          );
-    });
-  }
-
-  void _onCategoryChanged(String category) {
-    setState(() => _activeCategory = category);
-    ref.read(eventsProvider.notifier).fetchEvents(
-          search: _searchController.text.isNotEmpty ? _searchController.text : null,
-          type: category == 'All' ? null : category.toLowerCase(),
-        );
-  }
-
-  Future<void> _onRefresh() async {
-    await ref.read(eventsProvider.notifier).fetchEvents(
-          search: _searchController.text.isNotEmpty ? _searchController.text : null,
-          type: _activeCategory == 'All' ? null : _activeCategory.toLowerCase(),
-        );
-  }
+  final List<String> _categories = ['All', 'Running', 'Walking', 'Soccer', 'Cycling'];
 
   @override
   Widget build(BuildContext context) {
-    final eventsState = ref.watch(eventsProvider);
-    final topPadding = MediaQuery.of(context).padding.top;
+    // Mockup data for Events
+    final List<Map<String, dynamic>> mockEvents = [
+      {
+        'title': 'Morning Central Park Run',
+        'type': 'Running',
+        'date': 'Sat, May 20 • 8:00 AM',
+        'location': 'Central Park, NY',
+        'participants': 15,
+        'imageUrl': 'https://images.unsplash.com/photo-1552674605-db6ffd4facb5?q=80&w=800&auto=format&fit=crop',
+      },
+      {
+        'title': 'Weekend Soccer Match',
+        'type': 'Soccer',
+        'date': 'Sun, May 21 • 10:00 AM',
+        'location': 'Westside Fields',
+        'participants': 22,
+        'imageUrl': 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?q=80&w=800&auto=format&fit=crop',
+      },
+      {
+        'title': 'Sunset Yoga & Walk',
+        'type': 'Walking',
+        'date': 'Tue, May 23 • 6:30 PM',
+        'location': 'Riverside Park',
+        'participants': 8,
+        'imageUrl': 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?q=80&w=800&auto=format&fit=crop',
+      },
+    ];
 
     return Scaffold(
-      backgroundColor: EventsTheme.background,
-      body: Column(
-        children: [
-          // ── Sticky Header ─────────────────────────────────
-          _buildHeader(topPadding),
-          // ── Body ──────────────────────────────────────────
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: _onRefresh,
-              color: EventsTheme.primary,
-              child: CustomScrollView(
-                physics: const AlwaysScrollableScrollPhysics(
-                  parent: BouncingScrollPhysics(),
-                ),
-                slivers: [
-                  // Category filter chips
-                  SliverToBoxAdapter(child: _buildCategoryChips()),
-                  // Hero section (only when not searching)
-                  if (_searchController.text.isEmpty && !_isMyEvents)
-                    SliverToBoxAdapter(child: _buildHeroSection()),
-                  // Events list title
-                  SliverToBoxAdapter(child: _buildSectionTitle()),
-                  // Events list
-                  SliverPadding(
-                    padding: const EdgeInsets.symmetric(horizontal: EventsTheme.pagePadding),
-                    sliver: _buildEventsSliver(eventsState),
+      backgroundColor: AppColors.background,
+      body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          // Header & Search
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(AppSpacing.screenPadding, 16, AppSpacing.screenPadding, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Explore Events',
+                    style: AppTextStyles.screenTitle,
                   ),
-                  // Bottom spacing
-                  const SliverToBoxAdapter(child: SizedBox(height: 80)),
+                  const SizedBox(height: 16),
+                  _buildSearchBar(),
+                  const SizedBox(height: 20),
                 ],
               ),
             ),
           ),
-        ],
-      ),
-      floatingActionButton: _buildFab(context),
-    );
-  }
 
-  Widget _buildHeader(double topPadding) {
-    return Container(
-      color: EventsTheme.background,
-      padding: EdgeInsets.only(
-        top: topPadding + 8,
-        left: EventsTheme.pagePadding,
-        right: EventsTheme.pagePadding,
-        bottom: 12,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Top row: title + segment toggle
-          Row(
-            children: [
-              const Text(
-                'Events',
-                style: TextStyle(
-                  color: EventsTheme.foreground,
-                  fontFamily: EventsTheme.headingFont,
-                  fontSize: 28,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.5,
-                ),
-              ),
-              const Spacer(),
-              const Spacer(),
-            ],
+          // Categories
+          SliverToBoxAdapter(
+            child: _buildCategoryChips(),
           ),
-          const SizedBox(height: 12),
-          // Search bar
-          _buildSearchBar(),
+
+          // Hero / Featured Section
+          SliverToBoxAdapter(
+            child: _buildHeroSection(),
+          ),
+
+          // Events Title
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(AppSpacing.screenPadding, 24, AppSpacing.screenPadding, 12),
+              child: Text(
+                'Upcoming for You',
+                style: AppTextStyles.sectionHeader.copyWith(fontSize: 18),
+              ),
+            ),
+          ),
+
+          // Events List
+          SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                final event = mockEvents[index];
+                return _buildEventCard(event, index);
+              },
+              childCount: mockEvents.length,
+            ),
+          ),
+
+          const SliverToBoxAdapter(child: SizedBox(height: 100)),
         ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {},
+        backgroundColor: AppColors.primaryDark,
+        icon: const Icon(LucideIcons.plus, color: Colors.white),
+        label: const Text('Create', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       ),
     );
   }
-
-
 
   Widget _buildSearchBar() {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      height: 46,
+    return Container(
+      height: 50,
       decoration: BoxDecoration(
-        color: EventsTheme.cardBackground,
-        borderRadius: BorderRadius.circular(EventsTheme.inputRadius),
-        border: Border.all(
-          color: _isSearchFocused ? EventsTheme.primary : EventsTheme.cardStroke,
-          width: _isSearchFocused ? 1.5 : 1,
-        ),
-        boxShadow: _isSearchFocused
-            ? [
-                BoxShadow(
-                  color: EventsTheme.primary.withValues(alpha: 0.12),
-                  blurRadius: 12,
-                  offset: const Offset(0, 2),
-                )
-              ]
-            : [],
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: [
-          Icon(LucideIcons.search, size: 18, color: _isSearchFocused ? EventsTheme.primary : EventsTheme.muted),
-          const SizedBox(width: 10),
+          const Icon(LucideIcons.search, color: AppColors.inactive, size: 20),
+          const SizedBox(width: 12),
           Expanded(
             child: TextField(
               controller: _searchController,
-              focusNode: _searchFocusNode,
-              onChanged: _onSearchChanged,
-              style: const TextStyle(
-                color: EventsTheme.foreground,
-                fontSize: 15,
-                fontWeight: FontWeight.w400,
-              ),
               decoration: const InputDecoration(
-                hintText: 'Search events, locations…',
-                hintStyle: TextStyle(color: EventsTheme.muted, fontSize: 15),
+                hintText: 'Search for fitness events...',
+                hintStyle: TextStyle(color: AppColors.textPlaceholder, fontSize: 14),
                 border: InputBorder.none,
                 isDense: true,
-                contentPadding: EdgeInsets.zero,
               ),
             ),
           ),
-          if (_searchController.text.isNotEmpty)
-            GestureDetector(
-              onTap: () {
-                _searchController.clear();
-                _onSearchChanged('');
-              },
-              child: const Icon(LucideIcons.x, size: 16, color: EventsTheme.muted),
-            ),
+          Icon(LucideIcons.slidersHorizontal, color: AppColors.primary, size: 20),
         ],
       ),
     );
@@ -213,36 +155,32 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen>
 
   Widget _buildCategoryChips() {
     return SizedBox(
-      height: 52,
-      child: ListView.separated(
+      height: 40,
+      child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: EventsTheme.pagePadding, vertical: 8),
-        itemCount: _kCategories.length,
-        separatorBuilder: (context, index) => const SizedBox(width: 8),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenPadding),
+        itemCount: _categories.length,
         itemBuilder: (context, index) {
-          final cat = _kCategories[index];
-          final active = cat == _activeCategory;
-          final color = cat == 'All'
-              ? EventsTheme.primary
-              : EventsTheme.eventTypeColor(cat);
-          return GestureDetector(
-            onTap: () => _onCategoryChanged(cat),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              decoration: BoxDecoration(
-                color: active ? color : EventsTheme.cardBackground,
-                borderRadius: BorderRadius.circular(EventsTheme.chipRadius),
-                border: Border.all(
-                  color: active ? color : EventsTheme.cardStroke,
+          final cat = _categories[index];
+          final isActive = _activeCategory == cat;
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: GestureDetector(
+              onTap: () => setState(() => _activeCategory = cat),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                decoration: BoxDecoration(
+                  color: isActive ? AppColors.primary : AppColors.surface,
+                  borderRadius: BorderRadius.circular(AppRadius.chip),
+                  border: Border.all(color: isActive ? AppColors.primary : AppColors.border),
                 ),
-              ),
-              child: Text(
-                cat,
-                style: TextStyle(
-                  color: active ? Colors.white : EventsTheme.muted,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
+                child: Text(
+                  cat,
+                  style: TextStyle(
+                    color: isActive ? Colors.white : AppColors.textSecondary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ),
@@ -254,239 +192,152 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen>
 
   Widget _buildHeroSection() {
     return Container(
-      margin: const EdgeInsets.fromLTRB(EventsTheme.pagePadding, 8, EventsTheme.pagePadding, 0),
+      margin: const EdgeInsets.fromLTRB(AppSpacing.screenPadding, 24, AppSpacing.screenPadding, 0),
+      height: 160,
       decoration: BoxDecoration(
-        gradient: EventsTheme.heroGradient,
-        borderRadius: BorderRadius.circular(EventsTheme.cardRadius),
+        gradient: LinearGradient(
+          colors: [AppColors.primary, AppColors.primaryMid],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
-      padding: const EdgeInsets.all(24),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
+      child: Stack(
         children: [
-          Expanded(
+          Positioned(
+            right: -20,
+            bottom: -20,
+            child: Icon(
+              LucideIcons.trophy,
+              size: 140,
+              color: Colors.white.withValues(alpha: 0.15),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(EventsTheme.chipRadius),
-                  ),
-                  child: const Text(
-                    'COMMUNITY',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
                 const Text(
-                  'Find your next\nfitness challenge.',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontFamily: EventsTheme.headingFont,
-                    fontSize: 26,
-                    fontWeight: FontWeight.w800,
-                    height: 1.2,
-                    letterSpacing: -0.3,
-                  ),
+                  'Community Challenge',
+                  style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: 1),
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  'Join 1M+ members on GojoCalories.',
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.8),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w400,
-                    height: 1.4,
+                const Text(
+                  'Join the Mega Marathon\nthis Weekend!',
+                  style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800, height: 1.2),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(AppRadius.chip),
+                  ),
+                  child: Text(
+                    'Join Now',
+                    style: TextStyle(color: AppColors.primaryDark, fontWeight: FontWeight.bold, fontSize: 13),
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 16),
-          Icon(
-            LucideIcons.trophy,
-            size: 56,
-            color: Colors.white.withValues(alpha: 0.18),
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildSectionTitle() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(EventsTheme.pagePadding, 24, EventsTheme.pagePadding, 12),
-      child: Row(
-        children: [
-          Text(
-            _activeCategory == 'All' ? 'Upcoming Events' : '$_activeCategory Events',
-            style: const TextStyle(
-              color: EventsTheme.foreground,
-              fontFamily: EventsTheme.headingFont,
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-            ),
+  Widget _buildEventCard(Map<String, dynamic> event, int index) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(AppSpacing.screenPadding, 0, AppSpacing.screenPadding, 16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildEventsSliver(AsyncValue eventsState) {
-    return eventsState.when(
-      loading: () => SliverList(
-        delegate: SliverChildBuilderDelegate(
-          (context, index) => const EventShimmerCard(),
-          childCount: 3,
-        ),
-      ),
-      error: (error, stackTrace) => SliverToBoxAdapter(
-        child: _buildErrorState(),
-      ),
-      data: (events) {
-        if (events.isEmpty) {
-          return SliverToBoxAdapter(child: _buildEmptyState());
-        }
-        return SliverList(
-          delegate: SliverChildBuilderDelegate(
-            (context, index) => EventCard(
-              event: events[index],
-              onTap: () => Navigator.push(
-                context,
-                _buildDetailRoute(events[index].id),
-              ),
-            ),
-            childCount: events.length,
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 48),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              color: EventsTheme.primary.withValues(alpha: 0.08),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(LucideIcons.calendarX, size: 36, color: EventsTheme.primary),
-          ),
-          const SizedBox(height: 20),
-          const Text(
-            'No events found',
-            style: TextStyle(
-              color: EventsTheme.foreground,
-              fontFamily: EventsTheme.headingFont,
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
+            child: Image.network(
+              event['imageUrl'],
+              height: 150,
+              width: double.infinity,
+              fit: BoxFit.cover,
             ),
           ),
-          const SizedBox(height: 8),
-          const Text(
-            'Be the first to host one!',
-            style: TextStyle(color: EventsTheme.muted, fontSize: 14),
-          ),
-          const SizedBox(height: 24),
-          GestureDetector(
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const CreateEventScreen()),
-            ),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              decoration: BoxDecoration(
-                color: EventsTheme.primary,
-                borderRadius: BorderRadius.circular(EventsTheme.chipRadius),
-              ),
-              child: const Text(
-                'Create Event',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryLight,
+                        borderRadius: BorderRadius.circular(AppRadius.chip),
+                      ),
+                      child: Text(
+                        event['type'].toUpperCase(),
+                        style: TextStyle(color: AppColors.primaryDark, fontSize: 10, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        const Icon(LucideIcons.users, size: 14, color: AppColors.inactive),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${event['participants']} joined',
+                          style: AppTextStyles.bodyRegular.copyWith(fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-              ),
+                const SizedBox(height: 12),
+                Text(
+                  event['title'],
+                  style: AppTextStyles.bodyBold.copyWith(fontSize: 17),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Icon(LucideIcons.calendar, size: 14, color: AppColors.primary),
+                    const SizedBox(width: 8),
+                    Text(event['date'], style: AppTextStyles.bodyRegular),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    const Icon(LucideIcons.mapPin, size: 14, color: AppColors.primary),
+                    const SizedBox(width: 8),
+                    Text(event['location'], style: AppTextStyles.bodyRegular),
+                  ],
+                ),
+              ],
             ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildErrorState() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 48),
-      child: Column(
-        children: [
-          const Icon(LucideIcons.wifiOff, size: 40, color: EventsTheme.muted),
-          const SizedBox(height: 16),
-          const Text(
-            'Couldn\'t load events',
-            style: TextStyle(
-              color: EventsTheme.foreground,
-              fontWeight: FontWeight.w600,
-              fontSize: 16,
-            ),
-          ),
-          const SizedBox(height: 8),
-          GestureDetector(
-            onTap: _onRefresh,
-            child: Text(
-              'Tap to retry',
-              style: TextStyle(
-                color: EventsTheme.primary,
-                fontWeight: FontWeight.w600,
-                fontSize: 14,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFab(BuildContext context) {
-    return FloatingActionButton.extended(
-      onPressed: () => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const CreateEventScreen()),
-      ),
-      backgroundColor: EventsTheme.primaryDark,
-      elevation: 4,
-      icon: const Icon(LucideIcons.plus, color: Colors.white, size: 20),
-      label: const Text(
-        'Create',
-        style: TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.w700,
-          fontSize: 14,
-        ),
-      ),
-    );
-  }
-
-  PageRoute _buildDetailRoute(String eventId) {
-    return PageRouteBuilder(
-      pageBuilder: (context, animation, secondaryAnimation) => EventDetailScreen(eventId: eventId),
-      transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        return FadeTransition(
-          opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
-          child: child,
-        );
-      },
-      transitionDuration: const Duration(milliseconds: 280),
-    );
+    ).animate().fadeIn(delay: (index * 100).ms).slideY(begin: 0.05);
   }
 }

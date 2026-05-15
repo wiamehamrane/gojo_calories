@@ -1,4 +1,7 @@
 class AppRadius {
+  static const double sm      = 12.0;
+  static const double md      = 16.0;
+  static const double lg      = 20.0;
   static const double card    = 20.0;
   static const double tile    = 16.0;
   static const double chip    = 999.0;

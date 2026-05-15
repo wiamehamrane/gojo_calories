@@ -21,6 +21,7 @@ import '../widgets/macro_tile_inner.dart';
 import '../widgets/weekly_calendar.dart';
 import '../widgets/bmi_widget.dart';
 import '../widgets/feed_tab.dart';
+import '../widgets/health_connect_card.dart';
 import 'package:gojocalories/features/events/presentation/screens/events_feed_screen.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -103,6 +104,8 @@ class HomeScreen extends ConsumerWidget {
         children: [
           const SizedBox(height: 4),
           const WeeklyCalendar(),
+          const SizedBox(height: 16),
+          const HealthConnectCard(),
           const SizedBox(height: 20),
           // ─── Calorie Card (3 pages: Stats | Chart | BMI) ─────────
           Padding(
