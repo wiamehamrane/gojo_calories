@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:gojocalories/features/dashboard/providers/dashboard_provider.dart';
+
 
 void main() {
   test('DashboardProvider initial state is correctly padded', () {
