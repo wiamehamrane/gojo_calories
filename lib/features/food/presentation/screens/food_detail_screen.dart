@@ -112,8 +112,8 @@ class _FoodDetailScreenState extends ConsumerState<FoodDetailScreen> {
           _ingredients = list
               .map((e) => _Ingredient(
                     name: (e as Map)['name']?.toString() ?? '',
-                    amount: (e as Map)['amount']?.toString() ?? '',
-                    calories: ((e as Map)['calories'] as num? ?? 0).toInt(),
+                    amount: (e)['amount']?.toString() ?? '',
+                    calories: ((e)['calories'] as num? ?? 0).toInt(),
                   ))
               .toList();
         });
