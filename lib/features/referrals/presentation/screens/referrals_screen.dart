@@ -2,18 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import '../../../../core/network/referrals_api.dart';
-import '../../../../core/providers/locale_provider.dart';
+import '../../../../core/di/repository_providers.dart';
+import '../../../../core/localization/locale_provider.dart';
 import '../../../../core/localization/translations.dart';
 
-class ReferralsScreen extends StatefulWidget {
+class ReferralsScreen extends ConsumerStatefulWidget {
   const ReferralsScreen({super.key});
 
   @override
-  State<ReferralsScreen> createState() => _ReferralsScreenState();
+  ConsumerState<ReferralsScreen> createState() => _ReferralsScreenState();
 }
 
-class _ReferralsScreenState extends State<ReferralsScreen> {
+class _ReferralsScreenState extends ConsumerState<ReferralsScreen> {
   bool _loading = true;
   String? _error;
   Map<String, dynamic>? _data;
@@ -27,7 +27,7 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
   Future<void> _fetchData() async {
     setState(() { _loading = true; _error = null; });
     try {
-      final result = await ReferralsApi.getMyReferrals();
+      final result = await ref.read(referralsRepositoryProvider).getMyReferrals();
       setState(() { _data = result; _loading = false; });
     } catch (e) {
       setState(() { _error = e.toString(); _loading = false; });
@@ -589,17 +589,17 @@ class _WithdrawalHistoryCard extends StatelessWidget {
 
 // ─── Withdraw Sheet ───────────────────────────────────────────────────────────
 
-class _WithdrawSheet extends StatefulWidget {
+class _WithdrawSheet extends ConsumerStatefulWidget {
   final double maxAmount;
   final VoidCallback onSuccess;
   final String lang;
   const _WithdrawSheet({required this.maxAmount, required this.onSuccess, required this.lang});
 
   @override
-  State<_WithdrawSheet> createState() => _WithdrawSheetState();
+  ConsumerState<_WithdrawSheet> createState() => _WithdrawSheetState();
 }
 
-class _WithdrawSheetState extends State<_WithdrawSheet> {
+class _WithdrawSheetState extends ConsumerState<_WithdrawSheet> {
   final _amountCtrl = TextEditingController();
   String _method = 'PayPal';
   bool _loading = false;
@@ -620,7 +620,10 @@ class _WithdrawSheetState extends State<_WithdrawSheet> {
     if (amount > widget.maxAmount) { setState(() => _error = 'Amount exceeds your balance of \$${widget.maxAmount.toStringAsFixed(2)}.'); return; }
     setState(() { _loading = true; _error = null; });
     try {
-      await ReferralsApi.requestWithdrawal(amount: amount, method: _method);
+      await ref.read(referralsRepositoryProvider).requestWithdrawal(
+            amount: amount,
+            method: _method,
+          );
       if (mounted) {
         Navigator.of(context).pop();
         widget.onSuccess();

@@ -5,7 +5,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:gojocalories/core/theme/app_colors.dart';
 import 'package:gojocalories/core/theme/app_radius.dart';
 import 'package:gojocalories/core/theme/app_spacing.dart';
-import 'package:gojocalories/features/profile/presentation/screens/profile_screen.dart';
+import 'package:gojocalories/features/profile/presentation/providers/profile_providers.dart';
 
 class EventsFeedScreen extends ConsumerStatefulWidget {
   const EventsFeedScreen({super.key});

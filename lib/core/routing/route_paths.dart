@@ -1,0 +1,32 @@
+/// Central route path constants.
+abstract final class RoutePaths {
+  static const splash = '/splash';
+  static const auth = '/auth';
+  static const verifyOtp = '/auth/verify-otp';
+  static const weightSetup = '/onboarding/weight';
+  static const paywall = '/onboarding/paywall';
+
+  static const home = '/home';
+  static const scan = '/scan';
+  static const log = '/log';
+  static const events = '/events';
+  static const profile = '/profile';
+
+  static const profilePersonal = '/profile/personal';
+  static const profilePreferences = '/profile/preferences';
+  static const profileLanguage = '/profile/language';
+  static const profileNutrition = '/profile/nutrition';
+  static const profileReferrals = '/profile/referrals';
+
+  static const logExercise = '/log_exercise';
+  static const runIntensity = '/run_intensity';
+  static const weightLifting = '/weight_lifting';
+  static const describeExercise = '/describe_exercise';
+  static const manualExercise = '/manual_exercise';
+
+  static const savedFoods = '/saved_foods';
+  static const foodDatabase = '/food_database';
+  static const foodDetail = '/food-detail';
+  static const fixResults = '/fix-results';
+  static const featureRequest = '/feature_request';
+}

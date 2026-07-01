@@ -5,7 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_shadows.dart';
-import '../providers/locale_provider.dart';
+import '../localization/locale_provider.dart';
 import '../localization/translations.dart';
 
 class MainScaffold extends ConsumerWidget {

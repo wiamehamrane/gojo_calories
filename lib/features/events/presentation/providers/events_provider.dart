@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:gojocalories/core/network/api_client.dart';
-import 'package:dio/dio.dart';
+import '../../../../core/di/repository_providers.dart';
 import '../../domain/models/event.dart';
 
 class EventsNotifier extends Notifier<AsyncValue<List<Event>>> {
@@ -14,18 +13,11 @@ class EventsNotifier extends Notifier<AsyncValue<List<Event>>> {
   Future<void> fetchEvents({String? search, String? type}) async {
     state = const AsyncValue.loading();
     try {
-      final queryParams = <String, dynamic>{};
-      if (search != null && search.isNotEmpty) queryParams['search'] = search;
-      if (type != null && type.isNotEmpty) queryParams['event_type'] = type;
-
-      final response = await ApiClient.instance.get(
-        'events',
-        queryParameters: queryParams,
-      );
-
-      final List<dynamic> data = response.data;
-      final events = data.map((e) => Event.fromJson(e)).toList();
-      state = AsyncValue.data(events);
+      final data = await ref.read(eventsRepositoryProvider).getEvents(
+            search: search,
+            eventType: type,
+          );
+      state = AsyncValue.data(data.map((e) => Event.fromJson(e)).toList());
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
@@ -33,8 +25,8 @@ class EventsNotifier extends Notifier<AsyncValue<List<Event>>> {
 
   Future<Event?> getEvent(String eventId) async {
     try {
-      final response = await ApiClient.instance.get('events/$eventId');
-      return Event.fromJson(response.data);
+      final data = await ref.read(eventsRepositoryProvider).getEvent(eventId);
+      return Event.fromJson(data);
     } catch (e) {
       return null;
     }
@@ -42,9 +34,10 @@ class EventsNotifier extends Notifier<AsyncValue<List<Event>>> {
 
   Future<Event?> createEvent(Map<String, dynamic> eventData) async {
     try {
-      final response = await ApiClient.instance.post('events', data: eventData);
+      final data =
+          await ref.read(eventsRepositoryProvider).createEvent(eventData);
       await fetchEvents();
-      return Event.fromJson(response.data);
+      return Event.fromJson(data);
     } catch (e) {
       return null;
     }
@@ -52,13 +45,10 @@ class EventsNotifier extends Notifier<AsyncValue<List<Event>>> {
 
   Future<bool> uploadEventImage(String eventId, File imageFile) async {
     try {
-      final formData = FormData.fromMap({
-        'image': await MultipartFile.fromFile(
-          imageFile.path,
-          filename: 'event_image.jpg',
-        ),
-      });
-      await ApiClient.instance.post('events/$eventId/image', data: formData);
+      await ref.read(eventsRepositoryProvider).uploadEventImage(
+            eventId,
+            imageFile,
+          );
       await fetchEvents();
       return true;
     } catch (e) {
@@ -68,7 +58,7 @@ class EventsNotifier extends Notifier<AsyncValue<List<Event>>> {
 
   Future<bool> joinEvent(String eventId) async {
     try {
-      await ApiClient.instance.post('events/$eventId/join');
+      await ref.read(eventsRepositoryProvider).joinEvent(eventId);
       await fetchEvents();
       return true;
     } catch (e) {
@@ -77,6 +67,6 @@ class EventsNotifier extends Notifier<AsyncValue<List<Event>>> {
   }
 }
 
-final eventsProvider = NotifierProvider<EventsNotifier, AsyncValue<List<Event>>>(() {
-  return EventsNotifier();
-});
+final eventsProvider = NotifierProvider<EventsNotifier, AsyncValue<List<Event>>>(
+  EventsNotifier.new,
+);

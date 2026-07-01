@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
-import '../../../../core/network/api_client.dart';
-import 'profile_screen.dart';
+import '../providers/profile_providers.dart';
 
 class PersonalDetailsScreen extends ConsumerStatefulWidget {
   const PersonalDetailsScreen({super.key});
 
   @override
-  ConsumerState<PersonalDetailsScreen> createState() => _PersonalDetailsScreenState();
+  ConsumerState<PersonalDetailsScreen> createState() =>
+      _PersonalDetailsScreenState();
 }
 
 class _PersonalDetailsScreenState extends ConsumerState<PersonalDetailsScreen> {
@@ -41,7 +41,8 @@ class _PersonalDetailsScreenState extends ConsumerState<PersonalDetailsScreen> {
     _weightCtrl.text = data['current_weight']?.toString() ?? '';
     _targetWeightCtrl.text = data['goal_weight']?.toString() ?? '';
     _gender = data['gender']?.toString().toLowerCase() ?? 'male';
-    _activityLevel = data['activity_level']?.toString().toLowerCase() ?? 'sedentary';
+    _activityLevel =
+        data['activity_level']?.toString().toLowerCase() ?? 'sedentary';
     _isDataLoaded = true;
   }
 
@@ -58,51 +59,39 @@ class _PersonalDetailsScreenState extends ConsumerState<PersonalDetailsScreen> {
   Future<void> _saveChanges() async {
     setState(() => _isLoading = true);
     try {
-      // First update profile basics
-      await ApiClient.instance.put(
-        'auth/me/profile',
-        data: {
-          'name': _nameCtrl.text,
-          'age': int.tryParse(_ageCtrl.text),
-          'gender': _gender,
-          'activity_level': _activityLevel,
-        },
-      );
+      await ref.read(personalDetailsProvider.notifier).saveProfile({
+        'name': _nameCtrl.text,
+        'age': int.tryParse(_ageCtrl.text),
+        'gender': _gender,
+        'activity_level': _activityLevel,
+      });
 
-      // Then update weight/height
-      await ApiClient.instance.put(
-        'auth/me/weight',
-        data: {
-          'current_weight': double.tryParse(_weightCtrl.text),
-          'goal_weight': double.tryParse(_targetWeightCtrl.text),
-          'weight_unit': 'kg',
-          'height': double.tryParse(_heightCtrl.text),
-          'height_unit': 'cm',
-          'age': int.tryParse(_ageCtrl.text),
-          'gender': _gender,
-          'activity_level': _activityLevel,
-        },
-      );
+      await ref.read(personalDetailsProvider.notifier).saveWeight({
+        'current_weight': double.tryParse(_weightCtrl.text),
+        'goal_weight': double.tryParse(_targetWeightCtrl.text),
+        'weight_unit': 'kg',
+        'height': double.tryParse(_heightCtrl.text),
+        'height_unit': 'cm',
+        'age': int.tryParse(_ageCtrl.text),
+        'gender': _gender,
+        'activity_level': _activityLevel,
+      });
 
-      ref.invalidate(profileProvider);
-      
+      ref.read(profileProvider.notifier).loadProfile();
+
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Personal details updated!')),
-        );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to update details')),
+          const SnackBar(content: Text('Failed to save changes.')),
         );
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
-
   @override
   Widget build(BuildContext context) {
     final profileAsync = ref.watch(profileProvider);

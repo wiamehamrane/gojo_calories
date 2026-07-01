@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import '../config/env_config.dart';
+import '../storage/token_storage.dart';
 
 class ApiClient {
   static final Dio _dio = _createDio();
@@ -8,7 +8,7 @@ class ApiClient {
   static Dio _createDio() {
     final dio = Dio(
       BaseOptions(
-        baseUrl: _getBaseUrl(),
+        baseUrl: EnvConfig.apiBaseUrl,
         connectTimeout: const Duration(seconds: 30),
         receiveTimeout: const Duration(seconds: 30),
         headers: {'Content-Type': 'application/json'},
@@ -18,8 +18,7 @@ class ApiClient {
     dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
-          final prefs = await SharedPreferences.getInstance();
-          final token = prefs.getString('access_token');
+          final token = await TokenStorage.getAccessToken();
           if (token != null) {
             options.headers['Authorization'] = 'Bearer $token';
           }
@@ -29,10 +28,6 @@ class ApiClient {
     );
 
     return dio;
-  }
-
-  static String _getBaseUrl() {
-    return dotenv.env['API_URL'] ?? 'https://api.gojocalories.com/api/';
   }
 
   static Dio get instance => _dio;

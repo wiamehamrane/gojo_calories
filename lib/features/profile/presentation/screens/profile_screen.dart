@@ -2,31 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../../../../core/storage/token_storage.dart';
+import '../../../../core/routing/route_paths.dart';
+import '../../../auth/data/services/iap_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-import '../../providers/memories_provider.dart';
-import '../../providers/friends_provider.dart';
+import '../../../social/presentation/providers/memories_provider.dart';
+import '../../../social/presentation/providers/friends_provider.dart';
 import 'add_friend_screen.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_shadows.dart';
-import '../../../../core/providers/locale_provider.dart';
+import '../../../../core/localization/locale_provider.dart';
 import '../../../../core/localization/translations.dart';
-import '../../../../core/network/api_client.dart';
-import '../../../../core/services/iap_service.dart';
-
-
-
-// Providers
-final profileProvider = FutureProvider<Map<String, dynamic>>((ref) async {
-  final res = await ApiClient.instance.get('auth/me');
-  if (res.statusCode == 200) {
-    return res.data;
-  }
-  return {};
-});
+import '../../../../core/di/repository_providers.dart';
+import '../providers/profile_providers.dart';
 
 
 class ProfileScreen extends ConsumerWidget {
@@ -282,7 +273,7 @@ class ProfileScreen extends ConsumerWidget {
                     icon: LucideIcons.userMinus,
                     label: 'Delete Account',
                     color: AppColors.danger,
-                    onTap: () => _confirmDeleteAccount(context),
+                    onTap: () => _confirmDeleteAccount(context, ref),
                   ),
                 ],
               ),
@@ -338,7 +329,7 @@ class ProfileScreen extends ConsumerWidget {
           ElevatedButton(
             onPressed: () async {
               try {
-                await ApiClient.instance.post('auth/resend-verification');
+                await ref.read(profileRepositoryProvider).resendVerification();
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text("Verification email sent! Check your inbox.")),
@@ -693,18 +684,17 @@ class ProfileScreen extends ConsumerWidget {
       backgroundColor: Colors.transparent,
       builder: (ctx) => _ProfileUpdateSheet(
         user: data,
-        onSaved: () => ref.refresh(profileProvider),
+        onSaved: () => ref.read(profileProvider.notifier).loadProfile(),
       ),
     );
   }
 
   Future<void> _signOut(BuildContext context) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('access_token');
-    if (context.mounted) context.go('/auth');
+    await TokenStorage.clearSession();
+    if (context.mounted) context.go(RoutePaths.auth);
   }
 
-  Future<void> _confirmDeleteAccount(BuildContext context) async {
+  Future<void> _confirmDeleteAccount(BuildContext context, WidgetRef ref) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -729,10 +719,9 @@ class ProfileScreen extends ConsumerWidget {
     );
     if (confirm == true && context.mounted) {
       try {
-        await ApiClient.instance.delete('auth/me');
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.remove('access_token');
-        if (context.mounted) context.go('/auth');
+        await ref.read(profileRepositoryProvider).deleteAccount();
+        await TokenStorage.clearSession();
+        if (context.mounted) context.go(RoutePaths.auth);
       } catch (e) {
         if (context.mounted) {
           ScaffoldMessenger.of(
@@ -744,16 +733,16 @@ class ProfileScreen extends ConsumerWidget {
   }
 }
 
-class _ProfileUpdateSheet extends StatefulWidget {
+class _ProfileUpdateSheet extends ConsumerStatefulWidget {
   final Map<String, dynamic> user;
   final VoidCallback onSaved;
   const _ProfileUpdateSheet({required this.user, required this.onSaved});
 
   @override
-  State<_ProfileUpdateSheet> createState() => _ProfileUpdateSheetState();
+  ConsumerState<_ProfileUpdateSheet> createState() => _ProfileUpdateSheetState();
 }
 
-class _ProfileUpdateSheetState extends State<_ProfileUpdateSheet> {
+class _ProfileUpdateSheetState extends ConsumerState<_ProfileUpdateSheet> {
   late TextEditingController _nameCtrl;
   late TextEditingController _ageCtrl;
   late TextEditingController _phoneCtrl;
@@ -780,15 +769,12 @@ class _ProfileUpdateSheetState extends State<_ProfileUpdateSheet> {
   Future<void> _save() async {
     setState(() => _loading = true);
     try {
-      await ApiClient.instance.put(
-        'auth/me/profile',
-        data: {
-          'name': _nameCtrl.text,
-          'age': int.tryParse(_ageCtrl.text),
-          'phone': _phoneCtrl.text,
-          'share_phone': _sharePhone,
-        },
-      );
+      await ref.read(profileRepositoryProvider).updateProfile({
+        'name': _nameCtrl.text,
+        'age': int.tryParse(_ageCtrl.text),
+        'phone': _phoneCtrl.text,
+        'share_phone': _sharePhone,
+      });
       widget.onSaved();
       if (mounted) Navigator.pop(context);
     } catch (_) {}

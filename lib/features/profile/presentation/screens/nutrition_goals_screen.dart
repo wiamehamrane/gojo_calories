@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
-import '../../../../core/network/api_client.dart';
-import '../../../dashboard/providers/dashboard_provider.dart';
+import '../providers/profile_providers.dart';
+import '../../../stats/presentation/providers/dashboard_provider.dart';
 
 class NutritionGoalsScreen extends ConsumerStatefulWidget {
   const NutritionGoalsScreen({super.key});
@@ -41,25 +41,19 @@ class _NutritionGoalsScreenState extends ConsumerState<NutritionGoalsScreen> {
   Future<void> _saveTargets() async {
     setState(() => _isLoading = true);
     try {
-      final res = await ApiClient.instance.put(
-        'auth/me/profile', // Reusing profile update or a specific macro endpoint if exists
-        data: {
-          'daily_calories': int.tryParse(_caloriesCtrl.text),
-          'protein_target': int.tryParse(_proteinCtrl.text),
-          'carbs_target': int.tryParse(_carbsCtrl.text),
-          'fat_target': int.tryParse(_fatsCtrl.text),
-        },
-      );
-      
-      if (res.statusCode == 200) {
-        // Refresh dashboard to show new targets
-        ref.invalidate(dashboardProvider);
-        if (mounted) {
-          Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Nutrition goals updated!')),
-          );
-        }
+      await ref.read(nutritionGoalsProvider.notifier).saveGoals({
+        'daily_calories': int.tryParse(_caloriesCtrl.text),
+        'protein_target': int.tryParse(_proteinCtrl.text),
+        'carbs_target': int.tryParse(_carbsCtrl.text),
+        'fat_target': int.tryParse(_fatsCtrl.text),
+      });
+
+      ref.invalidate(dashboardProvider);
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Nutrition goals updated!')),
+        );
       }
     } catch (e) {
       if (mounted) {
