@@ -29,8 +29,8 @@ class AuthRepository {
       data: {
         'email': email,
         'password': password,
-        if (name != null) 'name': name,
-        if (referralCode != null) 'referral_code': referralCode,
+        'name': ?name,
+        'referral_code': ?referralCode,
       },
     );
     return res.data['access_token'] as String;
@@ -50,8 +50,8 @@ class AuthRepository {
       'auth/apple',
       data: {
         'identity_token': identityToken,
-        if (givenName != null) 'given_name': givenName,
-        if (familyName != null) 'family_name': familyName,
+        'given_name': ?givenName,
+        'family_name': ?familyName,
       },
     );
     return res.data['access_token'] as String;
