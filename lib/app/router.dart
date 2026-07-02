@@ -9,6 +9,7 @@ import '../features/exercise/exercise_routes.dart';
 import '../features/events/events_routes.dart';
 import '../features/profile/profile_routes.dart';
 import '../features/referrals/referrals_routes.dart';
+import '../features/tasks/tasks_routes.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>(
   debugLabel: 'root',
@@ -36,5 +37,6 @@ final GoRouter appRouter = GoRouter(
     ...exerciseRoutes,
     ...referralRoutes,
     ...foodRoutes,
+    ...tasksRoutes,
   ],
 );

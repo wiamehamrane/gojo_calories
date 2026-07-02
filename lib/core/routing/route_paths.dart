@@ -29,4 +29,8 @@ abstract final class RoutePaths {
   static const foodDetail = '/food-detail';
   static const fixResults = '/fix-results';
   static const featureRequest = '/feature_request';
+
+  static const tasks = '/tasks';
+  static const createTask = '/tasks/create';
+  static const taskTimer = '/tasks/timer';
 }

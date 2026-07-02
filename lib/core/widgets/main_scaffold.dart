@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../theme/app_colors.dart';
-import '../theme/app_spacing.dart';
 import '../theme/app_shadows.dart';
+import '../routing/route_paths.dart';
 import '../localization/locale_provider.dart';
 import '../localization/translations.dart';
 
@@ -40,7 +40,7 @@ class MainScaffold extends ConsumerWidget {
     }
   }
 
-  void _showActionGrid(BuildContext context) {
+  void _showActionGrid(BuildContext context, double bottomOffset, double pillHeight) {
     showGeneralDialog(
       context: context,
       barrierDismissible: true,
@@ -55,16 +55,9 @@ class MainScaffold extends ConsumerWidget {
             body: Stack(
               children: [
                 Positioned(
-                  bottom:
-                      AppSpacing.navHeight +
-                      AppSpacing.fabMargin +
-                      MediaQuery.of(context).padding.bottom,
-                  right: Directionality.of(context) == TextDirection.rtl
-                      ? null
-                      : AppSpacing.fabMargin,
-                  left: Directionality.of(context) == TextDirection.rtl
-                      ? AppSpacing.fabMargin
-                      : null,
+                  bottom: bottomOffset + pillHeight + 16,
+                  left: 0,
+                  right: 0,
                   child: ScaleTransition(
                     scale: CurvedAnimation(
                       parent: anim1,
@@ -74,7 +67,7 @@ class MainScaffold extends ConsumerWidget {
                       opacity: anim1,
                       child: GestureDetector(
                         onTap: () {},
-                        child: _ActionGrid(),
+                        child: const Center(child: _ActionGrid()),
                       ),
                     ),
                   ),
@@ -94,19 +87,20 @@ class MainScaffold extends ConsumerWidget {
     final bool isScan = _isScanRoute(context);
     final bottomPadding = MediaQuery.of(context).padding.bottom;
 
-    // Nav pill height: 58 fixed + safe area
-    const pillHeight = 58.0;
-    const pillHMargin = 20.0;
-    final bottomOffset = bottomPadding + 14.0;
+    const pillHeight = 56.0;
+    const pillHMargin = 24.0;
+    const fabSize = 60.0;
+    final bottomOffset = bottomPadding + 16.0;
+    final bool isHome = currentIndex == 0;
 
     return Scaffold(
       body: Stack(
+        clipBehavior: Clip.none,
         children: [
-          // ── Content fills whole screen ──────────────────────────────
           Positioned.fill(
             child: GestureDetector(
               onHorizontalDragEnd: (details) {
-                if (details.primaryVelocity! < -300 && currentIndex < 1) {
+                if (details.primaryVelocity! < -300 && currentIndex < 2) {
                   _onItemTapped(currentIndex + 1, context);
                 } else if (details.primaryVelocity! > 300 && currentIndex > 0) {
                   _onItemTapped(currentIndex - 1, context);
@@ -116,48 +110,19 @@ class MainScaffold extends ConsumerWidget {
             ),
           ),
 
-          // ── Floating Pill Navbar ────────────────────────────────────
           if (!isScan)
             Positioned(
               bottom: bottomOffset,
               left: pillHMargin,
               right: pillHMargin,
-              height: pillHeight,
+              height: pillHeight + (isHome ? fabSize / 2 : 0),
               child: _FloatingNavBar(
                 currentIndex: currentIndex,
                 lang: lang,
+                pillHeight: pillHeight,
+                fabSize: fabSize,
                 onTap: (i) => _onItemTapped(i, context),
-              ),
-            ),
-
-          // ── FAB (only on home, not on scan) ────────────────────────
-          if (currentIndex == 0 && !isScan)
-            Positioned(
-              bottom: bottomOffset + pillHeight / 2 - AppSpacing.fabSize / 2,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: GestureDetector(
-                  onTap: () => _showActionGrid(context),
-                  child: Container(
-                    width: AppSpacing.fabSize,
-                    height: AppSpacing.fabSize,
-                    decoration: BoxDecoration(
-                      color: Colors.black,
-                      shape: BoxShape.circle,
-                      boxShadow: AppShadows.fabShadow,
-                      border: Border.all(
-                        color: Colors.white,
-                        width: 3,
-                      ),
-                    ),
-                    child: const Icon(
-                      LucideIcons.plus,
-                      size: 26,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
+                onPlusTap: () => _showActionGrid(context, bottomOffset, pillHeight),
               ),
             ),
         ],
@@ -166,73 +131,109 @@ class MainScaffold extends ConsumerWidget {
   }
 }
 
-// ─── Floating Nav Bar Widget ──────────────────────────────────────────────
-
 class _FloatingNavBar extends StatelessWidget {
   final int currentIndex;
   final String lang;
+  final double pillHeight;
+  final double fabSize;
   final void Function(int) onTap;
+  final VoidCallback onPlusTap;
 
   const _FloatingNavBar({
     required this.currentIndex,
     required this.lang,
+    required this.pillHeight,
+    required this.fabSize,
     required this.onTap,
+    required this.onPlusTap,
   });
+
+  bool get _isHome => currentIndex == 0;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(999),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.10),
-            blurRadius: 20,
-            spreadRadius: 0,
-            offset: const Offset(0, 4),
+    return Stack(
+      clipBehavior: Clip.none,
+      alignment: Alignment.bottomCenter,
+      children: [
+        Container(
+          height: pillHeight,
+          decoration: _pillDecoration,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: _isHome ? _buildHomeRow() : _buildTabsRow(),
+        ),
+        if (_isHome)
+          Positioned(
+            bottom: pillHeight / 2 - fabSize / 2,
+            child: _CenterFab(size: fabSize, onTap: onPlusTap),
           ),
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.08),
-            blurRadius: 12,
-            offset: const Offset(0, 2),
+      ],
+    );
+  }
+
+  Widget _buildHomeRow() {
+    return Row(
+      children: [
+        Expanded(
+          child: _NavSlot(
+            icon: LucideIcons.house,
+            label: Translations.t(lang, 'nav_home'),
+            isActive: true,
+            onTap: () => onTap(0),
           ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _PillNavItem(
+        ),
+        SizedBox(width: fabSize + 4),
+        Expanded(
+          child: _NavSlot(
+            icon: LucideIcons.user,
+            label: Translations.t(lang, 'nav_profile'),
+            isActive: false,
+            onTap: () => onTap(2),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTabsRow() {
+    return Row(
+      children: [
+        Expanded(
+          child: _NavSlot(
             icon: LucideIcons.house,
             label: Translations.t(lang, 'nav_home'),
             isActive: currentIndex == 0,
             onTap: () => onTap(0),
           ),
-          _PillNavItem(
+        ),
+        Expanded(
+          child: _NavSlot(
             icon: LucideIcons.compass,
             label: 'Events',
             isActive: currentIndex == 1,
             onTap: () => onTap(1),
           ),
-          _PillNavItem(
+        ),
+        Expanded(
+          child: _NavSlot(
             icon: LucideIcons.user,
             label: Translations.t(lang, 'nav_profile'),
             isActive: currentIndex == 2,
             onTap: () => onTap(2),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
 
-class _PillNavItem extends StatelessWidget {
+class _NavSlot extends StatelessWidget {
   final IconData icon;
   final String label;
   final bool isActive;
   final VoidCallback onTap;
 
-  const _PillNavItem({
+  const _NavSlot({
     required this.icon,
     required this.label,
     required this.isActive,
@@ -241,47 +242,47 @@ class _PillNavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Center(
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 220),
-          curve: Curves.easeInOut,
-          margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          curve: Curves.easeOutCubic,
+          padding: EdgeInsets.symmetric(
+            horizontal: isActive ? 16 : 12,
+            vertical: 10,
+          ),
           decoration: BoxDecoration(
-            color: isActive ? AppColors.primary.withValues(alpha: 0.1) : Colors.transparent,
+            color: isActive
+                ? AppColors.primary.withValues(alpha: 0.12)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(999),
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                size: 20,
-                color: isActive ? AppColors.primaryDark : AppColors.inactive,
-              ),
-              AnimatedSize(
-                duration: const Duration(milliseconds: 200),
-                child: isActive
-                    ? Row(
-                        children: [
-                          const SizedBox(width: 6),
-                          Text(
-                            label,
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.primaryDark,
-                            ),
-                          ),
-                        ],
-                      )
-                    : const SizedBox.shrink(),
-              ),
-            ],
+          child: AnimatedSize(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  icon,
+                  size: 22,
+                  color: isActive ? AppColors.primaryDark : AppColors.inactive,
+                ),
+                if (isActive) ...[
+                  const SizedBox(width: 8),
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primaryDark,
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ),
         ),
       ),
@@ -289,21 +290,69 @@ class _PillNavItem extends StatelessWidget {
   }
 }
 
-// ─── Action Grid ─────────────────────────────────────────────────────────
+class _CenterFab extends StatelessWidget {
+  final double size;
+  final VoidCallback onTap;
+
+  const _CenterFab({required this.size, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: Colors.black,
+          shape: BoxShape.circle,
+          boxShadow: AppShadows.fabShadow,
+          border: Border.all(color: Colors.white, width: 3),
+        ),
+        child: const Icon(
+          LucideIcons.plus,
+          size: 28,
+          color: Colors.white,
+        ),
+      ),
+    );
+  }
+}
+
+const _pillDecoration = BoxDecoration(
+  color: Colors.white,
+  borderRadius: BorderRadius.all(Radius.circular(999)),
+  boxShadow: [
+    BoxShadow(
+      color: Color(0x1A000000),
+      blurRadius: 24,
+      spreadRadius: 0,
+      offset: Offset(0, 6),
+    ),
+    BoxShadow(
+      color: Color(0x0F000000),
+      blurRadius: 8,
+      offset: Offset(0, 2),
+    ),
+  ],
+);
 
 class _ActionGrid extends ConsumerWidget {
+  const _ActionGrid();
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final lang = ref.watch(localeProvider);
     final double screenWidth = MediaQuery.of(context).size.width;
-    final double cellWidth = (screenWidth - 32 - 10) / 2;
+    final double gridWidth = screenWidth - 48;
+    final double cellWidth = (gridWidth - 10) / 2;
 
     return SizedBox(
-      width: screenWidth - 32,
+      width: gridWidth,
       child: Wrap(
         spacing: 10,
         runSpacing: 10,
-        alignment: WrapAlignment.end,
+        alignment: WrapAlignment.center,
         children: [
           _ActionCell(
             icon: LucideIcons.footprints,
@@ -339,6 +388,15 @@ class _ActionGrid extends ConsumerWidget {
             onTap: () {
               Navigator.pop(context);
               context.push('/scan');
+            },
+          ),
+          _ActionCell(
+            icon: LucideIcons.listTodo,
+            label: Translations.t(lang, 'action_tasks'),
+            width: cellWidth,
+            onTap: () {
+              Navigator.pop(context);
+              context.push(RoutePaths.tasks);
             },
           ),
         ],

@@ -21,78 +21,29 @@ import '../widgets/calorie_ring_inner.dart';
 import '../widgets/macro_tile_inner.dart';
 import '../widgets/weekly_calendar.dart';
 import '../widgets/bmi_widget.dart';
-import '../../../social/presentation/widgets/feed_tab.dart';
 import '../widgets/health_connect_card.dart';
-import 'package:gojocalories/features/events/presentation/screens/events_feed_screen.dart';
+import '../../../tasks/presentation/widgets/active_tasks_carousel.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        backgroundColor: Colors.white,
-        body: SafeArea(
-          bottom: false,
-          child: Column(
-            children: [
-              _buildHeader(context, ref),
-              _buildTabBar(context),
-              Expanded(
-                child: TabBarView(
-                  children: [
-                    _buildMacrosTab(context, ref),
-                    /*FeedTab(),*/
-                    EventsFeedScreen(),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTabBar(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      height: 40,
-      decoration: BoxDecoration(
-        color: const Color(0xFFF2F2F7),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: TabBar(
-        indicator: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            _buildHeader(context, ref),
+            Expanded(child: _buildHomeContent(context, ref)),
           ],
         ),
-        labelColor: AppColors.textPrimary,
-        unselectedLabelColor: AppColors.textSecondary,
-        labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-        unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-        indicatorSize: TabBarIndicatorSize.tab,
-        dividerColor: Colors.transparent,
-        padding: const EdgeInsets.all(2),
-        tabs: const [
-          Tab(text: 'Macros'),
-          /*Tab(text: 'Feed'),*/
-          Tab(text: 'Events'),
-        ],
       ),
     );
   }
 
-  Widget _buildMacrosTab(BuildContext context, WidgetRef ref) {
+  Widget _buildHomeContent(BuildContext context, WidgetRef ref) {
     final stats = ref.watch(dashboardProvider);
     final lang = ref.watch(localeProvider);
     final weeklyAsync = ref.watch(weeklyStatsProvider);
@@ -107,7 +58,9 @@ class HomeScreen extends ConsumerWidget {
           const WeeklyCalendar(),
           const SizedBox(height: 16),
           const HealthConnectCard(),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
+          const ActiveTasksCarousel(),
+          const SizedBox(height: AppSpacing.cardGap),
           // ─── Calorie Card (3 pages: Stats | Chart | BMI) ─────────
           Padding(
             padding: const EdgeInsets.symmetric(
