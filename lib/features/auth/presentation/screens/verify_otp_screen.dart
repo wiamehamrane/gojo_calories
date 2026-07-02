@@ -20,6 +20,25 @@ class _VerifyOTPScreenState extends ConsumerState<VerifyOTPScreen> {
   bool _isLoading = false;
   String? _error;
 
+  Future<void> _routeAfterVerification() async {
+    final auth = ref.read(authRepositoryProvider);
+    try {
+      final data = await auth.getMe();
+      if (!mounted) return;
+      if (data['current_weight'] == null) {
+        context.go(RoutePaths.weightSetup);
+      } else if (data['has_paid'] != true) {
+        context.go(RoutePaths.paywall);
+      } else {
+        await auth.setOnboarded(true);
+        if (!mounted) return;
+        context.go(RoutePaths.home);
+      }
+    } catch (_) {
+      if (mounted) context.go(RoutePaths.weightSetup);
+    }
+  }
+
   Future<void> _verify() async {
     final otp = _otpCtrl.text.trim();
     if (otp.length != 6) {
@@ -33,12 +52,13 @@ class _VerifyOTPScreenState extends ConsumerState<VerifyOTPScreen> {
     });
 
     try {
-      await ref.read(authRepositoryProvider).verifyOtp(
+      final token = await ref.read(authRepositoryProvider).verifyOtp(
             email: widget.email,
             otp: otp,
           );
+      await ref.read(authRepositoryProvider).saveToken(token);
       if (!mounted) return;
-      context.go(RoutePaths.weightSetup);
+      await _routeAfterVerification();
     } catch (e) {
       setState(() => _error = "Invalid or expired code.");
     } finally {
@@ -48,7 +68,9 @@ class _VerifyOTPScreenState extends ConsumerState<VerifyOTPScreen> {
 
   Future<void> _resend() async {
     try {
-      await ref.read(authRepositoryProvider).resendVerification();
+      await ref.read(authRepositoryProvider).resendVerification(
+            email: widget.email,
+          );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -59,6 +81,7 @@ class _VerifyOTPScreenState extends ConsumerState<VerifyOTPScreen> {
         ),
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text("Failed to resend code."),
@@ -187,20 +210,6 @@ class _VerifyOTPScreenState extends ConsumerState<VerifyOTPScreen> {
                 ),
               ).animate().fadeIn(delay: 300.ms),
               const SizedBox(height: 24),
-              Center(
-                child: TextButton(
-                  onPressed: () => context.go(RoutePaths.weightSetup),
-                  child: const Text(
-                    "Skip for now →",
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ).animate().fadeIn(delay: 450.ms),
-              const SizedBox(height: 12),
               Center(
                 child: GestureDetector(
                   onTap: _resend,

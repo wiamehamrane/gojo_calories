@@ -7,6 +7,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gojocalories/core/theme/app_colors.dart';
 import 'package:gojocalories/core/di/repository_providers.dart';
+import 'package:gojocalories/features/auth/data/repositories/auth_repository.dart';
 import 'package:gojocalories/core/routing/route_paths.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -50,9 +51,18 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
   Future<void> _handleLoginSuccess(String token) async {
     final auth = ref.read(authRepositoryProvider);
     await auth.saveToken(token);
+    await _routeAfterAuth(auth);
+  }
+
+  Future<void> _routeAfterAuth(AuthRepository auth) async {
     try {
       final data = await auth.getMe();
       if (!mounted) return;
+      if (data['is_email_verified'] != true) {
+        final email = data['email'] as String? ?? '';
+        context.go('${RoutePaths.verifyOtp}?email=${Uri.encodeComponent(email)}');
+        return;
+      }
       if (data['current_weight'] == null) {
         context.go(RoutePaths.weightSetup);
       } else if (data['has_paid'] != true) {
@@ -79,10 +89,34 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
     setState(() => _isLoading = true);
     try {
       final auth = ref.read(authRepositoryProvider);
-      final token = _tab.index == 0
-          ? await auth.register(email: email, password: password)
-          : await auth.login(email: email, password: password);
-      await _handleLoginSuccess(token);
+      if (_tab.index == 0) {
+        final result = await auth.register(email: email, password: password);
+        if (!mounted) return;
+        if (result['requires_verification'] == true) {
+          context.go(
+            '${RoutePaths.verifyOtp}?email=${Uri.encodeComponent(email)}',
+          );
+          return;
+        }
+        final token = result['access_token'] as String?;
+        if (token != null) {
+          await _handleLoginSuccess(token);
+        }
+      } else {
+        try {
+          final token = await auth.login(email: email, password: password);
+          await _handleLoginSuccess(token);
+        } on DioException catch (e) {
+          if (e.response?.statusCode == 403) {
+            if (!mounted) return;
+            context.go(
+              '${RoutePaths.verifyOtp}?email=${Uri.encodeComponent(email)}',
+            );
+            return;
+          }
+          rethrow;
+        }
+      }
     } on DioException catch (e) {
       String errorMessage = 'Something went wrong. Please try again.';
       if (e.response != null && e.response?.data != null) {

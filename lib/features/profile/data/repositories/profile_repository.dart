@@ -24,8 +24,11 @@ class ProfileRepository {
     await _dio.put('auth/me/profile', data: data);
   }
 
-  Future<void> resendVerification() async {
-    await _dio.post('auth/resend-verification');
+  Future<void> resendVerification({String? email}) async {
+    await _dio.post(
+      'auth/resend-verification',
+      data: email != null ? {'email': email} : {},
+    );
   }
 
   Future<void> deleteAccount() async {

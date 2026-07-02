@@ -18,7 +18,7 @@ class AuthRepository {
     return res.data['access_token'] as String;
   }
 
-  Future<String> register({
+  Future<Map<String, dynamic>> register({
     required String email,
     required String password,
     String? name,
@@ -33,7 +33,7 @@ class AuthRepository {
         'referral_code': ?referralCode,
       },
     );
-    return res.data['access_token'] as String;
+    return res.data as Map<String, dynamic>;
   }
 
   Future<String> googleLogin(String idToken) async {
@@ -57,12 +57,19 @@ class AuthRepository {
     return res.data['access_token'] as String;
   }
 
-  Future<void> verifyOtp({required String email, required String otp}) async {
-    await _dio.post('auth/verify-otp', data: {'email': email, 'otp': otp});
+  Future<String> verifyOtp({required String email, required String otp}) async {
+    final res = await _dio.post(
+      'auth/verify-otp',
+      data: {'email': email, 'otp': otp},
+    );
+    return res.data['access_token'] as String;
   }
 
-  Future<void> resendVerification() async {
-    await _dio.post('auth/resend-verification');
+  Future<void> resendVerification({String? email}) async {
+    await _dio.post(
+      'auth/resend-verification',
+      data: email != null ? {'email': email} : {},
+    );
   }
 
   Future<Map<String, dynamic>> updateWeight(Map<String, dynamic> data) async {

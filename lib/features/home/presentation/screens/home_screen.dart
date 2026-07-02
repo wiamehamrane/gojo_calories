@@ -31,7 +31,7 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return DefaultTabController(
-      length: 3,
+      length: 2,
       child: Scaffold(
         backgroundColor: Colors.white,
         body: SafeArea(
@@ -44,7 +44,7 @@ class HomeScreen extends ConsumerWidget {
                 child: TabBarView(
                   children: [
                     _buildMacrosTab(context, ref),
-                    FeedTab(),
+                    /*FeedTab(),*/
                     EventsFeedScreen(),
                   ],
                 ),
@@ -82,10 +82,10 @@ class HomeScreen extends ConsumerWidget {
         unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
         indicatorSize: TabBarIndicatorSize.tab,
         dividerColor: Colors.transparent,
-        padding: const EdgeInsets.all(3),
+        padding: const EdgeInsets.all(2),
         tabs: const [
           Tab(text: 'Macros'),
-          Tab(text: 'Feed'),
+          /*Tab(text: 'Feed'),*/
           Tab(text: 'Events'),
         ],
       ),

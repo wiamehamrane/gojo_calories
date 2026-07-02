@@ -27,6 +27,14 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
         try {
           final data = await auth.getMe();
 
+          if (data['is_email_verified'] != true) {
+            final email = data['email'] as String? ?? '';
+            router.go(
+              '${RoutePaths.verifyOtp}?email=${Uri.encodeComponent(email)}',
+            );
+            return;
+          }
+
           if (data['current_weight'] == null) {
             router.go(RoutePaths.weightSetup);
           } else if (data['has_paid'] != true) {
