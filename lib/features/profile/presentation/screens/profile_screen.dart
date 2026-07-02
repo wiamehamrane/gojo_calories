@@ -62,13 +62,13 @@ class ProfileScreen extends ConsumerWidget {
                 ),
               ),
 
-              const SizedBox(height: 24),
+              /*const SizedBox(height: 24),
               _SectionLabel('Memories'),
               _buildMemoriesGallery(ref),
 
               const SizedBox(height: 24),
               _SectionLabel('Circle of Friends'),
-              _buildCircleOfFriends(context, ref),
+              _buildCircleOfFriends(context, ref),*/
 
               const SizedBox(height: 24),
               _SectionLabel(t('invite_friends')),
@@ -328,19 +328,32 @@ class ProfileScreen extends ConsumerWidget {
           ),
           ElevatedButton(
             onPressed: () async {
+              final email = data['email'] as String?;
+              if (email == null) return;
               try {
-                await ref.read(profileRepositoryProvider).resendVerification();
+                await ref.read(authRepositoryProvider).resendVerification(
+                      email: email,
+                    );
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Verification email sent! Check your inbox.")),
+                    const SnackBar(
+                      content: Text(
+                        "Verification code sent! Check your inbox.",
+                      ),
+                    ),
                   );
                 }
               } catch (e) {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Failed to send email.")),
+                    const SnackBar(content: Text("Failed to send code.")),
                   );
                 }
+              }
+              if (context.mounted) {
+                context.push(
+                  '${RoutePaths.verifyOtp}?email=${Uri.encodeComponent(email)}',
+                );
               }
             },
             style: ElevatedButton.styleFrom(

@@ -19,7 +19,28 @@ def run_tests():
     if r.status_code == 400 and "already registered" in r.text:
        r = requests.post(f"{BASE_URL}/api/auth/login", data={"username": email, "password": "strongpassword123"})
     
-    assert r.status_code == 200, f"Registration/Login failed: {r.text}"
+    assert r.status_code == 200, f"Registration failed: {r.text}"
+    reg_data = r.json()
+    assert reg_data.get("requires_verification") is True, f"Expected requires_verification: {r.text}"
+
+    print("Fetching OTP from database for verification")
+    otp = None
+    for db_cmd in [
+        f"sqlite3 gojo.db \"SELECT verification_code FROM users WHERE email = '{email}';\"",
+        f"PGPASSWORD=password psql -h localhost -U user -d gojocalories -t -c \"SELECT verification_code FROM users WHERE email = '{email}';\"",
+    ]:
+        result = subprocess.run(db_cmd, shell=True, capture_output=True, text=True)
+        if result.returncode == 0 and result.stdout.strip():
+            otp = result.stdout.strip()
+            break
+    assert otp, "Could not fetch verification code from database"
+
+    print("Testing OTP verification")
+    r = requests.post(f"{BASE_URL}/api/auth/verify-otp", json={
+        "email": email,
+        "otp": otp,
+    })
+    assert r.status_code == 200, f"OTP verification failed: {r.text}"
     token = r.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
     

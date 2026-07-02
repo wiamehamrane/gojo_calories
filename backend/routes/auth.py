@@ -2,13 +2,13 @@ import random
 import string
 import os
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
-from fastapi.responses import HTMLResponse
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from database import get_db
 from models import User, Referral, WeighIn, DailyStats
 from pydantic import BaseModel
 from typing import Optional
-from security import get_password_hash, verify_password, create_access_token, get_current_user_id
+from security import get_password_hash, verify_password, create_access_token, get_current_user_id, SECRET_KEY, ALGORITHM
 import datetime
 from google.oauth2 import id_token
 from google.auth.transport import requests as g_requests
@@ -17,12 +17,34 @@ import httpx
 from services import email_service
 
 router = APIRouter()
+optional_bearer = HTTPBearer(auto_error=False)
 
 GOOGLE_WEB_CLIENT_ID = os.getenv("GOOGLE_WEB_CLIENT_ID", "dummy_if_not_set")
 GOOGLE_IOS_CLIENT_ID = "980076580409-4d78u72lc8o7aqfuoinvd72dk2tr27co.apps.googleusercontent.com"
 
 def _generate_code(length: int = 6) -> str:
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
+
+def _generate_otp() -> str:
+    return ''.join(random.choices(string.digits, k=6))
+
+def _set_verification_code(user: User, background_tasks: BackgroundTasks):
+    otp = _generate_otp()
+    user.verification_code = otp
+    user.verification_code_expires_at = datetime.datetime.utcnow() + datetime.timedelta(minutes=15)
+    background_tasks.add_task(email_service.send_verification_code_email, user.email, otp)
+
+def _get_optional_user_id(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(optional_bearer),
+) -> Optional[str]:
+    if not credentials:
+        return None
+    try:
+        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = payload.get("sub")
+        return str(user_id) if user_id else None
+    except Exception:
+        return None
 
 
 class UserCreate(BaseModel):
@@ -60,6 +82,13 @@ class UserProfileUpdate(BaseModel):
 class UserLogin(BaseModel):
     email: str
     password: str
+
+class VerifyOtpBody(BaseModel):
+    email: str
+    otp: str
+
+class ResendVerificationBody(BaseModel):
+    email: Optional[str] = None
 
 @router.post("/register")
 def register(user: UserCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
@@ -103,15 +132,14 @@ def register(user: UserCreate, background_tasks: BackgroundTasks, db: Session = 
         db.add(referral_record)
         db.commit()
     
-    new_user.is_email_verified = True
+    new_user.is_email_verified = False
+    _set_verification_code(new_user, background_tasks)
     db.commit()
 
-    access_token = create_access_token(data={"sub": str(new_user.id)})
-    
     return {
         "status": "success",
-        "access_token": access_token,
-        "token_type": "bearer",
+        "requires_verification": True,
+        "email": new_user.email,
         "user_id": new_user.id,
         "name": new_user.name,
         "referral_code": new_user.referral_code,
@@ -122,6 +150,9 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
     db_user = db.query(User).filter(User.email == user.email).first()
     if not db_user or not verify_password(user.password, db_user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    if not db_user.is_email_verified:
+        raise HTTPException(status_code=403, detail="Email not verified")
     
     access_token = create_access_token(data={"sub": str(db_user.id)})
     return {
@@ -131,6 +162,69 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
         "user_id": db_user.id,
         "name": db_user.name
     }
+
+@router.post("/verify-otp")
+def verify_otp(body: VerifyOtpBody, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == body.email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if user.is_email_verified:
+        access_token = create_access_token(data={"sub": str(user.id)})
+        return {
+            "status": "success",
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user_id": user.id,
+            "name": user.name,
+        }
+
+    submitted = body.otp.strip()
+    if (
+        not user.verification_code
+        or submitted != user.verification_code
+        or not user.verification_code_expires_at
+        or user.verification_code_expires_at < datetime.datetime.utcnow()
+    ):
+        raise HTTPException(status_code=400, detail="Invalid or expired code")
+
+    user.is_email_verified = True
+    user.verification_code = None
+    user.verification_code_expires_at = None
+    db.commit()
+
+    access_token = create_access_token(data={"sub": str(user.id)})
+    return {
+        "status": "success",
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user_id": user.id,
+        "name": user.name,
+    }
+
+@router.post("/resend-verification")
+def resend_verification(
+    body: ResendVerificationBody,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user_id: Optional[str] = Depends(_get_optional_user_id),
+):
+    email = body.email
+    if email:
+        user = db.query(User).filter(User.email == email).first()
+    elif current_user_id:
+        user = db.query(User).filter(User.id == current_user_id).first()
+    else:
+        raise HTTPException(status_code=400, detail="Email is required")
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if user.is_email_verified:
+        return {"status": "success", "message": "Email already verified"}
+
+    _set_verification_code(user, background_tasks)
+    db.commit()
+    return {"status": "success", "message": "Verification code sent"}
 
 
 
@@ -177,7 +271,8 @@ def google_login(body: SocialLogin, db: Session = Depends(get_db)):
             name=name, 
             hashed_password="", # No password for social login
             referral_code=new_code,
-            referral_balance=0.0
+            referral_balance=0.0,
+            is_email_verified=True,
         )
         db.add(user)
         db.commit()
@@ -249,7 +344,8 @@ async def apple_login(body: AppleLoginBody, db: Session = Depends(get_db)):
             name=name, 
             hashed_password="",
             referral_code=new_code,
-            referral_balance=0.0
+            referral_balance=0.0,
+            is_email_verified=True,
         )
         db.add(user)
         db.commit()

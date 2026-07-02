@@ -119,19 +119,23 @@ class _SwipableStatCardState extends State<SwipableStatCard> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              "${widget.title} Trend",
-              style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
-                letterSpacing: 0.3,
+            Expanded(
+              child: Text(
+                "${widget.title} Trend",
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                  letterSpacing: 0.3,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
+            const SizedBox(width: 4),
             Text(
-              "7 days",
+              "7d",
               style: TextStyle(
                 fontSize: 10,
                 color: AppColors.textSecondary.withValues(alpha: 0.7),
