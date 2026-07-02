@@ -658,7 +658,9 @@ class ProfileScreen extends ConsumerWidget {
               ],
             ),
             loading: () => const SizedBox(height: 36, child: Center(child: CircularProgressIndicator(strokeWidth: 2))),
-            error: (e, st) => const Text('Failed to load circle', style: TextStyle(fontSize: 12, color: AppColors.danger)),
+            error: (e, st) => Text(
+              'Failed to load circle', 
+              style: const TextStyle(fontSize: 12, color: AppColors.danger)),
           ),
           const SizedBox(height: 12),
           const Text(

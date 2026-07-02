@@ -9,7 +9,7 @@ from models import User, Friendship
 from security import get_current_user
 from pydantic import BaseModel
 
-router = APIRouter(prefix="/friends", tags=["friends"])
+router = APIRouter()
 
 class FriendResponse(BaseModel):
     id: str

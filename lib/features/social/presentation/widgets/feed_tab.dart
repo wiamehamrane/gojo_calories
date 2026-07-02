@@ -2,59 +2,76 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:gojocalories/core/config/env_config.dart';
 import 'package:gojocalories/core/theme/app_colors.dart';
 import 'package:gojocalories/core/theme/app_radius.dart';
 import 'package:gojocalories/core/theme/app_spacing.dart';
+import '../providers/feed_provider.dart';
 
 class FeedTab extends ConsumerWidget {
   const FeedTab({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Mockup data for design demonstration
-    final List<Map<String, dynamic>> mockPosts = [
-      {
-        'userName': 'Alex Johnson',
-        'content': 'Just finished a 10km run! Feeling great. #fitness #running',
-        'imageUrl': 'https://images.unsplash.com/photo-1513594422870-0935119953d0?q=80&w=800&auto=format&fit=crop',
-        'likesCount': 24,
-        'isLiked': true,
-        'createdAt': DateTime.now().subtract(const Duration(hours: 2)),
-      },
-      {
-        'userName': 'Sarah Wilson',
-        'content': 'Healthy breakfast today! Avocado toast with poached eggs. 🥑🍳',
-        'imageUrl': 'https://images.unsplash.com/photo-1525351484163-7529414344d8?q=80&w=800&auto=format&fit=crop',
-        'likesCount': 42,
-        'isLiked': false,
-        'createdAt': DateTime.now().subtract(const Duration(hours: 5)),
-      },
-      {
-        'userName': 'Mike Ross',
-        'content': 'New personal record on deadlifts today! 200kg for 5 reps. 💪',
-        'imageUrl': 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=800&auto=format&fit=crop',
-        'likesCount': 15,
-        'isLiked': false,
-        'createdAt': DateTime.now().subtract(const Duration(days: 1)),
-      },
-    ];
+    final feedAsync = ref.watch(feedProvider);
 
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      itemCount: mockPosts.length + 1,
-      itemBuilder: (context, index) {
-        if (index == 0) {
-          return _buildCreatePostHeader(context);
+    return feedAsync.when(
+      loading: () => const Center(
+        child: CircularProgressIndicator(color: AppColors.primary),
+      ),
+      error: (error, stackTrace) => _FeedMessage(
+        icon: LucideIcons.wifiOff,
+        message: 'Could not load feed',
+        actionLabel: 'Retry',
+        onAction: () => ref.read(feedProvider.notifier).fetchFeed(),
+      ),
+      data: (posts) {
+        if (posts.isEmpty) {
+          return ListView(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            children: const [
+              _CreatePostHeader(),
+              _FeedMessage(
+                icon: LucideIcons.newspaper,
+                message: 'No posts yet.\nBe the first to share something!',
+              ),
+            ],
+          );
         }
-        final post = mockPosts[index - 1];
-        return _buildPostCard(context, post, index - 1);
+
+        return ListView.builder(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          itemCount: posts.length + 1,
+          itemBuilder: (context, index) {
+            if (index == 0) {
+              return const _CreatePostHeader();
+            }
+            final post = posts[index - 1];
+            return _PostCard(
+              post: post,
+              index: index - 1,
+              onToggleLike: () =>
+                  ref.read(feedProvider.notifier).toggleLike(post.id),
+            );
+          },
+        );
       },
     );
   }
+}
 
-  Widget _buildCreatePostHeader(BuildContext context) {
+class _CreatePostHeader extends StatelessWidget {
+  const _CreatePostHeader();
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.fromLTRB(AppSpacing.screenPadding, 0, AppSpacing.screenPadding, 24),
+      margin: const EdgeInsets.fromLTRB(
+        AppSpacing.screenPadding,
+        0,
+        AppSpacing.screenPadding,
+        24,
+      ),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -72,7 +89,11 @@ class FeedTab extends ConsumerWidget {
           CircleAvatar(
             radius: 20,
             backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-            child: const Icon(LucideIcons.user, color: AppColors.primary, size: 20),
+            child: const Icon(
+              LucideIcons.user,
+              color: AppColors.primary,
+              size: 20,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -94,18 +115,79 @@ class FeedTab extends ConsumerWidget {
       ),
     );
   }
+}
 
-  Widget _buildPostCard(BuildContext context, Map<String, dynamic> post, int index) {
+class _FeedMessage extends StatelessWidget {
+  final IconData icon;
+  final String message;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  const _FeedMessage({
+    required this.icon,
+    required this.message,
+    this.actionLabel,
+    this.onAction,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.screenPadding,
+        vertical: 48,
+      ),
+      child: Column(
+        children: [
+          Icon(icon, size: 40, color: AppColors.textPlaceholder),
+          const SizedBox(height: 12),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 15,
+              height: 1.4,
+            ),
+          ),
+          if (actionLabel != null && onAction != null) ...[
+            const SizedBox(height: 16),
+            TextButton(onPressed: onAction, child: Text(actionLabel!)),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _PostCard extends StatelessWidget {
+  final Post post;
+  final int index;
+  final VoidCallback onToggleLike;
+
+  const _PostCard({
+    required this.post,
+    required this.index,
+    required this.onToggleLike,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final imageUrl = EnvConfig.resolveMediaUrl(post.imageUrl);
+
     return Container(
-      margin: const EdgeInsets.fromLTRB(AppSpacing.screenPadding, 0, AppSpacing.screenPadding, 20),
+      margin: const EdgeInsets.fromLTRB(
+        AppSpacing.screenPadding,
+        0,
+        AppSpacing.screenPadding,
+        20,
+      ),
       height: 400,
       width: double.infinity,
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        image: DecorationImage(
-          image: NetworkImage(post['imageUrl']),
-          fit: BoxFit.cover,
-        ),
+        color: const Color(0xFFE8E8E8),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.1),
@@ -115,12 +197,20 @@ class FeedTab extends ConsumerWidget {
         ],
       ),
       child: Stack(
+        fit: StackFit.expand,
         children: [
-          // Gradient Overlay
+          if (imageUrl.isNotEmpty)
+            Image.network(
+              imageUrl,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) =>
+                  const _PostImageFallback(),
+            )
+          else
+            const _PostImageFallback(),
           Positioned.fill(
-            child: Container(
+            child: DecoratedBox(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(AppRadius.lg),
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
@@ -135,8 +225,6 @@ class FeedTab extends ConsumerWidget {
               ),
             ),
           ),
-
-          // User Info (Top)
           Positioned(
             top: 16,
             left: 16,
@@ -147,8 +235,11 @@ class FeedTab extends ConsumerWidget {
                   radius: 18,
                   backgroundColor: Colors.white.withValues(alpha: 0.2),
                   child: Text(
-                    post['userName'][0],
-                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                    post.userName.isNotEmpty ? post.userName[0] : '?',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -156,12 +247,19 @@ class FeedTab extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      post['userName'],
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                      post.userName,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
                     ),
                     Text(
-                      '2h ago',
-                      style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 11),
+                      _formatTimeAgo(post.createdAt),
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.8),
+                        fontSize: 11,
+                      ),
                     ),
                   ],
                 ),
@@ -170,8 +268,6 @@ class FeedTab extends ConsumerWidget {
               ],
             ),
           ),
-
-          // Content and Actions (Bottom)
           Positioned(
             bottom: 0,
             left: 0,
@@ -182,32 +278,40 @@ class FeedTab extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    post['content'],
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      height: 1.4,
-                      shadows: [
-                        Shadow(color: Colors.black45, blurRadius: 4, offset: Offset(0, 2)),
-                      ],
+                  if (post.content != null && post.content!.isNotEmpty)
+                    Text(
+                      post.content!,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        height: 1.4,
+                        shadows: [
+                          Shadow(
+                            color: Colors.black45,
+                            blurRadius: 4,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                  ),
                   const SizedBox(height: 16),
                   Row(
                     children: [
-                      _PostActionOverlay(
-                        icon: LucideIcons.heart,
-                        label: '${post['likesCount']}',
-                        isActive: post['isLiked'],
+                      GestureDetector(
+                        onTap: onToggleLike,
+                        child: _PostActionOverlay(
+                          icon: LucideIcons.heart,
+                          label: '${post.likesCount}',
+                          isActive: post.isLiked,
+                        ),
                       ),
                       const SizedBox(width: 16),
                       const _PostActionOverlay(
                         icon: LucideIcons.messageCircle,
-                        label: '12',
+                        label: '0',
                       ),
                       const SizedBox(width: 16),
                       const _PostActionOverlay(
@@ -215,7 +319,11 @@ class FeedTab extends ConsumerWidget {
                         label: '',
                       ),
                       const Spacer(),
-                      const Icon(LucideIcons.bookmark, color: Colors.white, size: 22),
+                      const Icon(
+                        LucideIcons.bookmark,
+                        color: Colors.white,
+                        size: 22,
+                      ),
                     ],
                   ),
                 ],
@@ -226,6 +334,32 @@ class FeedTab extends ConsumerWidget {
       ),
     ).animate().fadeIn(delay: (index * 100).ms).slideY(begin: 0.05);
   }
+}
+
+class _PostImageFallback extends StatelessWidget {
+  const _PostImageFallback();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: const Color(0xFFD8D8D8),
+      child: const Center(
+        child: Icon(
+          LucideIcons.image,
+          size: 48,
+          color: Colors.white54,
+        ),
+      ),
+    );
+  }
+}
+
+String _formatTimeAgo(DateTime dateTime) {
+  final diff = DateTime.now().difference(dateTime);
+  if (diff.inDays >= 1) return '${diff.inDays}d ago';
+  if (diff.inHours >= 1) return '${diff.inHours}h ago';
+  if (diff.inMinutes >= 1) return '${diff.inMinutes}m ago';
+  return 'Just now';
 }
 
 class _PostActionOverlay extends StatelessWidget {

@@ -10,7 +10,7 @@ from security import get_current_user
 from pydantic import BaseModel
 from s3_utils import upload_image_to_s3
 
-router = APIRouter(prefix="/feed", tags=["feed"])
+router = APIRouter()
 
 class PostUser(BaseModel):
     id: str

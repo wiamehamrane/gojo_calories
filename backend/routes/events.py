@@ -10,7 +10,7 @@ from models import User, Event, EventParticipant
 from security import get_current_user
 from pydantic import BaseModel, HttpUrl
 
-router = APIRouter(prefix="/events", tags=["events"])
+router = APIRouter()
 
 class EventCreate(BaseModel):
     title: str

@@ -9,7 +9,7 @@ from security import get_current_user
 from pydantic import BaseModel
 from s3_utils import upload_image_to_s3
 
-router = APIRouter(prefix="/memories", tags=["memories"])
+router = APIRouter()
 
 class MemoryResponse(BaseModel):
     id: str

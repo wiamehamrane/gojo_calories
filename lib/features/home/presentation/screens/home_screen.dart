@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:gojocalories/core/utils/image.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
@@ -222,7 +223,8 @@ class HomeScreen extends ConsumerWidget {
         children: [
           Row(
             children: [
-              const Text('🥑', style: TextStyle(fontSize: 26)),
+              //const Text('🥑', style: TextStyle(fontSize: 26)),
+              Image.asset(ImageAsset.logoHeader, width: 35, height: 35),
               const SizedBox(width: 6),
               const Text(
                 'GojoCalories',
