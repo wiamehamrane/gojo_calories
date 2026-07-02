@@ -70,7 +70,8 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
       return eventGender == userGender;
     }).toList();
 
-    return Scaffold(
+    return SafeArea(
+      child:Scaffold(
       backgroundColor: AppColors.background,
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
@@ -108,7 +109,7 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
         icon: const Icon(LucideIcons.plus, color: Colors.white),
         label: const Text('Create', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       ),
-    );
+    ));
   }
 
   Widget _buildSearchBar() {
