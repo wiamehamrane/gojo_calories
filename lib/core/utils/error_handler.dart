@@ -20,6 +20,9 @@ class AppErrorHandler {
           if (statusCode == 401) {
             return 'Your session has expired. Please sign in again.';
           }
+          if (statusCode == 404 && error.requestOptions.path.contains('auth/me')) {
+            return 'Your account was not found. Please sign in again.';
+          }
           if (statusCode == 404) {
             return 'The requested information was not found.';
           }

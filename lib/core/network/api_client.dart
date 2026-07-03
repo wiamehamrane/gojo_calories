@@ -24,6 +24,17 @@ class ApiClient {
           }
           return handler.next(options);
         },
+        onError: (error, handler) async {
+          if (error.response != null) {
+            final status = error.response!.statusCode;
+            final path = error.requestOptions.path;
+            final isAuthMe = path.contains('auth/me');
+            if (status == 401 || (status == 404 && isAuthMe)) {
+              await TokenStorage.clearSession();
+            }
+          }
+          handler.next(error);
+        },
       ),
     );
 

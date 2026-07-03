@@ -17,6 +17,7 @@ import '../../../../core/theme/app_shadows.dart';
 import '../../../../core/localization/locale_provider.dart';
 import '../../../../core/localization/translations.dart';
 import '../../../../core/di/repository_providers.dart';
+import '../../../../core/utils/error_handler.dart';
 import '../providers/profile_providers.dart';
 
 
@@ -56,9 +57,11 @@ class ProfileScreen extends ConsumerWidget {
                 loading: () => const Center(
                   child: CircularProgressIndicator(color: AppColors.primary),
                 ),
-                error: (e, st) => const Text(
-                  "Failed to load profile",
-                  style: TextStyle(color: AppColors.danger),
+                error: (e, st) => _ProfileLoadError(
+                  message: AppErrorHandler.message(e),
+                  onRetry: () =>
+                      ref.read(profileProvider.notifier).loadProfile(),
+                  onSignIn: () => context.go(RoutePaths.auth),
                 ),
               ),
 
@@ -962,6 +965,59 @@ class _SettingsRow extends StatelessWidget {
           : null,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       onTap: onTap,
+    );
+  }
+}
+
+class _ProfileLoadError extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+  final VoidCallback onSignIn;
+
+  const _ProfileLoadError({
+    required this.message,
+    required this.onRetry,
+    required this.onSignIn,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: AppShadows.cardShadow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Failed to load profile',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            message,
+            style: const TextStyle(
+              fontSize: 13,
+              color: AppColors.danger,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              TextButton(onPressed: onRetry, child: const Text('Retry')),
+              const SizedBox(width: 8),
+              TextButton(onPressed: onSignIn, child: const Text('Sign in')),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

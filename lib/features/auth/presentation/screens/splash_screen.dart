@@ -44,11 +44,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
             router.go(RoutePaths.home);
           }
         } catch (_) {
-          if (await auth.isOnboarded()) {
-            router.go(RoutePaths.home);
-          } else {
-            router.go(RoutePaths.auth);
-          }
+          await auth.clearSession();
+          router.go(RoutePaths.auth);
         }
       } else {
         router.go(RoutePaths.auth);
