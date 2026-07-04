@@ -55,7 +55,7 @@ async def _verify_with_apple(receipt_data: str, use_sandbox: bool = False) -> di
     url = APPLE_SANDBOX_VERIFY_URL if use_sandbox else APPLE_PRODUCTION_VERIFY_URL
     payload = {
         "receipt-data": receipt_data,
-        "password": 454ce35e24dc44b18fb8e0bccc915b1e,
+        "password": APPLE_SHARED_SECRET,
         "exclude-old-transactions": True,
     }
 

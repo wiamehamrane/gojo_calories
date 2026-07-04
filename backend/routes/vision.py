@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 _OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-_OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+_OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-5.4-mini")
 if not _OPENAI_API_KEY:
     logger.error("OPENAI_API_KEY is not set! Vision AI endpoints will fail.")
 
@@ -109,11 +109,27 @@ async def analyze_food_image(
         
         # Proper prompt asking for strict JSON
         prompt = """
-        Analyze this food image. Identify the overarching meal or food item and its individual ingredients.
-        Respond ONLY with a JSON object. No markdown formatting, no backticks, no explanations.
-        Format strictly like this:
-        {"name_en": "Food Name English", "name_fr": "Nom de l'aliment en français", "name_ar": "اسم الطعام بالعربية", "calories": 500, "protein": 20, "carbs": 50, "fat": 15, "ingredients": [{"name": "Ingredient", "amount": "1.5 cups", "calories": 45}, {"name": "Ingredient 2", "amount": "2 tbsp", "calories": 60}]}
-        Include 3 to 8 realistic, specific ingredients with accurate amounts and calorie estimates.
+        You are a nutrition estimation expert analyzing a food photo for a calorie-tracking app.
+
+TASK:
+1. Identify the overarching meal/dish shown in the image.
+2. Break it down into 3–8 individual visible ingredients or components.
+3. Estimate realistic portion sizes based on visual cues (plate size, utensils, hand/reference objects if visible).
+4. Estimate calories and macros per ingredient, then sum them for the total (do not estimate the total independently — it must equal the sum of ingredient calories, within rounding).
+
+RULES:
+- Base portion estimates on what is visibly on the plate, not a "standard serving."
+- If the image is ambiguous (multiple items, partially hidden food, unclear cooking method), make your best single estimate — do not ask for clarification or hedge.
+- If the image contains no food, or is too unclear to analyze, return {"error": "no_food_detected"} instead of the schema below.
+- Use standard household units for amounts (cups, tbsp, oz, g, pieces) — pick whichever is most natural for that ingredient.
+- Round calories to the nearest 5, protein/carbs/fat to the nearest 1g.
+- Provide translations that are natural/commonly used food terms in each language, not literal word-for-word translations.
+
+OUTPUT FORMAT:
+Respond with ONLY a raw JSON object. No markdown, no code fences, no backticks, no explanations, no text before or after the JSON.
+
+Schema:
+{"name_en": "Food Name English", "name_fr": "Nom de l'aliment en français", "name_ar": "اسم الطعام بالعربية", "calories": 500, "protein": 20, "carbs": 50, "fat": 15, "ingredients": [{"name": "Ingredient", "amount": "1.5 cups", "calories": 45, "protein": 3, "carbs": 5, "fat": 1}, {"name": "Ingredient 2", "amount": "2 tbsp", "calories": 60, "protein": 1, "carbs": 2, "fat": 6}]}
         """
 
         mime_type = file.content_type or "image/jpeg"
