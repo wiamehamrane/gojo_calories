@@ -10,7 +10,10 @@ import models
 import logging
 from fastapi.staticfiles import StaticFiles
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=getattr(logging, os.getenv("LOG_LEVEL", "INFO").upper(), logging.INFO),
+    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+)
 logger = logging.getLogger(__name__)
 load_dotenv()
 
@@ -148,6 +151,36 @@ except Exception as e:
 
 app = FastAPI(title="GojoCalories Backend API")
 
+# ── Request logging ────────────────────────────────────────────────────────────
+
+import time
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start = time.perf_counter()
+    client = request.client.host if request.client else "unknown"
+    logger.info(">> %s %s from %s", request.method, request.url.path, client)
+    try:
+        response = await call_next(request)
+        elapsed_ms = (time.perf_counter() - start) * 1000
+        logger.info(
+            "<< %s %s %s (%.0fms)",
+            request.method,
+            request.url.path,
+            response.status_code,
+            elapsed_ms,
+        )
+        return response
+    except Exception:
+        elapsed_ms = (time.perf_counter() - start) * 1000
+        logger.exception(
+            "!! %s %s failed (%.0fms)",
+            request.method,
+            request.url.path,
+            elapsed_ms,
+        )
+        raise
+
 # ── Global Exception Handlers ──────────────────────────────────────────────────
 
 @app.exception_handler(Exception)
@@ -161,6 +194,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     errors = [f"{' → '.join(str(l) for l in e['loc'])}: {e['msg']}" for e in exc.errors()]
+    logger.warning("Validation error on %s %s: %s", request.method, request.url.path, "; ".join(errors))
     return JSONResponse(
         status_code=422,
         content={"detail": "; ".join(errors)},

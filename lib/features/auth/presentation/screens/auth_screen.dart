@@ -8,6 +8,7 @@ import 'package:gojocalories/core/theme/app_colors.dart';
 import 'package:gojocalories/core/di/repository_providers.dart';
 import 'package:gojocalories/features/auth/data/repositories/auth_repository.dart';
 import 'package:gojocalories/core/routing/route_paths.dart';
+import 'package:gojocalories/core/routing/app_navigation.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
@@ -65,16 +66,16 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
         return;
       }
       if (data['current_weight'] == null) {
-        context.go(RoutePaths.weightSetup);
+        AppNavigation.goToWeightSetup(context: context);
       } else if (data['has_paid'] != true) {
-        context.go(RoutePaths.paywall);
+        AppNavigation.goToPaywall(context: context);
       } else {
         await auth.setOnboarded(true);
         if (!mounted) return;
         context.go(RoutePaths.home);
       }
     } catch (e) {
-      if (mounted) context.go(RoutePaths.weightSetup);
+      if (mounted) AppNavigation.goToWeightSetup(context: context);
     }
   }
 
@@ -217,9 +218,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
 
   @override
   Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       backgroundColor:
           _showEmailSheet ? const Color(0xFFB5B5B5) : const Color(0xFFF7F7F7),
       body: Stack(
@@ -301,12 +301,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
           if (_showEmailSheet)
             Align(
               alignment: Alignment.bottomCenter,
-              child: AnimatedPadding(
-                duration: const Duration(milliseconds: 200),
-                curve: Curves.easeOut,
-                padding: EdgeInsets.only(bottom: bottomInset),
-                child: GestureDetector(
-                  onTap: () {},
+              child: GestureDetector(
+                onTap: () {},
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.92,
+                  ),
                   child: _EmailAuthSheet(
                     tabController: _tab,
                     emailCtrl: _emailCtrl,
@@ -467,6 +467,7 @@ class _EmailAuthSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isCreate = tabController.index == 0;
+    final keyboardInset = MediaQuery.of(context).viewInsets.bottom;
 
     return Container(
       width: double.infinity,
@@ -476,9 +477,14 @@ class _EmailAuthSheet extends StatelessWidget {
       ),
       child: SafeArea(
         top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
-          child: Column(
+        child: AnimatedPadding(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+          padding: EdgeInsets.only(bottom: keyboardInset),
+          child: SingleChildScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+            child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -585,6 +591,7 @@ class _EmailAuthSheet extends StatelessWidget {
               ),
             ],
           ),
+        ),
         ),
       ),
     );

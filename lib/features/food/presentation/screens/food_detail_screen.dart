@@ -180,9 +180,7 @@ class _FoodDetailScreenState extends ConsumerState<FoodDetailScreen> {
     final lang = ref.read(localeProvider);
     final name = _displayName(lang);
     final cal = (log['calories'] as num? ?? 0).toInt() * _quantity;
-    SharePlus.instance.share(
-      ShareParams(text: 'I just logged $name — $cal kcal 🔥  via GojoCalories'),
-    );
+    Share.share('I just logged $name — $cal kcal 🔥  via GojoCalories');
   }
 
   void _showMenu() {

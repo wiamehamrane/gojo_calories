@@ -1,0 +1,93 @@
+{
+  "identifier" : "GOJO_CALORIES_IAP",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+
+  ],
+  "settings" : {
+    "_askToBuyEnabled" : false,
+    "_failTransactionsEnabled" : false,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Load Products"
+      }
+    ]
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "gojo_pro_group",
+      "localizations" : [
+
+      ],
+      "name" : "Gojo Pro",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "4.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "gojo_monthly_internal",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Monthly access to Gojo Pro features",
+              "displayName" : "Gojo Pro Monthly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "gojo_pro_monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Gojo Pro Monthly",
+          "subscriptionGroupID" : "gojo_pro_group",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "29.99",
+          "familyShareable" : false,
+          "groupNumber" : 2,
+          "internalID" : "gojo_yearly_internal",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Yearly access to Gojo Pro features",
+              "displayName" : "Gojo Pro Yearly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "gojo_pro_yearly",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "Gojo Pro Yearly",
+          "subscriptionGroupID" : "gojo_pro_group",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}

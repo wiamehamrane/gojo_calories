@@ -9,8 +9,9 @@ class ApiClient {
     final dio = Dio(
       BaseOptions(
         baseUrl: EnvConfig.apiBaseUrl,
-        connectTimeout: const Duration(seconds: 30),
-        receiveTimeout: const Duration(seconds: 30),
+        connectTimeout: const Duration(seconds: 15),
+        receiveTimeout: const Duration(seconds: 15),
+        sendTimeout: const Duration(seconds: 15),
         headers: {'Content-Type': 'application/json'},
       ),
     );
@@ -28,8 +29,9 @@ class ApiClient {
           if (error.response != null) {
             final status = error.response!.statusCode;
             final path = error.requestOptions.path;
-            final isAuthMe = path.contains('auth/me');
-            if (status == 401 || (status == 404 && isAuthMe)) {
+            final isProfileMe =
+                path == 'auth/me' || path.endsWith('/auth/me');
+            if (status == 401 || (status == 404 && isProfileMe)) {
               await TokenStorage.clearSession();
             }
           }

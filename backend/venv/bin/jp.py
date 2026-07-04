@@ -1,4 +1,4 @@
-#!/home/zelghourfi/Documents/gojocalories/backend/venv/bin/python3
+#!/Users/nm/Desktop/gojocalories/backend/venv/bin/python3
 
 import sys
 import json

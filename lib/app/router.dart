@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 import '../core/routing/route_paths.dart';
 import '../core/widgets/main_scaffold.dart';
@@ -10,17 +10,14 @@ import '../features/events/events_routes.dart';
 import '../features/profile/profile_routes.dart';
 import '../features/referrals/referrals_routes.dart';
 import '../features/tasks/tasks_routes.dart';
+import 'router_keys.dart';
 
-final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>(
-  debugLabel: 'root',
-);
-final GlobalKey<NavigatorState> shellNavigatorKey = GlobalKey<NavigatorState>(
-  debugLabel: 'shell',
-);
+export 'router_keys.dart';
 
 final GoRouter appRouter = GoRouter(
   navigatorKey: rootNavigatorKey,
   initialLocation: RoutePaths.splash,
+  debugLogDiagnostics: kDebugMode,
   routes: [
     ...authRoutes,
     ShellRoute(

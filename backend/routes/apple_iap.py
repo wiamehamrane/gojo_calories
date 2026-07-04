@@ -6,6 +6,8 @@ Endpoints:
   POST /webhook         — Handle Apple S2S notifications (renewal, expiry, refund)
 """
 
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -38,14 +40,14 @@ VALID_PRODUCT_IDS = {
 
 class VerifyReceiptRequest(BaseModel):
     receipt_data: str  # Base64-encoded receipt from StoreKit
-    product_id: str | None = None
+    product_id: Optional[str] = None
 
 
 class AppleReceiptResponse(BaseModel):
     status: str
     subscription_active: bool
-    expires_at: str | None = None
-    product_id: str | None = None
+    expires_at: Optional[str] = None
+    product_id: Optional[str] = None
 
 
 async def _verify_with_apple(receipt_data: str, use_sandbox: bool = False) -> dict:
@@ -53,7 +55,7 @@ async def _verify_with_apple(receipt_data: str, use_sandbox: bool = False) -> di
     url = APPLE_SANDBOX_VERIFY_URL if use_sandbox else APPLE_PRODUCTION_VERIFY_URL
     payload = {
         "receipt-data": receipt_data,
-        "password": APPLE_SHARED_SECRET,
+        "password": 454ce35e24dc44b18fb8e0bccc915b1e,
         "exclude-old-transactions": True,
     }
 
@@ -63,7 +65,7 @@ async def _verify_with_apple(receipt_data: str, use_sandbox: bool = False) -> di
         return response.json()
 
 
-def _extract_latest_subscription(receipt_response: dict) -> dict | None:
+def _extract_latest_subscription(receipt_response: dict) -> Optional[dict]:
     """
     Extract the latest active subscription info from Apple's receipt response.
     Returns the most recent transaction for our subscription products.

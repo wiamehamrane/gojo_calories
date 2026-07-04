@@ -517,7 +517,7 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
                 return Opacity(
                   opacity: _pulseAnimation.value,
                   child: CustomPaint(
-                    size: const Size(240, 240),
+                    size: const Size(340, 340),
                     painter: _ScanCornersPainter(
                       color: Colors.white,
                       strokeWidth: 3,

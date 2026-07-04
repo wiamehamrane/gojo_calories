@@ -5,6 +5,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/di/repository_providers.dart';
 import '../../../../core/routing/route_paths.dart';
+import '../../../../core/routing/app_navigation.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class VerifyOTPScreen extends ConsumerStatefulWidget {
@@ -26,16 +27,16 @@ class _VerifyOTPScreenState extends ConsumerState<VerifyOTPScreen> {
       final data = await auth.getMe();
       if (!mounted) return;
       if (data['current_weight'] == null) {
-        context.go(RoutePaths.weightSetup);
+        AppNavigation.goToWeightSetup(context: context);
       } else if (data['has_paid'] != true) {
-        context.go(RoutePaths.paywall);
+        AppNavigation.goToPaywall(context: context);
       } else {
         await auth.setOnboarded(true);
         if (!mounted) return;
         context.go(RoutePaths.home);
       }
     } catch (_) {
-      if (mounted) context.go(RoutePaths.weightSetup);
+      if (mounted) AppNavigation.goToWeightSetup(context: context);
     }
   }
 

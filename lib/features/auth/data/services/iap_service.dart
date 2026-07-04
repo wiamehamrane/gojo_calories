@@ -86,46 +86,76 @@ class IAPService {
     );
   }
 
-  /// Fetch available subscription products from the App Store.
+  /// Fetch available subscription products from the App Store (with retries).
   Future<List<ProductDetails>> loadProducts() async {
     status.value = const IAPStatus(state: IAPState.loading);
 
-    try {
-      final response = await _iap.queryProductDetails(kProductIds);
-
-      if (response.notFoundIDs.isNotEmpty) {
-        debugPrint(
-          'IAPService: Products not found: ${response.notFoundIDs}',
-        );
+    Object? lastError;
+    for (var attempt = 1; attempt <= 3; attempt++) {
+      try {
+        final products = await _queryProductsOnce();
+        status.value = const IAPStatus(state: IAPState.idle);
+        return products;
+      } catch (e) {
+        lastError = e;
+        debugPrint('IAPService: loadProducts attempt $attempt/3 failed: $e');
+        final retryable = e.toString().toLowerCase().contains('storekit');
+        if (!retryable || attempt == 3) break;
+        await Future.delayed(Duration(seconds: attempt * 2));
       }
-
-      if (response.error != null) {
-        debugPrint('IAPService: Query error: ${response.error}');
-        status.value = IAPStatus(
-          state: IAPState.error,
-          errorMessage: response.error?.message ?? 'Failed to load products',
-        );
-        return [];
-      }
-
-      // Sort so yearly comes first (better value, typical paywall layout)
-      products = response.productDetails.toList()
-        ..sort((a, b) {
-          if (a.id == kYearlyProductId) return -1;
-          if (b.id == kYearlyProductId) return 1;
-          return 0;
-        });
-
-      status.value = const IAPStatus(state: IAPState.idle);
-      return products;
-    } catch (e) {
-      debugPrint('IAPService: loadProducts error: $e');
-      status.value = IAPStatus(
-        state: IAPState.error,
-        errorMessage: e.toString(),
-      );
-      return [];
     }
+
+    status.value = const IAPStatus(state: IAPState.idle);
+    throw lastError ?? Exception('Failed to load subscription plans');
+  }
+
+  Future<List<ProductDetails>> _queryProductsOnce() async {
+    final available = await _iap.isAvailable();
+    debugPrint('IAPService: Store available = $available');
+    if (!available) {
+      throw Exception(
+        'App Store is not available on this device.',
+      );
+    }
+
+    final response = await _iap.queryProductDetails(kProductIds);
+    debugPrint(
+      'IAPService: found=${response.productDetails.map((p) => p.id).toList()} '
+      'notFound=${response.notFoundIDs} error=${response.error}',
+    );
+
+    if (response.error != null) {
+      throw Exception(
+        _storeKitErrorMessage(
+          response.error!.message,
+          response.notFoundIDs,
+        ),
+      );
+    }
+
+    if (response.notFoundIDs.isNotEmpty) {
+      throw Exception(
+        'App Store could not find: ${response.notFoundIDs.join(", ")}. '
+        'Confirm the bundle ID com.gojocalories.gojocalories matches App Store '
+        'Connect and that both products are in the "GojoCalories Pro" group.',
+      );
+    }
+
+    if (response.productDetails.isEmpty) {
+      throw Exception(
+        'No subscription plans returned. Sign in with a Sandbox Apple ID '
+        '(Settings → Developer → Sandbox Apple Account) when testing debug builds.',
+      );
+    }
+
+    products = response.productDetails.toList()
+      ..sort((a, b) {
+        if (a.id == kYearlyProductId) return -1;
+        if (b.id == kYearlyProductId) return 1;
+        return 0;
+      });
+
+    return products;
   }
 
   /// Initiate a subscription purchase.
@@ -245,5 +275,36 @@ class IAPService {
   void dispose() {
     _subscription?.cancel();
     status.dispose();
+  }
+
+  static String _storeKitErrorMessage(
+    String message,
+    List<String> notFoundIds,
+  ) {
+    if (message.contains('storekit') || message.contains('StoreKit')) {
+      if (kDebugMode) {
+        return 'StoreKit could not reach Apple\'s servers (storekit_no_response).\n\n'
+            'Xcode + GojoCalories.storekit only works for local debug builds.\n\n'
+            'For TestFlight / real App Store testing:\n'
+            '1. Sandbox Apple ID on device (Settings → Developer → Sandbox Account)\n'
+            '2. App Store Connect → Agreements → Paid Apps is Active\n'
+            '3. Link subscriptions to your app version (App → Version → In-App Purchases)\n'
+            '4. Wait up to 24h after first TestFlight upload\n\n'
+            'Tap Retry or Restore Purchase below.';
+      }
+      return 'We couldn\'t load subscription plans right now.\n\n'
+          'If you\'re testing via TestFlight:\n'
+          '• Sign in with a Sandbox Apple ID (Settings → Developer → Sandbox Account)\n'
+          '• Subscriptions must be linked to your app version in App Store Connect\n'
+          '• Paid Apps agreement must be Active under Agreements\n'
+          '• New builds can take up to 24 hours before plans appear\n\n'
+          'Tap Retry or Restore Purchase below.';
+    }
+    if (notFoundIds.isNotEmpty) {
+      return 'Subscription plans are not available yet (${notFoundIds.join(", ")}). '
+          'Confirm they are linked to your app version in App Store Connect, '
+          'then try again in a few hours.';
+    }
+    return message;
   }
 }
