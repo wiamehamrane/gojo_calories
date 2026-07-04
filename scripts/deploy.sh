@@ -2,22 +2,25 @@
 set -e
 
 echo "Ensuring AWS Copilot CLI is installed..."
-if ! command -v copilot &> /dev/null; then
-    echo "AWS Copilot not found. Installing locally..."
+export PATH="$PWD/.bin:$PATH"
+if ! command -v copilot &> /dev/null || ! copilot version | grep -q "v1.34.1"; then
+    echo "AWS Copilot v1.34.1 not found. Installing locally..."
     mkdir -p .bin
-    curl -Lo .bin/copilot https://github.com/aws/copilot-cli/releases/latest/download/copilot-linux
+    curl -Lo .bin/copilot https://github.com/aws/copilot-cli/releases/download/v1.34.1/copilot-linux
     chmod +x .bin/copilot
-    export PATH="$PWD/.bin:$PATH"
 fi
 
 echo "Initializing Copilot Application..."
 # 1. Initialize the app and the web service manifest (without deploying yet)
-copilot init \
-  --app gojocalories \
-  --name api \
-  --type "Load Balanced Web Service" \
-  --dockerfile backend/Dockerfile \
-  --port 5000
+if [ ! -f "copilot/api/manifest.yml" ]; then
+  copilot app init gojocalories
+  copilot svc init \
+    --app gojocalories \
+    --name api \
+    --type "Load Balanced Web Service" \
+    --dockerfile backend/Dockerfile \
+    --port 5000
+fi
 
 echo "Initializing Production Environment..."
 # 2. Init Environment
