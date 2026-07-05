@@ -1,0 +1,38 @@
+Parameters:
+  App:
+    Type: String
+    Description: Your application's name.
+  Env:
+    Type: String
+    Description: The environment name (e.g. dev, qa, prod).
+  Name:
+    Type: String
+    Description: The service name.
+Resources:
+  S3AndSSMAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: Grants S3 and SSM access for GojoCalories tasks.
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - s3:PutObject
+              - s3:PutObjectAcl
+              - s3:GetObject
+              - s3:ListBucket
+            Resource:
+              - arn:aws:s3:::gojocalories-media-uploads
+              - arn:aws:s3:::gojocalories-media-uploads/*
+          - Effect: Allow
+            Action:
+              - ssm:GetParameters
+              - ssm:GetParameter
+            Resource:
+              - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/copilot/gojocalories/prod/secrets/*'
+Outputs:
+  # This output name MUST be included for Copilot to attach it to the Task Role
+  S3AndSSMAccessPolicyArn:
+    Description: The ARN of the S3 and SSM access policy.
+    Value: !Ref S3AndSSMAccessPolicy

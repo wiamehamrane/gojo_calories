@@ -9,74 +9,51 @@ Metadata:
     # Read the full specification for the "Load Balanced Web Service" type at:
     #  https://aws.github.io/copilot-cli/docs/manifest/lb-web-service/
 
-    # Your service name will be used in naming your resources like log groups, ECS services, etc.
     name: api
     type: Load Balanced Web Service
-    # Distribute traffic to your service.
     http:
-      # Requests to this path will be forwarded to your service.
-      # To match all requests you can use the "/" path.
       path: '/'
-      # You can specify a custom health check path. The default is "/".
-      # healthcheck: '/'
-    # Configuration for your containers and service.
+      alias: api.gojocalories.com
+      hosted_zone: Z0346355R6ZEM25G0C0T
+      healthcheck:
+        path: /
+        healthy_threshold: 2
+        unhealthy_threshold: 3
+        interval: 15s
+        timeout: 10s
     image:
-      # Docker build arguments. For additional overrides: https://aws.github.io/copilot-cli/docs/manifest/lb-web-service/#image-build
       build:
         dockerfile: backend/Dockerfile
         context: backend
-      # Port exposed through your container to route traffic to it.
       port: 5000
-    cpu: 256 # Number of CPU units for the task.
-    memory: 512 # Amount of memory in MiB used by the task.
-    count: 1 # Number of tasks that should be running in your service.
-    exec: true # Enable running commands in your container.
+    cpu: 256
+    memory: 512
+    count: 1
+    exec: true
     network:
-      connect: true # Enable Service Connect for intra-environment traffic between services.
-    # storage:
-    # readonly_fs: true       # Limit to read-only access to mounted root filesystems.
-
-    # Optional fields for more advanced use-cases.
-    #
-    variables: # Pass environment variables as key value pairs.
+      connect: true
+      vpc:
+        security_groups:
+          - from_cfn: gojocalories-prod-gojodbSecurityGroup
+    variables:
       LOG_LEVEL: info
       WIPE_DB: "false"
+      OPENAI_MODEL: gpt-5.4-mini
       GOOGLE_WEB_CLIENT_ID: 980076580409-rgqujk89m5lhvsr3nfg24hhodk08uoeh.apps.googleusercontent.com
     secrets:
-      GEMINI_API_KEY: GEMINI_API_KEY
-      SECRET_KEY: SECRET_KEY
-      ALLOWED_ORIGINS: ALLOWED_ORIGINS
-      AWS_BUCKET_NAME: AWS_BUCKET_NAME
-      DATABASE_URL: DATABASE_URL
-      STRIPE_SECRET_KEY: STRIPE_SECRET_KEY
-      STRIPE_WEBHOOK_SECRET: STRIPE_WEBHOOK_SECRET
-      STRIPE_PUBLISHABLE_KEY: STRIPE_PUBLISHABLE_KEY
-      FOODDATA_CENTRAL_API_KEY: FOODDATA_CENTRAL_API_KEY
-    # Grant the task permission to access the S3 bucket
-    iam_policy_statements:
-      - effect: Allow
-        actions:
-          - s3:PutObject
-          - s3:PutObjectAcl
-          - s3:GetObject
-          - s3:ListBucket
-        resources:
-          - arn:aws:s3:::gojocalories-media-uploads
-          - arn:aws:s3:::gojocalories-media-uploads/*
-      - effect: Allow
-        actions:
-          - ssm:GetParameters
-          - ssm:GetParameter
-        resources:
-          - arn:aws:ssm:us-east-1:368306127521:parameter/copilot/gojocalories/prod/secrets/*
+      OPENAI_API_KEY: /copilot/gojocalories/prod/secrets/OPENAI_API_KEY
+      SECRET_KEY: /copilot/gojocalories/prod/secrets/SECRET_KEY
+      ALLOWED_ORIGINS: /copilot/gojocalories/prod/secrets/ALLOWED_ORIGINS
+      AWS_BUCKET_NAME: /copilot/gojocalories/prod/secrets/AWS_BUCKET_NAME
+      DB_SECRET:
+        from_cfn: gojocalories-prod-gojodbAuroraSecret
+      STRIPE_SECRET_KEY: /copilot/gojocalories/prod/secrets/STRIPE_SECRET_KEY
+      STRIPE_WEBHOOK_SECRET: /copilot/gojocalories/prod/secrets/STRIPE_WEBHOOK_SECRET
+      STRIPE_PUBLISHABLE_KEY: /copilot/gojocalories/prod/secrets/STRIPE_PUBLISHABLE_KEY
+      FOODDATA_CENTRAL_API_KEY: /copilot/gojocalories/prod/secrets/FOODDATA_CENTRAL_API_KEY
+      APPLE_SHARED_SECRET: /copilot/gojocalories/prod/secrets/APPLE_SHARED_SECRET
 
-    # You can override any of the values defined above by environment.
-
-    #environments:
-    #  test:
-    #    count: 2               # Number of tasks to run for the "test" environment.
-    #    deployment:            # The deployment strategy for the "test" environment.
-    #       rolling: 'recreate' # Stops existing tasks before new ones are started for faster deployments.
+    # IAM permissions are managed via addons/s3-ssm-policy.yml
 Parameters:
   AppName:
     Type: String
@@ -151,23 +128,26 @@ Resources: # If a bucket URL is specified, that means the template exists.
           Image: !Ref ContainerImage
           Secrets:
             - Name: ALLOWED_ORIGINS
-              ValueFrom: ALLOWED_ORIGINS
+              ValueFrom: /copilot/gojocalories/prod/secrets/ALLOWED_ORIGINS
+            - Name: APPLE_SHARED_SECRET
+              ValueFrom: /copilot/gojocalories/prod/secrets/APPLE_SHARED_SECRET
             - Name: AWS_BUCKET_NAME
-              ValueFrom: AWS_BUCKET_NAME
-            - Name: DATABASE_URL
-              ValueFrom: DATABASE_URL
+              ValueFrom: /copilot/gojocalories/prod/secrets/AWS_BUCKET_NAME
+            - Name: DB_SECRET
+              ValueFrom:
+                Fn::ImportValue: "gojocalories-prod-gojodbAuroraSecret"
             - Name: FOODDATA_CENTRAL_API_KEY
-              ValueFrom: FOODDATA_CENTRAL_API_KEY
-            - Name: GEMINI_API_KEY
-              ValueFrom: GEMINI_API_KEY
+              ValueFrom: /copilot/gojocalories/prod/secrets/FOODDATA_CENTRAL_API_KEY
+            - Name: OPENAI_API_KEY
+              ValueFrom: /copilot/gojocalories/prod/secrets/OPENAI_API_KEY
             - Name: SECRET_KEY
-              ValueFrom: SECRET_KEY
+              ValueFrom: /copilot/gojocalories/prod/secrets/SECRET_KEY
             - Name: STRIPE_PUBLISHABLE_KEY
-              ValueFrom: STRIPE_PUBLISHABLE_KEY
+              ValueFrom: /copilot/gojocalories/prod/secrets/STRIPE_PUBLISHABLE_KEY
             - Name: STRIPE_SECRET_KEY
-              ValueFrom: STRIPE_SECRET_KEY
+              ValueFrom: /copilot/gojocalories/prod/secrets/STRIPE_SECRET_KEY
             - Name: STRIPE_WEBHOOK_SECRET
-              ValueFrom: STRIPE_WEBHOOK_SECRET
+              ValueFrom: /copilot/gojocalories/prod/secrets/STRIPE_WEBHOOK_SECRET
           Environment:
             - Name: COPILOT_APPLICATION_NAME
               Value: !Sub '${AppName}'
@@ -183,6 +163,8 @@ Resources: # If a bucket URL is specified, that means the template exists.
               Value: "980076580409-rgqujk89m5lhvsr3nfg24hhodk08uoeh.apps.googleusercontent.com"
             - Name: LOG_LEVEL
               Value: "info"
+            - Name: OPENAI_MODEL
+              Value: "gpt-5.4-mini"
             - Name: WIPE_DB
               Value: "false"
           EnvironmentFiles:
@@ -283,6 +265,8 @@ Resources: # If a bucket URL is specified, that means the template exists.
       'aws:copilot:description': 'An IAM role to control permissions for the containers in your tasks'
     Type: AWS::IAM::Role
     Properties:
+      ManagedPolicyArns:
+        - Fn::GetAtt: [AddonsStack, Outputs.S3AndSSMAccessPolicyArn]
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -333,6 +317,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Properties:
       ServiceToken: !GetAtt EnvControllerFunction.Arn
       Workload: !Ref WorkloadName
+      Aliases: ["api.gojocalories.com"]
       EnvStack: !Sub '${AppName}-${EnvName}'
       Parameters: [ALBWorkloads, Aliases]
       EnvVersion: v1.34.1
@@ -340,7 +325,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: AWS::Lambda::Function
     Properties:
       Code:
-        S3Bucket: stackset-gojocalories-inf-pipelinebuiltartifactbuc-hjxu7hszuq8f
+        S3Bucket: stackset-gojocalories-inf-pipelinebuiltartifactbuc-a3caebkfdbjp
         S3Key: manual/scripts/custom-resources/envcontrollerfunction/5cdb2f63626cf4ce22c15032e1f5842c8a16567b342c66ff137188f19c2cebb7.zip
       Handler: "index.handler"
       Timeout: 900
@@ -395,7 +380,8 @@ Resources: # If a bucket URL is specified, that means the template exists.
       'aws:copilot:description': 'An ECS service to run and maintain your tasks in the environment cluster'
     Type: AWS::ECS::Service
     DependsOn:
-      - HTTPListenerRule
+      - HTTPListenerRuleWithDomain
+      - HTTPSListenerRule
     Properties:
       PlatformVersion: LATEST
       Cluster:
@@ -442,6 +428,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
               - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
           SecurityGroups:
             - Fn::ImportValue: !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'
+            - Fn::ImportValue: gojocalories-prod-gojodbSecurityGroup
       # This may need to be adjusted if the container takes a while to start up
       HealthCheckGracePeriodSeconds: 60
       LoadBalancers:
@@ -457,6 +444,10 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       HealthCheckPath: / # Default is '/'.
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+      HealthCheckIntervalSeconds: 15
+      HealthCheckTimeoutSeconds: 10
       Port: 5000
       Protocol: HTTP
       TargetGroupAttributes:
@@ -471,7 +462,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: AWS::Lambda::Function
     Properties:
       Code:
-        S3Bucket: stackset-gojocalories-inf-pipelinebuiltartifactbuc-hjxu7hszuq8f
+        S3Bucket: stackset-gojocalories-inf-pipelinebuiltartifactbuc-a3caebkfdbjp
         S3Key: manual/scripts/custom-resources/rulepriorityfunction/e718bfc34436d66c748c932859ef8383fda896513ed87ba4197c4ec1e0728af6.zip
       Handler: "index.nextAvailableRulePriorityHandler"
       Timeout: 600
@@ -504,7 +495,28 @@ Resources: # If a bucket URL is specified, that means the template exists.
                 Action:
                   - elasticloadbalancing:DescribeRules
                 Resource: "*"
-  HTTPRulePriorityAction:
+  LoadBalancerDNSAliasZ0346355R6ZEM25G0C0T:
+    Metadata:
+      'aws:copilot:description': 'Alias records for the application load balancer in hosted zone Z0346355R6ZEM25G0C0T'
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      HostedZoneId: Z0346355R6ZEM25G0C0T
+      Comment: !Sub "LoadBalancer aliases for service ${WorkloadName} in hosted zone Z0346355R6ZEM25G0C0T"
+      RecordSets:
+        - Name: "api.gojocalories.com"
+          Type: A
+          AliasTarget:
+            HostedZoneId: !GetAtt EnvControllerAction.PublicLoadBalancerHostedZone
+            DNSName: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
+  HTTPSRulePriorityAction:
+    Metadata:
+      'aws:copilot:description': 'A custom resource assigning priority for HTTPS listener rules'
+    Type: Custom::RulePriorityFunction
+    Properties:
+      ServiceToken: !GetAtt RulePriorityFunction.Arn
+      RulePath: ["/"]
+      ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
+  HTTPRuleWithDomainPriorityAction:
     Metadata:
       'aws:copilot:description': 'A custom resource assigning priority for HTTP listener rules'
     Type: Custom::RulePriorityFunction
@@ -512,21 +524,48 @@ Resources: # If a bucket URL is specified, that means the template exists.
       ServiceToken: !GetAtt RulePriorityFunction.Arn
       RulePath: ["/"]
       ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
-  HTTPListenerRule:
+  HTTPListenerRuleWithDomain:
     Metadata:
-      'aws:copilot:description': 'An HTTP listener rule for path `/` that forwards HTTP traffic to your tasks'
+      'aws:copilot:description': 'An HTTP listener rule for path `/` that redirects HTTP to HTTPS'
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      Actions:
+        - Type: redirect
+          RedirectConfig:
+            Protocol: HTTPS
+            Port: 443
+            Host: "#{host}"
+            Path: "/#{path}"
+            Query: "#{query}"
+            StatusCode: HTTP_301
+      Conditions:
+        - Field: 'host-header'
+          HostHeaderConfig:
+            Values: ["api.gojocalories.com"]
+        - Field: 'path-pattern'
+          PathPatternConfig:
+            Values:
+              - /*
+      ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
+      Priority: !GetAtt HTTPRuleWithDomainPriorityAction.Priority
+  HTTPSListenerRule:
+    Metadata:
+      'aws:copilot:description': 'An HTTPS listener rule for path `/` that forwards HTTPS traffic to your tasks'
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Properties:
       Actions:
         - TargetGroupArn: !Ref TargetGroup
           Type: forward
       Conditions:
+        - Field: 'host-header'
+          HostHeaderConfig:
+            Values: ["api.gojocalories.com"]
         - Field: 'path-pattern'
           PathPatternConfig:
             Values:
               - /*
-      ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
-      Priority: !GetAtt HTTPRulePriorityAction.Priority
+      ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
+      Priority: !GetAtt HTTPSRulePriorityAction.Priority
   AddonsStack:
     Metadata:
       'aws:copilot:description': 'An Addons CloudFormation Stack for your additional AWS resources'
