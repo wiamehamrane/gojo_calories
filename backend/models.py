@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text, Boolean, JSON
+from sqlalchemy import Column, Integer, String, Float, DateTime, Date, ForeignKey, Text, Boolean, JSON
 from sqlalchemy.orm import relationship
 import datetime
 import uuid
@@ -168,6 +168,7 @@ class ExerciseLog(Base):
     duration_minutes = Column(Integer, nullable=False)
     calories_burned = Column(Integer, nullable=False)
     date = Column(DateTime, default=datetime.datetime.utcnow)
+    log_date = Column(Date, nullable=True, index=True)
     
     user = relationship("User", back_populates="exercise_logs")
 

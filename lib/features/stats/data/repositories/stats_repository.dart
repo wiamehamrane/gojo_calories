@@ -47,6 +47,22 @@ class StatsRepository {
     return res.data as List<dynamic>? ?? [];
   }
 
+  Future<List<dynamic>> getCalendarProgress({
+    required String endDate,
+    required int days,
+    required int tzOffset,
+  }) async {
+    final res = await _dio.get(
+      'stats/calendar-progress',
+      queryParameters: {
+        'end_date': endDate,
+        'days': days,
+        'tz_offset': tzOffset,
+      },
+    );
+    return res.data as List<dynamic>? ?? [];
+  }
+
   Future<List<dynamic>> getWeighIns() async {
     final res = await _dio.get('stats/progress/weigh-ins');
     return res.data as List<dynamic>? ?? [];

@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../providers/saved_foods_provider.dart';
-import '../../../../core/config/env_config.dart';
+import '../../../../core/widgets/cached_food_image.dart';
 import 'food_detail_screen.dart';
 
 class SavedFoodsScreen extends ConsumerWidget {
@@ -180,10 +180,15 @@ class _FoodItemTile extends StatelessWidget {
     if (url == null || url.isEmpty) {
       return Container(color: AppColors.surface, child: const Icon(LucideIcons.image, size: 20));
     }
-    if (url.startsWith('/uploads/')) {
-      final fullUrl = EnvConfig.resolveMediaUrl(url);
-      return Image.network(fullUrl, fit: BoxFit.cover);
-    }
-    return Image.network(url, fit: BoxFit.cover);
+    return CachedFoodImage(
+      imageUrl: url,
+      fit: BoxFit.cover,
+      memCacheWidth: 200,
+      memCacheHeight: 200,
+      errorWidget: Container(
+        color: AppColors.surface,
+        child: const Icon(LucideIcons.image, size: 20),
+      ),
+    );
   }
 }

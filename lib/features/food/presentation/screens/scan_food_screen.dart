@@ -12,9 +12,11 @@ import '../providers/food_providers.dart';
 import '../../../stats/presentation/providers/dashboard_provider.dart';
 import '../../../stats/presentation/providers/history_provider.dart';
 import '../../../stats/presentation/providers/weekly_stats_provider.dart';
+import '../../../stats/presentation/providers/calendar_progress_provider.dart';
+import '../../../exercise/presentation/providers/exercise_providers.dart';
 import '../../../../features/stats/presentation/providers/selected_date_provider.dart';
 import 'package:go_router/go_router.dart';
-import 'food_detail_screen.dart';
+import '../../../../core/routing/route_paths.dart';
 
 class ScanFoodScreen extends ConsumerStatefulWidget {
   final String initialMode;
@@ -103,7 +105,7 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
         case DioExceptionType.connectionTimeout:
         case DioExceptionType.sendTimeout:
         case DioExceptionType.receiveTimeout:
-          return 'Request timed out. Check your internet connection and try again.';
+          return 'Analysis is taking longer than expected. Please wait — your meal may still be saved. Check your food log in a moment.';
         case DioExceptionType.connectionError:
           return 'No internet connection. Please connect to Wi-Fi or mobile data.';
         case DioExceptionType.badResponse:
@@ -138,13 +140,37 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
     return "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
   }
 
+  /// Leave scan and restore the bottom nav (GoRouter must leave `/scan`).
+  void _exitScan() {
+    final onScanRoute =
+        GoRouterState.of(context).uri.path.startsWith(RoutePaths.scan);
+    if (onScanRoute) {
+      context.go(RoutePaths.home);
+    } else if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
+  }
+
+  Future<void> _openFoodDetail(Map<String, dynamic> logData) async {
+    if (!mounted) return;
+    final onScanRoute =
+        GoRouterState.of(context).uri.path.startsWith(RoutePaths.scan);
+    if (onScanRoute) {
+      context.go(RoutePaths.home);
+    } else if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
+    if (!mounted) return;
+    await context.push(RoutePaths.foodDetail, extra: logData);
+  }
+
   /// Navigate to home with a smooth fade+slide transition after success.
   Future<void> _redirectToHome() async {
     if (mounted) setState(() => _showSuccess = true);
     await Future.delayed(const Duration(milliseconds: 600));
     if (!mounted) return;
     ref.invalidate(historyProvider);
-    context.go('/home');
+    context.go(RoutePaths.home);
   }
 
   Future<void> _analyzeFile(String path, String name) async {
@@ -187,18 +213,14 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
             
         final selectedDate = ref.read(selectedDateProvider);
         ref.invalidate(historyProvider(selectedDate));
+        ref.invalidate(dailyExercisesProvider(selectedDate));
         ref.invalidate(weeklyStatsProvider);
         ref.invalidate(dashboardProvider);
+        ref.invalidate(calendarProgressProvider);
 
         if (!mounted) return;
-        
-        // Navigate to details screen instead of home
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => FoodDetailScreen(log: logData),
-          ),
-        );
+
+        await _openFoodDetail(logData);
       } else {
         _showError('Analysis failed. Please try again with a clearer photo.');
       }
@@ -361,19 +383,32 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
     );
   }
 
+  Widget _wrapWithBackHandler(Widget child) {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _exitScan();
+      },
+      child: child,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isInitializing) {
-      return const Scaffold(
-        backgroundColor: Colors.black,
-        body: Center(
-          child: CircularProgressIndicator(color: AppColors.primary),
+      return _wrapWithBackHandler(
+        const Scaffold(
+          backgroundColor: Colors.black,
+          body: Center(
+            child: CircularProgressIndicator(color: AppColors.primary),
+          ),
         ),
       );
     }
 
     if (_cameraError != null) {
-      return Scaffold(
+      return _wrapWithBackHandler(
+        Scaffold(
         backgroundColor: Colors.black,
         body: SafeArea(
           child: Column(
@@ -399,7 +434,7 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
               ),
               const SizedBox(height: 32),
               TextButton.icon(
-                onPressed: () => context.go('/home'),
+                onPressed: _exitScan,
                 icon: const Icon(LucideIcons.arrowLeft, color: Colors.white),
                 label: const Text(
                   'Go Back',
@@ -409,13 +444,15 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
             ],
           ),
         ),
+        ),
       );
     }
 
     final safeTop = MediaQuery.of(context).padding.top;
     final safeBottom = MediaQuery.of(context).padding.bottom;
 
-    return Scaffold(
+    return _wrapWithBackHandler(
+      Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
         alignment: Alignment.center,
@@ -497,7 +534,7 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 GestureDetector(
-                  onTap: () => context.go('/home'),
+                  onTap: _exitScan,
                   child: const _CameraRoundButton(icon: LucideIcons.x),
                 ),
                 // Upload icon — opens gallery for the current mode
@@ -630,6 +667,7 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
             ),
           ),
         ],
+      ),
       ),
     );
   }

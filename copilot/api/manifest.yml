@@ -8,7 +8,8 @@ type: Load Balanced Web Service
 http:
   path: '/'
   alias: api.gojocalories.com
-  hosted_zone: Z0346355R6ZEM25G0C0T
+  hosted_zone: Z08140152Y3748IHFP8PT
+  idle_timeout: 120s
   healthcheck:
     path: /
     healthy_threshold: 2
@@ -17,9 +18,8 @@ http:
     timeout: 10s
 
 image:
-  build:
-    dockerfile: backend/Dockerfile
-    context: backend
+  # Built and pushed by scripts/deploy.sh (Copilot v1.34.1 drops the ECR URI when using image.build).
+  location: 640471340191.dkr.ecr.us-east-1.amazonaws.com/gojocalories/api:latest
   port: 5000
 
 cpu: 256
@@ -38,6 +38,9 @@ variables:
   WIPE_DB: "false"
   OPENAI_MODEL: gpt-5.4-mini
   GOOGLE_WEB_CLIENT_ID: 980076580409-rgqujk89m5lhvsr3nfg24hhodk08uoeh.apps.googleusercontent.com
+  APPLE_APP_ID: "6762560685"
+  SES_SENDER_EMAIL: noreply@gojocalories.com
+  AWS_REGION: us-east-1
 
 secrets:
   OPENAI_API_KEY: /copilot/${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/secrets/OPENAI_API_KEY

@@ -22,11 +22,19 @@ class _NutritionGoalsScreenState extends ConsumerState<NutritionGoalsScreen> {
   @override
   void initState() {
     super.initState();
-    final stats = ref.read(dashboardProvider);
-    _caloriesCtrl = TextEditingController(text: stats.calorieBudget.toString());
-    _proteinCtrl = TextEditingController(text: stats.proteinTarget.toString());
-    _carbsCtrl = TextEditingController(text: stats.carbsTarget.toString());
-    _fatsCtrl = TextEditingController(text: stats.fatTarget.toString());
+    final stats = ref.read(dashboardProvider).value;
+    _caloriesCtrl = TextEditingController(
+      text: (stats?.calorieBudget ?? 2200).toString(),
+    );
+    _proteinCtrl = TextEditingController(
+      text: (stats?.proteinTarget ?? 150).toString(),
+    );
+    _carbsCtrl = TextEditingController(
+      text: (stats?.carbsTarget ?? 200).toString(),
+    );
+    _fatsCtrl = TextEditingController(
+      text: (stats?.fatTarget ?? 65).toString(),
+    );
   }
 
   @override

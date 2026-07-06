@@ -24,13 +24,14 @@ class DailyStats {
   });
 
   DailyStats copyWith({
+    int? calorieBudget,
     int? caloriesConsumed,
     int? proteinConsumed,
     int? carbsConsumed,
     int? fatConsumed,
   }) {
     return DailyStats(
-      calorieBudget: calorieBudget,
+      calorieBudget: calorieBudget ?? this.calorieBudget,
       caloriesConsumed: caloriesConsumed ?? this.caloriesConsumed,
       proteinConsumed: proteinConsumed ?? this.proteinConsumed,
       carbsConsumed: carbsConsumed ?? this.carbsConsumed,

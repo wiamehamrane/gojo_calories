@@ -71,6 +71,18 @@ try:
         conn.execute(text("ALTER TABLE food_logs ADD COLUMN IF NOT EXISTS name_ar VARCHAR;"))
         conn.execute(text("ALTER TABLE food_logs ADD COLUMN IF NOT EXISTS image_url VARCHAR;"))
         conn.execute(text("ALTER TABLE food_logs ADD COLUMN IF NOT EXISTS ingredients JSON;"))
+        conn.execute(text("ALTER TABLE exercise_logs ADD COLUMN IF NOT EXISTS log_date DATE;"))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS exercise_logs (
+                id VARCHAR(36) PRIMARY KEY,
+                user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+                name VARCHAR NOT NULL,
+                duration_minutes INTEGER NOT NULL,
+                calories_burned INTEGER NOT NULL,
+                date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                log_date DATE
+            );
+        """))
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS saved_foods (
                 id VARCHAR(36) PRIMARY KEY,

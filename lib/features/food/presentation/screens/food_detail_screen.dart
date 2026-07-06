@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -9,7 +8,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../../../core/theme/app_colors.dart';
 
-import '../../../../core/config/env_config.dart';
+import '../../../../core/widgets/cached_food_image.dart';
 import '../../../../core/localization/locale_provider.dart';
 import '../../../../core/localization/translations.dart';
 import '../../../stats/presentation/providers/selected_date_provider.dart';
@@ -607,38 +606,12 @@ class _FoodDetailScreenState extends ConsumerState<FoodDetailScreen> {
 
   Widget _buildHeroImage(String? imageUrl) {
     if (imageUrl != null && imageUrl.isNotEmpty) {
-      // Local file path (camera/gallery before upload completes)
-      if (imageUrl.startsWith('file://') || (imageUrl.startsWith('/') && !imageUrl.startsWith('/uploads/'))) {
-        final path = imageUrl.replaceFirst('file://', '');
-        return Image.file(
-          File(path),
-          fit: BoxFit.cover,
-          errorBuilder: (_, e, s) => _placeholder(),
-        );
-      }
-      // Relative network path
-      if (imageUrl.startsWith('/uploads/')) {
-        final fullUrl = EnvConfig.resolveMediaUrl(imageUrl);
-        return Image.network(
-          fullUrl,
-          fit: BoxFit.cover,
-          errorBuilder: (_, e, s) => _placeholder(),
-          loadingBuilder: (ctx, child, progress) {
-            if (progress == null) return child;
-            return _ShimmerPlaceholder();
-          },
-        );
-      }
-      // Network image — show shimmer while loading, never fallback to placeholder mid-load
-      return Image.network(
-        imageUrl,
+      return CachedFoodImage(
+        imageUrl: imageUrl,
         fit: BoxFit.cover,
-        errorBuilder: (_, e, s) => _placeholder(),
-        loadingBuilder: (ctx, child, progress) {
-          if (progress == null) return child; // fully loaded
-          // Show animated shimmer while loading
-          return _ShimmerPlaceholder();
-        },
+        memCacheWidth: 1200,
+        placeholder: _ShimmerPlaceholder(),
+        errorWidget: _placeholder(),
       );
     }
     return _placeholder();

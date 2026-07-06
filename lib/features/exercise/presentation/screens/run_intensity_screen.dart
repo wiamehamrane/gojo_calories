@@ -1,19 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../../../stats/presentation/providers/dashboard_provider.dart';
 
 enum RunIntensity { high, medium, low }
 
-class RunIntensityScreen extends StatefulWidget {
+int _estimateRunCalories(RunIntensity intensity, int minutes) {
+  const double bodyWeightKg = 75.0;
+  final double met = switch (intensity) {
+    RunIntensity.high => 14.0,
+    RunIntensity.medium => 9.8,
+    RunIntensity.low => 3.5,
+  };
+  return (met * bodyWeightKg * (minutes / 60)).round();
+}
+
+class RunIntensityScreen extends ConsumerStatefulWidget {
   const RunIntensityScreen({super.key});
 
   @override
-  State<RunIntensityScreen> createState() => _RunIntensityScreenState();
+  ConsumerState<RunIntensityScreen> createState() => _RunIntensityScreenState();
 }
 
-class _RunIntensityScreenState extends State<RunIntensityScreen> {
+class _RunIntensityScreenState extends ConsumerState<RunIntensityScreen> {
   RunIntensity? _selectedIntensity = RunIntensity.medium;
   final List<String> _durations = [
     "15 mins",
@@ -23,6 +35,60 @@ class _RunIntensityScreenState extends State<RunIntensityScreen> {
     "120 mins",
   ];
   int _selectedDurationIndex = 1;
+  final _manualDurationController = TextEditingController();
+  bool _saving = false;
+
+  @override
+  void dispose() {
+    _manualDurationController.dispose();
+    super.dispose();
+  }
+
+  int get _durationMinutes {
+    final manual = int.tryParse(_manualDurationController.text.trim());
+    if (manual != null && manual > 0) return manual;
+    return int.parse(_durations[_selectedDurationIndex].split(' ').first);
+  }
+
+  Future<void> _saveRun() async {
+    final intensity = _selectedIntensity ?? RunIntensity.medium;
+    final minutes = _durationMinutes;
+    if (minutes <= 0) return;
+
+    final calories = _estimateRunCalories(intensity, minutes);
+    final intensityLabel = switch (intensity) {
+      RunIntensity.high => 'High',
+      RunIntensity.medium => 'Medium',
+      RunIntensity.low => 'Low',
+    };
+
+    setState(() => _saving = true);
+    try {
+      await ref.read(dashboardProvider.notifier).logExercise(
+            name: 'Run ($intensityLabel)',
+            durationMinutes: minutes,
+            caloriesBurned: calories,
+          );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Logged $calories kcal burned'),
+          backgroundColor: AppColors.primaryDark,
+        ),
+      );
+      Navigator.of(context).pop();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to save run. Please try again.'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -201,13 +267,14 @@ class _RunIntensityScreenState extends State<RunIntensityScreen> {
                       horizontal: 16,
                       vertical: 4,
                     ),
-                    child: const TextField(
+                    child: TextField(
+                      controller: _manualDurationController,
                       keyboardType: TextInputType.number,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w500,
                       ),
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
                         border: InputBorder.none,
                         hintText: "Or enter manual time...",
                         hintStyle: TextStyle(
@@ -240,11 +307,17 @@ class _RunIntensityScreenState extends State<RunIntensityScreen> {
                     borderRadius: BorderRadius.circular(18),
                   ),
                 ),
-                child: const Text("Continue", style: AppTextStyles.buttonLabel),
-                onPressed: () {
-                  // handle save log
-                  Navigator.pop(context);
-                },
+                onPressed: _saving ? null : _saveRun,
+                child: _saving
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text("Continue", style: AppTextStyles.buttonLabel),
               ),
             ),
           ),

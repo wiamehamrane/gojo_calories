@@ -29,11 +29,19 @@ def _generate_code(length: int = 6) -> str:
 def _generate_otp() -> str:
     return ''.join(random.choices(string.digits, k=6))
 
-def _set_verification_code(user: User, background_tasks: BackgroundTasks):
+def _set_verification_code(user: User) -> str:
     otp = _generate_otp()
     user.verification_code = otp
     user.verification_code_expires_at = datetime.datetime.utcnow() + datetime.timedelta(minutes=15)
-    background_tasks.add_task(email_service.send_verification_code_email, user.email, otp)
+    return otp
+
+
+def _deliver_verification_code(user: User) -> None:
+    otp = _set_verification_code(user)
+    try:
+        email_service.send_verification_code_email_or_raise(user.email, otp)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 def _get_optional_user_id(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(optional_bearer),
@@ -138,7 +146,7 @@ def register(user: UserCreate, background_tasks: BackgroundTasks, db: Session = 
         new_user.verification_code = None
         new_user.verification_code_expires_at = None
     else:
-        _set_verification_code(new_user, background_tasks)
+        _deliver_verification_code(new_user)
     db.commit()
 
     if DEV_MODE:
@@ -238,7 +246,7 @@ def resend_verification(
     if user.is_email_verified:
         return {"status": "success", "message": "Email already verified"}
 
-    _set_verification_code(user, background_tasks)
+    _deliver_verification_code(user)
     db.commit()
     return {"status": "success", "message": "Verification code sent"}
 

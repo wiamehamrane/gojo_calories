@@ -38,6 +38,8 @@ class DailyStats extends Table {
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
+  AppDatabase.forTesting() : super(NativeDatabase.memory());
+
   @override
   int get schemaVersion => 4;
 

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import '../../../../core/network/api_client.dart';
@@ -262,6 +263,21 @@ class IAPService {
           errorMessage: detail.toString(),
         );
       }
+    } on DioException catch (e) {
+      final responseData = e.response?.data;
+      final detail = responseData is Map
+          ? responseData['detail']?.toString()
+          : null;
+      debugPrint(
+        'IAPService: _verifyAndDeliver error: status=${e.response?.statusCode} '
+        'detail=$detail message=${e.message}',
+      );
+      status.value = IAPStatus(
+        state: IAPState.error,
+        errorMessage: detail ??
+            e.message ??
+            'Receipt verification failed. Please try again.',
+      );
     } catch (e) {
       debugPrint('IAPService: _verifyAndDeliver error: $e');
       status.value = IAPStatus(

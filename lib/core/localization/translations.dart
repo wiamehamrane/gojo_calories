@@ -12,6 +12,9 @@ class Translations {
       'error': 'Something went wrong',
       'today': 'Today',
       'left': 'left',
+      'over_goal': 'over goal',
+      'consumed': 'consumed',
+      'eaten': 'eaten',
 
       // Nav
       'nav_home': 'Home',
@@ -168,9 +171,28 @@ class Translations {
       'run': 'Run',
       'weight_lifting': 'Weight lifting',
       'describe': 'Describe',
+      'describe_exercise': 'Describe Exercise',
+      'describe_exercise_hint':
+          'e.g., I played intense basketball for 45 minutes and then did 20 pushups.',
+      'describe_exercise_empty': 'Please describe your workout first.',
+      'analyze_with_ai': 'Analyze with AI',
+      'analyze_again': 'Analyze Again',
+      'exercise_logged': 'Workout logged successfully',
       'manual': 'Manual',
       'calories_burned': 'Calories Burned',
       'describe_hint': 'e.g. Played basketball for 2 hours',
+      'recent_exercises': 'Recent Workouts',
+      'todays_workouts': "Today's Workouts",
+      'workouts_on_date': 'Workouts on {date}',
+      'daily_workouts': 'Workouts',
+      'no_exercises_today': 'No workouts logged for this day',
+      'no_exercises_logged': 'No workouts logged yet',
+      'exercise_duration_mins': '{n} min',
+      'yesterday': 'Yesterday',
+      'delete_exercise': 'Delete Workout?',
+      'delete_exercise_confirm':
+          'This will remove the workout and subtract burned calories from your daily budget.',
+      'exercise_deleted': 'Workout deleted',
 
       // Height & BMI
       'height': 'Height',
@@ -198,6 +220,7 @@ class Translations {
       'cancel_anytime': 'Cancel anytime in Settings before trial ends.',
 
       // Errors
+      'loading_day': 'Loading your day...',
       'error_generic': 'Something went wrong. Please try again.',
       'error_network': 'No internet connection. Check your network settings.',
       'error_auth': 'Session expired. Please sign in again.',
@@ -220,6 +243,9 @@ class Translations {
       'error': 'Quelque chose s\'est mal passé',
       'today': 'Aujourd\'hui',
       'left': 'restant',
+      'over_goal': 'au-dessus de l\'objectif',
+      'consumed': 'consommées',
+      'eaten': 'mangés',
 
       'nav_home': 'Accueil',
       'nav_progress': 'Progrès',
@@ -371,9 +397,28 @@ class Translations {
       'run': 'Course',
       'weight_lifting': 'Musculation',
       'describe': 'Décrire',
+      'describe_exercise': 'Décrire l\'exercice',
+      'describe_exercise_hint':
+          'ex. J\'ai joué au basket intensément pendant 45 minutes puis fait 20 pompes.',
+      'describe_exercise_empty': 'Veuillez d\'abord décrire votre entraînement.',
+      'analyze_with_ai': 'Analyser avec l\'IA',
+      'analyze_again': 'Analyser à nouveau',
+      'exercise_logged': 'Entraînement enregistré',
       'manual': 'Manuel',
       'calories_burned': 'Calories Brûlées',
       'describe_hint': 'ex. J\'ai joué au basket pendant 2 heures',
+      'recent_exercises': 'Entraînements récents',
+      'todays_workouts': "Entraînements d'aujourd'hui",
+      'workouts_on_date': 'Entraînements du {date}',
+      'daily_workouts': 'Entraînements',
+      'no_exercises_today': 'Aucun entraînement ce jour-là',
+      'no_exercises_logged': 'Aucun entraînement enregistré',
+      'exercise_duration_mins': '{n} min',
+      'yesterday': 'Hier',
+      'delete_exercise': 'Supprimer l\'entraînement ?',
+      'delete_exercise_confirm':
+          'Cela supprimera l\'entraînement et retirera les calories brûlées de votre budget quotidien.',
+      'exercise_deleted': 'Entraînement supprimé',
 
       // Height & BMI
       'height': 'Taille',
@@ -402,6 +447,7 @@ class Translations {
           'Annulez à tout moment dans les paramètres avant la fin de l\'essai.',
 
       // Errors
+      'loading_day': 'Chargement de la journée...',
       'error_generic': 'Quelque chose s\'est mal passé. Veuillez réessayer.',
       'error_network':
           'Pas de connexion Internet. Vérifiez vos paramètres réseau.',
@@ -425,6 +471,9 @@ class Translations {
       'error': 'حدث خطأ ما',
       'today': 'اليوم',
       'left': 'متبقي',
+      'over_goal': 'فوق الهدف',
+      'consumed': 'مستهلكة',
+      'eaten': 'متناولة',
 
       'nav_home': 'الرئيسية',
       'nav_progress': 'التقدم',
@@ -571,9 +620,28 @@ class Translations {
       'run': 'ركض',
       'weight_lifting': 'رفع الأثقال',
       'describe': 'وصف',
+      'describe_exercise': 'وصف التمرين',
+      'describe_exercise_hint':
+          'مثال: لعبت كرة سلة مكثفة لمدة 45 دقيقة ثم قمت بـ 20 تمرين ضغط.',
+      'describe_exercise_empty': 'يرجى وصف تمرينك أولاً.',
+      'analyze_with_ai': 'تحليل بالذكاء الاصطناعي',
+      'analyze_again': 'تحليل مرة أخرى',
+      'exercise_logged': 'تم تسجيل التمرين بنجاح',
       'manual': 'يدوي',
       'calories_burned': 'السعرات المحروقة',
       'describe_hint': 'مثال: لعبت كرة السلة لمدة ساعتين',
+      'recent_exercises': 'التمارين الأخيرة',
+      'todays_workouts': 'تمارين اليوم',
+      'workouts_on_date': 'تمارين {date}',
+      'daily_workouts': 'التمارين',
+      'no_exercises_today': 'لا توجد تمارين في هذا اليوم',
+      'no_exercises_logged': 'لا توجد تمارين مسجلة بعد',
+      'exercise_duration_mins': '{n} د',
+      'yesterday': 'أمس',
+      'delete_exercise': 'حذف التمرين؟',
+      'delete_exercise_confirm':
+          'سيؤدي هذا إلى إزالة التمرين وخصم السعرات المحروقة من ميزانيتك اليومية.',
+      'exercise_deleted': 'تم حذف التمرين',
 
       // Height & BMI
       'height': 'الطول',
@@ -601,6 +669,7 @@ class Translations {
           'يمكنك الإلغاء في أي وقت من الإعدادات قبل انتهاء الفترة التجريبية.',
 
       // Errors
+      'loading_day': 'جارٍ تحميل يومك...',
       'error_generic': 'حدث خطأ ما. الرجاء المحاولة مرة أخرى.',
       'error_network': 'لا يوجد اتصال بالإنترنت. تحقق من إعدادات الشبكة.',
       'error_auth': 'انتهت الجلسة. يرجى تسجيل الدخول مرة أخرى.',

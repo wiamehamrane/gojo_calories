@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/localization/translations.dart';
 import '../widgets/donut_ring_painter.dart';
 
 class MacroTileInner extends StatefulWidget {
   final String macroName;
+  final String lang;
   final int total;
   final int consumed;
   final Color macroColor;
@@ -13,6 +15,7 @@ class MacroTileInner extends StatefulWidget {
   const MacroTileInner({
     super.key,
     required this.macroName,
+    required this.lang,
     required this.total,
     required this.consumed,
     required this.macroColor,
@@ -29,6 +32,8 @@ class _MacroTileInnerState extends State<MacroTileInner>
   late AnimationController _animController;
   late Animation<double> _scaleAnim;
   late Animation<double> _fadeAnim;
+
+  static const _overGoalColor = Color(0xFFE65100);
 
   @override
   void initState() {
@@ -61,10 +66,22 @@ class _MacroTileInnerState extends State<MacroTileInner>
 
   @override
   Widget build(BuildContext context) {
-    int left = widget.total - widget.consumed;
-    if (left < 0) left = 0;
-    final int displayValue = _showConsumed ? widget.consumed : left;
-    final String verb = _showConsumed ? 'eaten' : 'left';
+    final rawLeft = widget.total - widget.consumed;
+    final isOverGoal = !_showConsumed && rawLeft < 0;
+    final surplus = widget.consumed - widget.total;
+
+    final int displayValue = _showConsumed
+        ? widget.consumed
+        : (isOverGoal ? surplus : (rawLeft < 0 ? 0 : rawLeft));
+
+    final String verb = _showConsumed
+        ? Translations.t(widget.lang, 'eaten')
+        : (isOverGoal
+            ? Translations.t(widget.lang, 'over_goal')
+            : Translations.t(widget.lang, 'left'));
+
+    final Color verbColor =
+        isOverGoal ? _overGoalColor : AppColors.textSecondary;
 
     final double progress = widget.total > 0
         ? (widget.consumed / widget.total).clamp(0.0, 1.0)
@@ -80,7 +97,6 @@ class _MacroTileInnerState extends State<MacroTileInner>
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Animated number + label
             AnimatedBuilder(
               animation: _animController,
               builder: (context, child) => FadeTransition(
@@ -92,7 +108,9 @@ class _MacroTileInnerState extends State<MacroTileInner>
                 children: [
                   Text(
                     '${displayValue}g',
-                    style: AppTextStyles.macroValue,
+                    style: AppTextStyles.macroValue.copyWith(
+                      color: isOverGoal ? _overGoalColor : null,
+                    ),
                   ),
                   const SizedBox(height: 2),
                   RichText(
@@ -108,10 +126,10 @@ class _MacroTileInnerState extends State<MacroTileInner>
                         ),
                         TextSpan(
                           text: verb,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w400,
-                            color: AppColors.textSecondary,
+                            color: verbColor,
                           ),
                         ),
                       ],
@@ -121,11 +139,9 @@ class _MacroTileInnerState extends State<MacroTileInner>
               ),
             ),
             const Spacer(),
-            // Bottom: icon left, donut right
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Thin progress bar
                 Expanded(
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(3),
@@ -143,7 +159,6 @@ class _MacroTileInnerState extends State<MacroTileInner>
                   ),
                 ),
                 const SizedBox(width: 8),
-                // Donut ring
                 SizedBox(
                   width: 44,
                   height: 44,

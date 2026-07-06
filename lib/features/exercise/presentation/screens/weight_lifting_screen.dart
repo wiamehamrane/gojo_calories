@@ -115,20 +115,32 @@ class _WeightLiftingScreenState extends ConsumerState<WeightLiftingScreen> {
     });
   }
 
-  void _saveWorkout(String lang) {
+  Future<void> _saveWorkout(String lang) async {
     final calories = _estimateCalories(_exercises);
     if (calories == 0) return;
 
-    ref
-        .read(dashboardProvider.notifier)
-        .logFood(
-          calories: calories,
-          protein: 0,
-          carbs: 0,
-          fat: 0,
-          name: 'Weight Lifting (${_exercises.map((e) => e.name).join(', ')})',
-        );
+    final totalSets = _exercises.fold<int>(0, (s, e) => s + e.sets.length);
+    final durationMinutes = (totalSets * 2.5).round().clamp(1, 999);
 
+    try {
+      await ref.read(dashboardProvider.notifier).logExercise(
+            name:
+                'Weight Lifting (${_exercises.map((e) => e.name).join(', ')})',
+            durationMinutes: durationMinutes,
+            caloriesBurned: calories,
+          );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to save workout. Please try again.'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+
+    if (!mounted) return;
     setState(() => _saved = true);
 
     ScaffoldMessenger.of(context).showSnackBar(

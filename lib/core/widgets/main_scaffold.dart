@@ -387,7 +387,7 @@ class _ActionGrid extends ConsumerWidget {
             width: cellWidth,
             onTap: () {
               Navigator.pop(context);
-              context.push('/scan');
+              context.go(RoutePaths.scan);
             },
           ),
           _ActionCell(

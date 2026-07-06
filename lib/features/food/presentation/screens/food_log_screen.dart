@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../../../../core/widgets/cached_food_image.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/theme/app_spacing.dart';
@@ -420,10 +421,12 @@ class _SuggestionRow extends StatelessWidget {
         child: const Icon(LucideIcons.image, size: 20, color: AppColors.inactive),
       );
     }
-    return Image.network(
-      url,
+    return CachedFoodImage(
+      imageUrl: url,
       fit: BoxFit.cover,
-      errorBuilder: (_, _, _) => Container(
+      memCacheWidth: 160,
+      memCacheHeight: 160,
+      errorWidget: Container(
         color: AppColors.inactive.withValues(alpha: 0.1),
         child: const Icon(LucideIcons.image, size: 20, color: AppColors.inactive),
       ),

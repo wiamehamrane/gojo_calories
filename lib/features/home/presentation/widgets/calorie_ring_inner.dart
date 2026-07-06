@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/localization/translations.dart';
 import '../../../stats/data/models/daily_stats.dart';
 import '../widgets/donut_ring_painter.dart';
 
@@ -21,6 +22,8 @@ class _CalorieRingInnerState extends State<CalorieRingInner>
   late AnimationController _animController;
   late Animation<double> _scaleAnim;
   late Animation<double> _fadeAnim;
+
+  static const _overGoalColor = Color(0xFFE65100);
 
   @override
   void initState() {
@@ -53,19 +56,28 @@ class _CalorieRingInnerState extends State<CalorieRingInner>
 
   @override
   Widget build(BuildContext context) {
-    final int caloriesLeft = widget.stats.calorieBudget > 0
-        ? (widget.stats.calorieBudget - widget.stats.caloriesConsumed)
-        : 0;
+    final lang = widget.lang;
+    final rawLeft = widget.stats.calorieBudget - widget.stats.caloriesConsumed;
+    final isOverGoal = !_showConsumed && rawLeft < 0;
+    final surplus = widget.stats.caloriesConsumed - widget.stats.calorieBudget;
+
     final int displayValue = _showConsumed
         ? widget.stats.caloriesConsumed
-        : caloriesLeft;
+        : (isOverGoal ? surplus : (rawLeft < 0 ? 0 : rawLeft));
 
     final double progress = widget.stats.calorieBudget > 0
         ? (widget.stats.caloriesConsumed / widget.stats.calorieBudget)
             .clamp(0.0, 1.0)
         : 0.0;
 
-    final String verbLabel = _showConsumed ? 'consumed' : 'left';
+    final String verbLabel = _showConsumed
+        ? Translations.t(lang, 'consumed')
+        : (isOverGoal
+            ? Translations.t(lang, 'over_goal')
+            : Translations.t(lang, 'left'));
+
+    final Color verbColor =
+        isOverGoal ? _overGoalColor : AppColors.textPrimary;
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -76,7 +88,6 @@ class _CalorieRingInnerState extends State<CalorieRingInner>
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            // Left: animated number + label
             AnimatedBuilder(
               animation: _animController,
               builder: (context, child) => FadeTransition(
@@ -92,7 +103,9 @@ class _CalorieRingInnerState extends State<CalorieRingInner>
                 children: [
                   Text(
                     displayValue.toString(),
-                    style: AppTextStyles.heroNumber,
+                    style: AppTextStyles.heroNumber.copyWith(
+                      color: isOverGoal ? _overGoalColor : null,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   RichText(
@@ -108,17 +121,16 @@ class _CalorieRingInnerState extends State<CalorieRingInner>
                         ),
                         TextSpan(
                           text: verbLabel,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
-                            color: AppColors.textPrimary,
+                            color: verbColor,
                           ),
                         ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 6),
-                  // Progress bar (linear pill)
                   ClipRRect(
                     borderRadius: BorderRadius.circular(4),
                     child: Container(
@@ -132,7 +144,10 @@ class _CalorieRingInnerState extends State<CalorieRingInner>
                           child: Container(
                             decoration: const BoxDecoration(
                               gradient: LinearGradient(
-                                colors: [AppColors.primaryMid, AppColors.primary],
+                                colors: [
+                                  AppColors.primaryMid,
+                                  AppColors.primary,
+                                ],
                               ),
                             ),
                           ),
@@ -143,7 +158,6 @@ class _CalorieRingInnerState extends State<CalorieRingInner>
                 ],
               ),
             ),
-            // Right: donut ring
             SizedBox(
               width: 86,
               height: 86,

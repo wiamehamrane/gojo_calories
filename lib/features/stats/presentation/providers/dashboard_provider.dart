@@ -5,26 +5,18 @@ import '../../../../core/di/repository_providers.dart';
 import '../../../../core/database/database_provider.dart';
 import '../../../../core/database/database.dart';
 import '../../data/models/daily_stats.dart' as models;
+import '../../../exercise/presentation/providers/exercise_providers.dart';
+import 'calendar_progress_provider.dart';
 import 'selected_date_provider.dart';
 
-class DashboardNotifier extends Notifier<models.DailyStats> {
+class DashboardNotifier extends AsyncNotifier<models.DailyStats> {
   @override
-  models.DailyStats build() {
+  Future<models.DailyStats> build() async {
     final date = ref.watch(selectedDateProvider);
-    _loadData(date);
-    return models.DailyStats(
-      calorieBudget: 0,
-      caloriesConsumed: 0,
-      proteinConsumed: 0,
-      carbsConsumed: 0,
-      fatConsumed: 0,
-      proteinTarget: 0,
-      carbsTarget: 0,
-      fatTarget: 0,
-    );
+    return _fetchStats(date);
   }
 
-  Future<void> _loadData(DateTime date) async {
+  Future<models.DailyStats> _fetchStats(DateTime date) async {
     final dateStr =
         "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
     final tzOffset = date.timeZoneOffset.inMinutes;
@@ -45,7 +37,6 @@ class DashboardNotifier extends Notifier<models.DailyStats> {
           carbsTarget: latest['carbs_target'] ?? 0,
           fatTarget: latest['fat_target'] ?? 0,
         );
-        state = stats;
 
         final db = ref.read(databaseProvider);
         await db.into(db.dailyStats).insertOnConflictUpdate(
@@ -62,12 +53,13 @@ class DashboardNotifier extends Notifier<models.DailyStats> {
                 fatConsumed: stats.fatConsumed,
               ),
             );
+        return stats;
       }
     } catch (_) {
       final db = ref.read(databaseProvider);
       final local = await db.getStatsForDate(date);
       if (local != null) {
-        state = models.DailyStats(
+        return models.DailyStats(
           calorieBudget: local.calorieBudget,
           caloriesConsumed: local.caloriesConsumed,
           proteinTarget: local.proteinTarget,
@@ -79,6 +71,40 @@ class DashboardNotifier extends Notifier<models.DailyStats> {
         );
       }
     }
+
+    return models.DailyStats(
+      calorieBudget: 0,
+      caloriesConsumed: 0,
+      proteinTarget: 0,
+      carbsTarget: 0,
+      fatTarget: 0,
+    );
+  }
+
+  Future<void> refresh() async {
+    ref.invalidateSelf();
+  }
+
+  Future<void> logExercise({
+    required String name,
+    required int durationMinutes,
+    required int caloriesBurned,
+  }) async {
+    final date = ref.read(selectedDateProvider);
+    final localDate =
+        "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+
+    await ref.read(exerciseRepositoryProvider).logExercise(
+          name: name,
+          durationMinutes: durationMinutes,
+          caloriesBurned: caloriesBurned,
+          localDate: localDate,
+        );
+
+    ref.invalidate(dailyExercisesProvider(date));
+    ref.invalidate(exercisesProvider);
+    ref.invalidate(calendarProgressProvider);
+    ref.invalidateSelf();
   }
 
   void logFood({
@@ -93,13 +119,17 @@ class DashboardNotifier extends Notifier<models.DailyStats> {
     String? imageUrl,
     List<dynamic>? ingredients,
   }) {
-    final newState = state.copyWith(
-      caloriesConsumed: state.caloriesConsumed + calories,
-      proteinConsumed: state.proteinConsumed + protein,
-      carbsConsumed: state.carbsConsumed + carbs,
-      fatConsumed: state.fatConsumed + fat,
-    );
-    state = newState;
+    final current = state.value;
+    if (current != null) {
+      state = AsyncData(
+        current.copyWith(
+          caloriesConsumed: current.caloriesConsumed + calories,
+          proteinConsumed: current.proteinConsumed + protein,
+          carbsConsumed: current.carbsConsumed + carbs,
+          fatConsumed: current.fatConsumed + fat,
+        ),
+      );
+    }
 
     final db = ref.read(databaseProvider);
     db.insertFoodLog(
@@ -116,11 +146,12 @@ class DashboardNotifier extends Notifier<models.DailyStats> {
         fat: fat,
       ),
     );
+    ref.invalidate(calendarProgressProvider);
   }
 }
 
 final dashboardProvider =
-    NotifierProvider<DashboardNotifier, models.DailyStats>(
+    AsyncNotifierProvider<DashboardNotifier, models.DailyStats>(
   DashboardNotifier.new,
 );
 
@@ -132,3 +163,6 @@ final streakProvider = FutureProvider<int>((ref) async {
     return 0;
   }
 });
+
+bool isSameCalendarDay(DateTime a, DateTime b) =>
+    a.year == b.year && a.month == b.month && a.day == b.day;
