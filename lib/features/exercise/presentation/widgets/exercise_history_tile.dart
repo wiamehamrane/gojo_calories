@@ -4,6 +4,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_shadows.dart';
 import '../../../../core/localization/translations.dart';
+import '../../../../core/localization/locale_provider.dart';
 
 IconData exerciseIconForName(String name) {
   final lower = name.toLowerCase();
@@ -24,8 +25,7 @@ String formatExerciseTime(String? isoDate, String lang) {
   if (isoDate == null || isoDate.isEmpty) return '';
   final parsed = DateTime.tryParse(isoDate.replaceFirst('Z', ''));
   if (parsed == null) return '';
-  final locale = lang == 'fr' ? 'fr_FR' : (lang == 'ar' ? 'ar' : 'en_US');
-  return DateFormat.jm(locale).format(parsed.toLocal());
+  return DateFormat.jm(toIntlLocale(lang)).format(parsed.toLocal());
 }
 
 String formatExerciseDate(String? isoDate, String lang) {
@@ -45,8 +45,7 @@ String formatExerciseDate(String? isoDate, String lang) {
     return Translations.t(lang, 'yesterday');
   }
 
-  final locale = lang == 'fr' ? 'fr_FR' : (lang == 'ar' ? 'ar' : 'en_US');
-  return DateFormat.MMMd(locale).format(local);
+  return DateFormat.MMMd(toIntlLocale(lang)).format(local);
 }
 
 class ExerciseHistoryTile extends StatelessWidget {

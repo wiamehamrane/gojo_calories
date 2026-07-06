@@ -84,7 +84,7 @@ class _WeeklyCalendarState extends ConsumerState<WeeklyCalendar> {
         progressAsync.hasValue ? progressAsync.value : null;
     final today = _today;
     final lang = ref.watch(localeProvider);
-    final locale = lang == 'fr' ? 'fr_FR' : (lang == 'ar' ? 'ar' : 'en_US');
+    final locale = toIntlLocale(lang);
 
     ref.listen<DateTime>(selectedDateProvider, (previous, next) {
       if (previous != null && !_sameDay(previous, next)) {

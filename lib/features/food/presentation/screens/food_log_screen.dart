@@ -49,9 +49,10 @@ class _FoodLogScreenState extends ConsumerState<FoodLogScreen> {
       });
     } catch (e) {
       if (mounted) {
+        final lang = ref.read(localeProvider);
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Error searching food library.')));
+        ).showSnackBar(SnackBar(content: Text(Translations.t(lang, 'error_search_food_library'))));
       }
     } finally {
       if (mounted) setState(() => _isSearching = false);
@@ -86,9 +87,12 @@ class _FoodLogScreenState extends ConsumerState<FoodLogScreen> {
         );
 
     if (mounted) {
+      final lang = ref.read(localeProvider);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Logged $name!'),
+          content: Text(
+            Translations.t(lang, 'food_logged_success').replaceAll('{name}', name),
+          ),
           backgroundColor: AppColors.primaryDark,
         ),
       );

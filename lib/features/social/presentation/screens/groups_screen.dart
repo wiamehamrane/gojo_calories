@@ -5,6 +5,8 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_shadows.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/localization/locale_provider.dart';
+import '../../../../core/localization/translations.dart';
 import '../../presentation/providers/groups_provider.dart';
 
 class GroupsScreen extends ConsumerStatefulWidget {
@@ -16,10 +18,18 @@ class GroupsScreen extends ConsumerStatefulWidget {
 
 class _GroupsScreenState extends ConsumerState<GroupsScreen> {
   int _selectedTab = 0;
-  final List<String> _tabs = ["Feed", "My Groups", "Discover"];
+
+  List<String> _tabs(String lang) => [
+    Translations.t(lang, 'tab_feed'),
+    Translations.t(lang, 'tab_my_groups'),
+    Translations.t(lang, 'tab_discover'),
+  ];
 
   @override
   Widget build(BuildContext context) {
+    final lang = ref.watch(localeProvider);
+    String t(String k) => Translations.t(lang, k);
+    final tabs = _tabs(lang);
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -35,14 +45,14 @@ class _GroupsScreenState extends ConsumerState<GroupsScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text("Groups", style: AppTextStyles.screenTitle),
+                  Text(t('groups'), style: AppTextStyles.screenTitle),
                   IconButton(
                     onPressed: _showCreateGroupSheet,
                     icon: const Icon(
                       LucideIcons.plus,
                       color: AppColors.textPrimary,
                     ),
-                    tooltip: "Create Group",
+                    tooltip: t('create_group'),
                   ),
                 ],
               ),
@@ -55,7 +65,7 @@ class _GroupsScreenState extends ConsumerState<GroupsScreen> {
                 horizontal: AppSpacing.screenPadding,
               ),
               child: Row(
-                children: List.generate(_tabs.length, (i) {
+                children: List.generate(tabs.length, (i) {
                   final bool active = i == _selectedTab;
                   return GestureDetector(
                     onTap: () => setState(() => _selectedTab = i),
@@ -66,7 +76,7 @@ class _GroupsScreenState extends ConsumerState<GroupsScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            _tabs[i],
+                            tabs[i],
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: active
@@ -106,6 +116,8 @@ class _GroupsScreenState extends ConsumerState<GroupsScreen> {
   }
 
   void _showCreateGroupSheet() {
+    final lang = ref.read(localeProvider);
+    String t(String k) => Translations.t(lang, k);
     final nameController = TextEditingController();
     showModalBottomSheet(
       context: context,
@@ -125,7 +137,7 @@ class _GroupsScreenState extends ConsumerState<GroupsScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text("Create Group", style: AppTextStyles.cardHeading),
+            Text(t('create_group'), style: AppTextStyles.cardHeading),
             const SizedBox(height: 16),
             Container(
               decoration: BoxDecoration(
@@ -135,10 +147,10 @@ class _GroupsScreenState extends ConsumerState<GroupsScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
               child: TextField(
                 controller: nameController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   border: InputBorder.none,
-                  hintText: "Group name...",
-                  hintStyle: TextStyle(color: AppColors.textPlaceholder),
+                  hintText: t('group_name_hint'),
+                  hintStyle: const TextStyle(color: AppColors.textPlaceholder),
                 ),
               ),
             ),
@@ -155,7 +167,7 @@ class _GroupsScreenState extends ConsumerState<GroupsScreen> {
                   ),
                 ),
                 onPressed: () => Navigator.pop(ctx),
-                child: const Text("Create", style: AppTextStyles.buttonLabel),
+                child: Text(t('create'), style: AppTextStyles.buttonLabel),
               ),
             ),
           ],

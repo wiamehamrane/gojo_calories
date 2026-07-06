@@ -84,7 +84,7 @@ class HomeScreen extends ConsumerWidget {
                     child: SizedBox(
                       height: 160,
                       child: SwipableStatCard(
-                        title: 'Calories',
+                        title: Translations.t(lang, 'calories_label'),
                         themeColor: AppColors.primaryMid,
                         chartData: weeklyData?.calorieSpots,
                         extraPage: const BmiWidget(),
@@ -104,7 +104,7 @@ class HomeScreen extends ConsumerWidget {
                         children: [
                           Expanded(
                             child: SwipableStatCard(
-                              title: 'Protein',
+                              title: Translations.t(lang, 'macro_protein'),
                               themeColor: AppColors.protein,
                               chartData: weeklyData?.proteinSpots,
                               primaryView: MacroTileInner(
@@ -121,7 +121,7 @@ class HomeScreen extends ConsumerWidget {
                           const SizedBox(width: AppSpacing.macroTileGap),
                           Expanded(
                             child: SwipableStatCard(
-                              title: 'Carbs',
+                              title: Translations.t(lang, 'macro_carbs'),
                               themeColor: AppColors.carbs,
                               chartData: weeklyData?.carbsSpots,
                               primaryView: MacroTileInner(
@@ -137,7 +137,7 @@ class HomeScreen extends ConsumerWidget {
                           const SizedBox(width: AppSpacing.macroTileGap),
                           Expanded(
                             child: SwipableStatCard(
-                              title: 'Fats',
+                              title: Translations.t(lang, 'macro_fats'),
                               themeColor: AppColors.fats,
                               chartData: weeklyData?.fatSpots,
                               primaryView: MacroTileInner(
@@ -374,10 +374,10 @@ class HomeScreen extends ConsumerWidget {
         );
       },
       loading: () => const SizedBox.shrink(),
-      error: (e, _) => const Center(
+      error: (e, _) => Center(
         child: Text(
-          'Failed to load history',
-          style: TextStyle(color: AppColors.danger),
+          Translations.t(lang, 'failed_load_history'),
+          style: const TextStyle(color: AppColors.danger),
         ),
       ),
     );

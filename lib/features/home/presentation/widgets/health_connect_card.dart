@@ -7,6 +7,8 @@ import 'package:gojocalories/core/theme/app_colors.dart';
 import 'package:gojocalories/core/theme/app_radius.dart';
 import 'package:gojocalories/core/theme/app_spacing.dart';
 import 'package:gojocalories/core/theme/app_text_styles.dart';
+import 'package:gojocalories/core/localization/locale_provider.dart';
+import 'package:gojocalories/core/localization/translations.dart';
 import '../../../health/presentation/providers/health_provider.dart';
 
 class HealthConnectCard extends ConsumerWidget {
@@ -15,6 +17,8 @@ class HealthConnectCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final health = ref.watch(healthSyncProvider);
+    final lang = ref.watch(localeProvider);
+    String t(String k) => Translations.t(lang, k);
 
     ref.listen(healthSyncProvider, (previous, next) {
       final message = next.error;
@@ -57,7 +61,7 @@ class HealthConnectCard extends ConsumerWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                'Health Sync',
+                t('health_sync'),
                 style: AppTextStyles.bodyBold.copyWith(fontSize: 16),
               ),
               const Spacer(),
@@ -69,7 +73,7 @@ class HealthConnectCard extends ConsumerWidget {
                 )
               else if (health.isConnected)
                 IconButton(
-                  tooltip: 'Refresh',
+                  tooltip: t('refresh'),
                   onPressed: () =>
                       ref.read(healthSyncProvider.notifier).refresh(),
                   icon: const Icon(LucideIcons.refreshCw, size: 18),
@@ -80,13 +84,13 @@ class HealthConnectCard extends ConsumerWidget {
           const SizedBox(height: 12),
           Text(
             health.isConnected
-                ? 'Connected. Steps, active calories, and weight sync from your health app.'
-                : 'Connect your health data to automatically sync steps, active calories, and weight.',
+                ? t('health_sync_connected')
+                : t('health_sync_prompt'),
             style: AppTextStyles.bodyRegular,
           ),
           if (health.isConnected) ...[
             const SizedBox(height: 14),
-            _SyncedStatsRow(health: health),
+            _SyncedStatsRow(health: health, lang: lang),
             const SizedBox(height: 12),
             Align(
               alignment: Alignment.centerRight,
@@ -94,7 +98,7 @@ class HealthConnectCard extends ConsumerWidget {
                 onPressed: health.isLoading
                     ? null
                     : () => ref.read(healthSyncProvider.notifier).disconnect(),
-                child: const Text('Disconnect'),
+                child: Text(t('disconnect')),
               ),
             ),
           ] else ...[
@@ -103,7 +107,9 @@ class HealthConnectCard extends ConsumerWidget {
               children: [
                 Expanded(
                   child: _HealthButton(
-                    label: 'Apple Health',
+                    label: t('apple_health'),
+                    labelKey: 'apple_health',
+                    lang: lang,
                     icon: LucideIcons.apple,
                     color: Colors.black,
                     isConnected: false,
@@ -118,7 +124,11 @@ class HealthConnectCard extends ConsumerWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: _HealthButton(
-                    label: Platform.isAndroid ? 'Health Connect' : 'Google Fit',
+                    label: Platform.isAndroid
+                        ? t('health_connect')
+                        : t('google_fit'),
+                    labelKey: Platform.isAndroid ? 'health_connect' : 'google_fit',
+                    lang: lang,
                     icon: LucideIcons.activity,
                     color: const Color(0xFF4285F4),
                     isConnected: false,
@@ -140,7 +150,7 @@ class HealthConnectCard extends ConsumerWidget {
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: Text(
-                  'Health sync is only available on iOS and Android devices.',
+                  t('health_sync_platform_only'),
                   style: AppTextStyles.bodyRegular.copyWith(
                     color: AppColors.textSecondary,
                     fontSize: 12,
@@ -155,12 +165,14 @@ class HealthConnectCard extends ConsumerWidget {
 }
 
 class _SyncedStatsRow extends StatelessWidget {
-  const _SyncedStatsRow({required this.health});
+  const _SyncedStatsRow({required this.health, required this.lang});
 
   final HealthSyncState health;
+  final String lang;
 
   @override
   Widget build(BuildContext context) {
+    String t(String k) => Translations.t(lang, k);
     final data = health.data;
     final weight = data.weightKg;
     final weightLabel = weight == null
@@ -172,19 +184,19 @@ class _SyncedStatsRow extends StatelessWidget {
         _StatChip(
           icon: LucideIcons.footprints,
           label: '${data.stepsToday ?? 0}',
-          caption: 'Steps',
+          caption: t('steps'),
         ),
         const SizedBox(width: 8),
         _StatChip(
           icon: LucideIcons.flame,
           label: '${data.activeCaloriesToday ?? 0}',
-          caption: 'Active cal',
+          caption: t('active_cal'),
         ),
         const SizedBox(width: 8),
         _StatChip(
           icon: LucideIcons.scale,
           label: weightLabel,
-          caption: 'Weight',
+          caption: t('weight_label'),
         ),
       ],
     );
@@ -236,6 +248,8 @@ class _StatChip extends StatelessWidget {
 
 class _HealthButton extends StatelessWidget {
   final String label;
+  final String labelKey;
+  final String lang;
   final IconData icon;
   final Color color;
   final bool isConnected;
@@ -244,6 +258,8 @@ class _HealthButton extends StatelessWidget {
 
   const _HealthButton({
     required this.label,
+    required this.labelKey,
+    required this.lang,
     required this.icon,
     required this.color,
     required this.isConnected,
@@ -289,17 +305,17 @@ class _HealthButton extends StatelessWidget {
                 ),
                 textAlign: TextAlign.center,
               ),
-              if (!enabled && Platform.isIOS && label.contains('Health Connect'))
+              if (!enabled && Platform.isIOS && labelKey == 'health_connect')
                 Text(
-                  'Android only',
+                  Translations.t(lang, 'android_only'),
                   style: TextStyle(
                     color: Colors.grey.shade500,
                     fontSize: 10,
                   ),
                 )
-              else if (!enabled && Platform.isAndroid && label.contains('Apple'))
+              else if (!enabled && Platform.isAndroid && labelKey == 'apple_health')
                 Text(
-                  'iOS only',
+                  Translations.t(lang, 'ios_only'),
                   style: TextStyle(
                     color: Colors.grey.shade500,
                     fontSize: 10,

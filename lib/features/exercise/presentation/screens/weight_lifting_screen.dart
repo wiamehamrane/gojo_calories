@@ -132,8 +132,8 @@ class _WeightLiftingScreenState extends ConsumerState<WeightLiftingScreen> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to save workout. Please try again.'),
+        SnackBar(
+          content: Text(Translations.t(lang, 'failed_save_workout')),
           backgroundColor: Colors.redAccent,
         ),
       );

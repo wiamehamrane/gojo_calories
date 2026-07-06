@@ -10,6 +10,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'package:gojocalories/features/auth/presentation/providers/iap_provider.dart';
 import 'package:gojocalories/features/auth/data/services/iap_service.dart';
+import 'package:gojocalories/core/localization/locale_provider.dart';
+import 'package:gojocalories/core/localization/translations.dart';
 
 class PaywallScreen extends ConsumerStatefulWidget {
   const PaywallScreen({super.key});
@@ -89,10 +91,11 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
   }
 
   Future<void> _handlePurchase() async {
+    final lang = ref.read(localeProvider);
     if (_selectedProductId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select a plan'),
+        SnackBar(
+          content: Text(Translations.t(lang, 'please_select_plan')),
           backgroundColor: Colors.orange,
         ),
       );
@@ -108,6 +111,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
   Widget _buildPlansUnavailable({
     required String message,
     required VoidCallback onRetry,
+    required String lang,
   }) {
     return Center(
       child: Padding(
@@ -130,7 +134,10 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            TextButton(onPressed: onRetry, child: const Text('Retry')),
+            TextButton(
+              onPressed: onRetry,
+              child: Text(Translations.t(lang, 'retry')),
+            ),
           ],
         ),
       ),
@@ -150,6 +157,8 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final lang = ref.watch(localeProvider);
+    String t(String k) => Translations.t(lang, k);
     // Design Tokens
     const Color background = Colors.white;
     const Color primaryDark = Color(0xFF1E3A1A);
@@ -302,6 +311,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                 error: (e, _) => _buildPlansUnavailable(
                   message: e.toString().replaceFirst('Exception: ', ''),
                   onRetry: () => ref.refresh(iapProductsProvider),
+                  lang: lang,
                 ),
               ),
 
@@ -355,9 +365,9 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                   children: [
                     GestureDetector(
                       onTap: _isProcessing ? null : _handleRestore,
-                      child: const Text(
-                        'Restore Purchase',
-                        style: TextStyle(
+                      child: Text(
+                        t('restore_purchases'),
+                        style: const TextStyle(
                           fontSize: 12,
                           color: Colors.grey,
                           decoration: TextDecoration.underline,
@@ -368,9 +378,9 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                       onTap: () => launchUrl(
                         Uri.parse('https://gojocalories.com/privacy'),
                       ),
-                      child: const Text(
-                        'Privacy Policy',
-                        style: TextStyle(
+                      child: Text(
+                        t('privacy_policy'),
+                        style: const TextStyle(
                           fontSize: 12,
                           color: Colors.grey,
                           decoration: TextDecoration.underline,

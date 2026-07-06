@@ -5,6 +5,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:gojocalories/core/theme/app_colors.dart';
 import 'package:gojocalories/core/theme/app_radius.dart';
 import 'package:gojocalories/core/theme/app_spacing.dart';
+import 'package:gojocalories/core/widgets/fab_above_nav_location.dart';
 import 'package:gojocalories/features/profile/presentation/providers/profile_providers.dart';
 
 class EventsFeedScreen extends ConsumerStatefulWidget {
@@ -109,6 +110,7 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
         icon: const Icon(LucideIcons.plus, color: Colors.white),
         label: const Text('Create', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       ),
+      floatingActionButtonLocation: const FabAboveNavLocation(),
     ));
   }
 

@@ -6,6 +6,8 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_shadows.dart';
+import '../../../../core/localization/locale_provider.dart';
+import '../../../../core/localization/translations.dart';
 import '../providers/progress_provider.dart';
 
 class ProgressScreen extends ConsumerStatefulWidget {
@@ -21,6 +23,8 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final lang = ref.watch(localeProvider);
+    String t(String k) => Translations.t(lang, k);
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -28,7 +32,7 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
         backgroundColor: AppColors.background,
         elevation: 0,
         centerTitle: true,
-        title: const Text('Progress', style: AppTextStyles.screenTitle),
+        title: Text(t('progress'), style: AppTextStyles.screenTitle),
       ),
       body: RefreshIndicator(
         onRefresh: () => ref.read(progressProvider.notifier).refresh(),
@@ -42,13 +46,13 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
               const SizedBox(height: 16),
               Row(
                 children: [
-                  Expanded(child: _buildWeightCard(context)),
+                  Expanded(child: _buildWeightCard(context, t)),
                   const SizedBox(width: AppSpacing.cardGap),
-                  Expanded(child: _buildStreakCard(context)),
+                  Expanded(child: _buildStreakCard(context, t)),
                 ],
               ),
               const SizedBox(height: 24),
-              _buildChartCard(context),
+              _buildChartCard(context, t),
               const SizedBox(height: 100), // padding for Nav
             ],
           ),
@@ -57,7 +61,7 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
     );
   }
 
-  Widget _buildWeightCard(BuildContext context) {
+  Widget _buildWeightCard(BuildContext context, String Function(String) t) {
     final asyncData = ref.watch(progressProvider);
     double currentWeight = 0.0;
 
@@ -77,7 +81,7 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const Text("My Weight", style: AppTextStyles.cardHeading),
+          Text(t('my_weight'), style: AppTextStyles.cardHeading),
           const SizedBox(height: 6),
           Text(
             "${currentWeight.toStringAsFixed(1)} kg",
@@ -123,7 +127,7 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
     );
   }
 
-  Widget _buildStreakCard(BuildContext context) {
+  Widget _buildStreakCard(BuildContext context, String Function(String) t) {
     final List<String> days = ["S", "M", "T", "W", "T", "F", "S"];
     final List<bool> completedDays = [
       true,
@@ -167,9 +171,9 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
             ],
           ),
           const SizedBox(height: 6),
-          const Text(
-            "Day streak",
-            style: TextStyle(
+          Text(
+            t('streak'),
+            style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
               color: AppColors.fire,
@@ -208,7 +212,7 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
     );
   }
 
-  Widget _buildChartCard(BuildContext context) {
+  Widget _buildChartCard(BuildContext context, String Function(String) t) {
     final asyncData = ref.watch(progressProvider);
 
     return Container(
@@ -265,10 +269,10 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                 child: CircularProgressIndicator(color: AppColors.primary),
               ),
               error: (err, st) =>
-                  const Center(child: Text('Could not load data')),
+                  Center(child: Text(t('could_not_load_data'))),
               data: (weighIns) {
                 if (weighIns.isEmpty) {
-                  return const Center(child: Text("No weigh-ins yet."));
+                  return Center(child: Text(t('no_weigh_ins')));
                 }
 
                 return LineChart(

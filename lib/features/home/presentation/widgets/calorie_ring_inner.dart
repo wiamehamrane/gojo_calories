@@ -111,9 +111,9 @@ class _CalorieRingInnerState extends State<CalorieRingInner>
                   RichText(
                     text: TextSpan(
                       children: [
-                        const TextSpan(
-                          text: 'Calories ',
-                          style: TextStyle(
+                        TextSpan(
+                          text: '${Translations.t(lang, 'calories_label')} ',
+                          style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w400,
                             color: AppColors.textSecondary,

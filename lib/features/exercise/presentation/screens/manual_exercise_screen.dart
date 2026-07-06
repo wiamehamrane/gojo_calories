@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/localization/locale_provider.dart';
+import '../../../../core/localization/translations.dart';
 import '../../../stats/presentation/providers/dashboard_provider.dart';
 
 class ManualExerciseScreen extends ConsumerStatefulWidget {
@@ -27,14 +29,16 @@ class _ManualExerciseScreenState extends ConsumerState<ManualExerciseScreen> {
   }
 
   Future<void> _save() async {
+    final lang = ref.read(localeProvider);
+    String t(String k) => Translations.t(lang, k);
     final name = _nameController.text.trim();
     final duration = int.tryParse(_durationController.text.trim()) ?? 0;
     final calories = int.tryParse(_caloriesController.text.trim()) ?? 0;
 
     if (name.isEmpty || duration <= 0 || calories <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please fill in all fields with valid values.'),
+        SnackBar(
+          content: Text(t('please_fill_valid_fields')),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -51,7 +55,9 @@ class _ManualExerciseScreenState extends ConsumerState<ManualExerciseScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Logged $calories kcal burned'),
+          content: Text(
+            t('logged_kcal_burned').replaceAll('{calories}', '$calories'),
+          ),
           backgroundColor: AppColors.primaryDark,
         ),
       );
@@ -59,8 +65,8 @@ class _ManualExerciseScreenState extends ConsumerState<ManualExerciseScreen> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to save exercise. Please try again.'),
+        SnackBar(
+          content: Text(t('failed_save_exercise')),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -71,10 +77,12 @@ class _ManualExerciseScreenState extends ConsumerState<ManualExerciseScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final lang = ref.watch(localeProvider);
+    String t(String k) => Translations.t(lang, k);
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Manual Entry', style: AppTextStyles.sectionHeader),
+        title: Text(t('manual_entry'), style: AppTextStyles.sectionHeader),
         backgroundColor: AppColors.surface,
         elevation: 0,
         iconTheme: const IconThemeData(color: AppColors.textPrimary),
@@ -84,17 +92,17 @@ class _ManualExerciseScreenState extends ConsumerState<ManualExerciseScreen> {
         child: Column(
           children: [
             const SizedBox(height: 20),
-            _buildField('Exercise Name', 'e.g., Zumba class', _nameController),
+            _buildField(t('exercise_name'), t('exercise_name_hint'), _nameController),
             const SizedBox(height: 16),
             _buildField(
-              'Duration (minutes)',
+              t('duration_minutes'),
               '45',
               _durationController,
               isNumber: true,
             ),
             const SizedBox(height: 16),
             _buildField(
-              'Calories Burned',
+              t('calories_burned'),
               '320',
               _caloriesController,
               isNumber: true,
@@ -118,9 +126,9 @@ class _ManualExerciseScreenState extends ConsumerState<ManualExerciseScreen> {
                         color: Colors.white,
                       ),
                     )
-                  : const Text(
-                      'Save Entry',
-                      style: TextStyle(
+                  : Text(
+                      t('save_entry'),
+                      style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w700,
                         fontSize: 16,

@@ -4,6 +4,8 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/localization/locale_provider.dart';
+import '../../../../core/localization/translations.dart';
 import '../../../stats/presentation/providers/dashboard_provider.dart';
 
 enum RunIntensity { high, medium, low }
@@ -70,18 +72,23 @@ class _RunIntensityScreenState extends ConsumerState<RunIntensityScreen> {
             caloriesBurned: calories,
           );
       if (!mounted) return;
+      final lang = ref.read(localeProvider);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Logged $calories kcal burned'),
+          content: Text(
+            Translations.t(lang, 'logged_kcal_burned')
+                .replaceAll('{calories}', '$calories'),
+          ),
           backgroundColor: AppColors.primaryDark,
         ),
       );
       Navigator.of(context).pop();
     } catch (_) {
       if (!mounted) return;
+      final lang = ref.read(localeProvider);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to save run. Please try again.'),
+        SnackBar(
+          content: Text(Translations.t(lang, 'failed_save_run')),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -92,6 +99,8 @@ class _RunIntensityScreenState extends ConsumerState<RunIntensityScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final lang = ref.watch(localeProvider);
+    String t(String k) => Translations.t(lang, k);
     final safeBottom = MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
@@ -105,15 +114,15 @@ class _RunIntensityScreenState extends ConsumerState<RunIntensityScreen> {
         ),
         title: Row(
           mainAxisSize: MainAxisSize.min,
-          children: const [
-            Icon(
+          children: [
+            const Icon(
               LucideIcons.footprints,
               size: 18,
               color: AppColors.textPrimary,
             ),
             Text(
-              " Run",
-              style: TextStyle(
+              ' ${t('run')}',
+              style: const TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.w600,
                 color: AppColors.textPrimary,
@@ -135,14 +144,14 @@ class _RunIntensityScreenState extends ConsumerState<RunIntensityScreen> {
                 children: [
                   // Section header
                   Row(
-                    children: const [
-                      Icon(
+                    children: [
+                      const Icon(
                         LucideIcons.sparkles,
                         size: 18,
                         color: AppColors.inactive,
                       ),
-                      SizedBox(width: 6),
-                      Text("Set intensity", style: AppTextStyles.sectionHeader),
+                      const SizedBox(width: 6),
+                      Text(t('set_intensity'), style: AppTextStyles.sectionHeader),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -195,14 +204,14 @@ class _RunIntensityScreenState extends ConsumerState<RunIntensityScreen> {
 
                   // Duration header
                   Row(
-                    children: const [
-                      Icon(
+                    children: [
+                      const Icon(
                         LucideIcons.timer,
                         size: 18,
                         color: AppColors.inactive,
                       ),
-                      SizedBox(width: 6),
-                      Text("Duration", style: AppTextStyles.sectionHeader),
+                      const SizedBox(width: 6),
+                      Text(t('duration'), style: AppTextStyles.sectionHeader),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -317,7 +326,7 @@ class _RunIntensityScreenState extends ConsumerState<RunIntensityScreen> {
                           color: Colors.white,
                         ),
                       )
-                    : const Text("Continue", style: AppTextStyles.buttonLabel),
+                    : Text(t('continue_btn'), style: AppTextStyles.buttonLabel),
               ),
             ),
           ),

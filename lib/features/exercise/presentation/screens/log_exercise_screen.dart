@@ -20,8 +20,7 @@ bool _isSameDay(DateTime a, DateTime b) =>
     a.year == b.year && a.month == b.month && a.day == b.day;
 
 String _formatSelectedDate(DateTime date, String lang) {
-  final locale = lang == 'fr' ? 'fr_FR' : (lang == 'ar' ? 'ar' : 'en_US');
-  return DateFormat.MMMd(locale).format(date);
+  return DateFormat.MMMd(toIntlLocale(lang)).format(date);
 }
 
 class LogExerciseScreen extends ConsumerStatefulWidget {

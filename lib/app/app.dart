@@ -28,7 +28,14 @@ class GojoCaloriesApp extends ConsumerWidget {
         theme: AppTheme.lightTheme.copyWith(textTheme: textTheme),
         routerConfig: appRouter,
         locale: flutterLocale,
-        supportedLocales: const [Locale('en'), Locale('fr'), Locale('ar')],
+        supportedLocales: const [
+          Locale('en'),
+          Locale('fr'),
+          Locale('ar'),
+          Locale('es'),
+          Locale('nl'),
+          Locale('pt'),
+        ],
         localizationsDelegates: const [
           GlobalMaterialLocalizations.delegate,
           GlobalWidgetsLocalizations.delegate,

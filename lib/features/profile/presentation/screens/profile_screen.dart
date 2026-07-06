@@ -58,6 +58,7 @@ class ProfileScreen extends ConsumerWidget {
                   child: CircularProgressIndicator(color: AppColors.primary),
                 ),
                 error: (e, st) => _ProfileLoadError(
+                  lang: lang,
                   message: AppErrorHandler.message(e),
                   onRetry: () =>
                       ref.read(profileProvider.notifier).loadProfile(),
@@ -157,7 +158,7 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                   _SettingsRow(
                     icon: LucideIcons.creditCard,
-                    label: 'Manage Subscription',
+                    label: t('manage_subscription'),
                     onTap: () async {
                       try {
                         final uri = Uri.parse(
@@ -173,9 +174,9 @@ class ProfileScreen extends ConsumerWidget {
                         debugPrint('Subscription management error: $e');
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
+                            SnackBar(
                               content: Text(
-                                'Could not open subscription settings.',
+                                t('could_not_open_subscription_settings'),
                               ),
                             ),
                           );
@@ -185,7 +186,7 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                   _SettingsRow(
                     icon: LucideIcons.refreshCw,
-                    label: 'Restore Purchases',
+                    label: t('restore_purchases'),
                     onTap: () async {
                       try {
                         final iapService = IAPService();
@@ -193,8 +194,8 @@ class ProfileScreen extends ConsumerWidget {
                         await iapService.restorePurchases();
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Restore initiated. Please wait...'),
+                            SnackBar(
+                              content: Text(t('restore_initiated')),
                             ),
                           );
                         }
@@ -202,8 +203,8 @@ class ProfileScreen extends ConsumerWidget {
                         debugPrint('Restore error: $e');
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Failed to restore purchases.'),
+                            SnackBar(
+                              content: Text(t('restore_purchases_failed')),
                             ),
                           );
                         }
@@ -227,17 +228,17 @@ class ProfileScreen extends ConsumerWidget {
               ),
 
               const SizedBox(height: 20),
-              _SectionLabel('Support & Legal'),
+              _SectionLabel(t('support_legal')),
               _GroupedListCard(
                 rows: [
                   _SettingsRow(
                     icon: LucideIcons.lightbulb,
-                    label: 'Feature Request',
+                    label: t('feature_request'),
                     onTap: () => context.push('/feature_request'),
                   ),
                   _SettingsRow(
                     icon: LucideIcons.mail,
-                    label: 'Support Email',
+                    label: t('support_email'),
                     onTap: () async {
                       final uri = Uri.parse('mailto:support@gojocalories.com?subject=Support%20Request');
                       if (await canLaunchUrl(uri)) await launchUrl(uri);
@@ -245,7 +246,7 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                   _SettingsRow(
                     icon: LucideIcons.fileText,
-                    label: 'Terms of Service',
+                    label: t('terms_of_service'),
                     onTap: () async {
                       final uri = Uri.parse('https://gojocalories.com/terms-of-service');
                       if (await canLaunchUrl(uri)) await launchUrl(uri);
@@ -253,7 +254,7 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                   _SettingsRow(
                     icon: LucideIcons.shieldCheck,
-                    label: 'Privacy Policy',
+                    label: t('privacy_policy'),
                     onTap: () async {
                       final uri = Uri.parse('https://gojocalories.com/privacy-policy');
                       if (await canLaunchUrl(uri)) await launchUrl(uri);
@@ -268,13 +269,13 @@ class ProfileScreen extends ConsumerWidget {
                 rows: [
                   _SettingsRow(
                     icon: LucideIcons.logOut,
-                    label: 'Sign Out',
+                    label: t('sign_out'),
                     color: AppColors.primary,
                     onTap: () => _signOut(context),
                   ),
                   _SettingsRow(
                     icon: LucideIcons.userMinus,
-                    label: 'Delete Account',
+                    label: t('delete_account'),
                     color: AppColors.danger,
                     onTap: () => _confirmDeleteAccount(context, ref),
                   ),
@@ -310,9 +311,9 @@ class ProfileScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  "Email Not Verified",
-                  style: TextStyle(
+                Text(
+                  t('email_not_verified'),
+                  style: const TextStyle(
                     fontWeight: FontWeight.w600,
                     color: AppColors.fire,
                     fontSize: 14,
@@ -320,7 +321,7 @@ class ProfileScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  "Please verify to secure your account.",
+                  t('email_verify_secure_prompt'),
                   style: TextStyle(
                     fontSize: 12,
                     color: AppColors.textSecondary,
@@ -339,17 +340,15 @@ class ProfileScreen extends ConsumerWidget {
                     );
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        "Verification code sent! Check your inbox.",
-                      ),
+                    SnackBar(
+                      content: Text(t('verification_code_sent_inbox')),
                     ),
                   );
                 }
               } catch (e) {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Failed to send code.")),
+                    SnackBar(content: Text(t('failed_send_code'))),
                   );
                 }
               }
@@ -370,7 +369,7 @@ class ProfileScreen extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(8),
               ),
             ),
-            child: const Text("Verify", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+            child: Text(t('verify'), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -713,23 +712,23 @@ class ProfileScreen extends ConsumerWidget {
   }
 
   Future<void> _confirmDeleteAccount(BuildContext context, WidgetRef ref) async {
+    final lang = ref.read(localeProvider);
+    String t(String k) => Translations.t(lang, k);
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text("Delete Account?"),
-        content: const Text(
-          "This action is permanent and will completely erase all your data and cancel any active subscription. Do you wish to proceed?",
-        ),
+        title: Text(t('delete_account')),
+        content: Text(t('delete_account_confirm')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text("Cancel"),
+            child: Text(t('cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(
-              "Delete Permanently",
-              style: TextStyle(color: AppColors.danger),
+            child: Text(
+              t('delete_permanently'),
+              style: const TextStyle(color: AppColors.danger),
             ),
           ),
         ],
@@ -744,7 +743,7 @@ class ProfileScreen extends ConsumerWidget {
         if (context.mounted) {
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(const SnackBar(content: Text("Delete failed.")));
+          ).showSnackBar(SnackBar(content: Text(t('delete_failed'))));
         }
       }
     }
@@ -801,6 +800,8 @@ class _ProfileUpdateSheetState extends ConsumerState<_ProfileUpdateSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final lang = ref.watch(localeProvider);
+    String t(String k) => Translations.t(lang, k);
     return Container(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -818,9 +819,9 @@ class _ProfileUpdateSheetState extends ConsumerState<_ProfileUpdateSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
-              "Update Profile",
-              style: TextStyle(
+            Text(
+              t('update_profile'),
+              style: const TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: AppColors.textPrimary,
@@ -855,8 +856,8 @@ class _ProfileUpdateSheetState extends ConsumerState<_ProfileUpdateSheet> {
             ),
             const SizedBox(height: 8),
             SwitchListTile(
-              title: const Text('Share phone with friends'),
-              subtitle: const Text('Allow friends in your circle to see your number'),
+              title: Text(t('share_phone_with_friends')),
+              subtitle: Text(t('share_phone_with_friends_desc')),
               value: _sharePhone,
               onChanged: (val) => setState(() => _sharePhone = val),
               activeThumbColor: AppColors.primary,
@@ -876,7 +877,7 @@ class _ProfileUpdateSheetState extends ConsumerState<_ProfileUpdateSheet> {
                       width: 20,
                       child: CircularProgressIndicator(color: Colors.white),
                     )
-                  : const Text("Save Changes"),
+                  : Text(t('save_changes')),
             ),
             const SizedBox(height: 16),
           ],
@@ -970,11 +971,13 @@ class _SettingsRow extends StatelessWidget {
 }
 
 class _ProfileLoadError extends StatelessWidget {
+  final String lang;
   final String message;
   final VoidCallback onRetry;
   final VoidCallback onSignIn;
 
   const _ProfileLoadError({
+    required this.lang,
     required this.message,
     required this.onRetry,
     required this.onSignIn,
@@ -982,6 +985,7 @@ class _ProfileLoadError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    String t(String k) => Translations.t(lang, k);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -992,9 +996,9 @@ class _ProfileLoadError extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Failed to load profile',
-            style: TextStyle(
+          Text(
+            t('failed_load_profile'),
+            style: const TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w600,
               color: AppColors.textPrimary,
@@ -1011,9 +1015,9 @@ class _ProfileLoadError extends StatelessWidget {
           const SizedBox(height: 12),
           Row(
             children: [
-              TextButton(onPressed: onRetry, child: const Text('Retry')),
+              TextButton(onPressed: onRetry, child: Text(t('retry'))),
               const SizedBox(width: 8),
-              TextButton(onPressed: onSignIn, child: const Text('Sign in')),
+              TextButton(onPressed: onSignIn, child: Text(t('sign_in'))),
             ],
           ),
         ],

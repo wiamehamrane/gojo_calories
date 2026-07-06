@@ -126,6 +126,7 @@ class _FoodDetailScreenState extends ConsumerState<FoodDetailScreen> {
 
   Future<void> _toggleSave() async {
     if (_savingInProgress) return;
+    final lang = ref.read(localeProvider);
     setState(() { _savingInProgress = true; });
     
     final wasSaved = _saved;
@@ -155,7 +156,7 @@ class _FoodDetailScreenState extends ConsumerState<FoodDetailScreen> {
       setState(() { _saved = wasSaved; });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to update saved foods')),
+          SnackBar(content: Text(Translations.t(lang, 'failed_update_saved_foods'))),
         );
       }
     } finally {
@@ -210,6 +211,7 @@ class _FoodDetailScreenState extends ConsumerState<FoodDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final lang = ref.watch(localeProvider);
+    String t(String k) => Translations.t(lang, k);
     final displayName = _displayName(lang);
     final imageUrl = log['image_url'] as String?;
     final calories = (log['calories'] as num? ?? 0).toInt();
@@ -390,7 +392,7 @@ class _FoodDetailScreenState extends ConsumerState<FoodDetailScreen> {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('Calories', style: TextStyle(fontSize: 12, color: Color(0xFF888888))),
+                                Text(t('calories_label'), style: const TextStyle(fontSize: 12, color: Color(0xFF888888))),
                                 Text(
                                   '${calories * _quantity}',
                                   style: const TextStyle(
@@ -498,12 +500,12 @@ class _FoodDetailScreenState extends ConsumerState<FoodDetailScreen> {
                                 borderRadius: BorderRadius.circular(14),
                                 border: Border.all(color: const Color(0xFFEEEEEE), style: BorderStyle.solid),
                               ),
-                              child: const Row(
+                              child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(LucideIcons.plus, size: 16, color: Color(0xFF888888)),
-                                  SizedBox(width: 8),
-                                  Text('Add ingredient', style: TextStyle(color: Color(0xFF888888), fontSize: 14)),
+                                  const Icon(LucideIcons.plus, size: 16, color: Color(0xFF888888)),
+                                  const SizedBox(width: 8),
+                                  Text(t('add_ingredient'), style: const TextStyle(color: Color(0xFF888888), fontSize: 14)),
                                 ],
                               ),
                             ),
