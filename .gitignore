@@ -18,11 +18,6 @@ migrate_working_dir/
 *.iws
 .idea/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
-
 # Flutter/Dart/Pub related
 **/doc/api/
 **/ios/Flutter/.last_build_id
@@ -44,15 +39,46 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
+# Node
+node_modules/
+
 # Backend
 backend/venv/
 backend/__pycache__/
-.env
-*.p8
+backend/uploads/
 
-ziOXSupi
+# Environment & secrets (never commit real values)
+.env
+.env.local
+.env.*.local
+backend/.env
+secrets.yml
+
+# Examples are safe to commit
+!.env.example
+!backend/.env.example
+!secrets.yml.example
+
+# Private keys, keystores, provisioning
+*.pem
+*.p8
+*.p12
+*.jks
+*.keystore
+*.mobileprovision
+
+# iOS signing bundle (keep ExportOptions.plist only)
+ios_signing/*
+!ios_signing/ExportOptions.plist
+
+# Repo-root signing artifacts
+gojo_*_key.pem
+gojo_*_csr.pem
+gojo-mac-key.pem
+codemagic.keystore
+my-release-key.jks
+ocsp_check/
+
+# Misc local artifacts
 gojocalories_backup.zip
 .agents/
-.*
-secrets.yml
-secrets.yaml
