@@ -19,7 +19,7 @@ load_dotenv()
 
 os.makedirs("uploads", exist_ok=True)
 
-from routes import vision, auth, stats, groups, referrals, payments, notifications, exercises, recipes, events, apple_iap, memories, feed, friends
+from routes import vision, auth, stats, groups, referrals, payments, notifications, exercises, recipes, events, apple_iap, google_iap, memories, feed, friends
 
 if os.getenv("WIPE_DB") == "true":
     logger.warning("WIPE_DB is true. Dropping all tables via SCHEMA wipe...")
@@ -61,6 +61,8 @@ try:
         # Apple IAP columns
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_source VARCHAR;"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS apple_original_transaction_id VARCHAR;"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS google_order_id VARCHAR;"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS google_purchase_token VARCHAR;"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_expires_at TIMESTAMP;"))
         # Social & Privacy
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR;"))
@@ -282,6 +284,7 @@ def health_check():
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(payments.router, prefix="/api/payments", tags=["Payments"])
 app.include_router(apple_iap.router, prefix="/api/payments/apple", tags=["Apple IAP"])
+app.include_router(google_iap.router, prefix="/api/payments/google", tags=["Google IAP"])
 
 # Hard Paywall temporarily suspended for AWS testing mode
 app.include_router(vision.router, prefix="/api/food", tags=["Food Vision AI"])

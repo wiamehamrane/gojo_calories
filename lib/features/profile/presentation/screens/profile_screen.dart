@@ -175,7 +175,9 @@ class ProfileScreen extends ConsumerWidget {
                     onTap: () async {
                       try {
                         final uri = Uri.parse(
-                          'https://apps.apple.com/account/subscriptions',
+                          Platform.isAndroid
+                              ? 'https://play.google.com/store/account/subscriptions?package=$kAndroidPackageName'
+                              : 'https://apps.apple.com/account/subscriptions',
                         );
                         if (await canLaunchUrl(uri)) {
                           await launchUrl(

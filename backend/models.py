@@ -40,10 +40,13 @@ class User(Base):
     stripe_customer_id = Column(String, unique=True, nullable=True, index=True)
     has_paid = Column(Boolean, default=False, nullable=False)
 
-    # Subscription source tracking ("apple" | "stripe" | None)
+    # Subscription source tracking ("apple" | "google" | "stripe" | None)
     subscription_source = Column(String, nullable=True)
     # Apple In-App Purchase
     apple_original_transaction_id = Column(String, nullable=True, index=True)
+    # Google Play In-App Purchase
+    google_order_id = Column(String, nullable=True, index=True)
+    google_purchase_token = Column(String, nullable=True, index=True)
     subscription_expires_at = Column(DateTime, nullable=True)
 
     # Referral system
