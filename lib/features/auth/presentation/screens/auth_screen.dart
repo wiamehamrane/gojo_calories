@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gojocalories/core/config/env_config.dart';
 import 'package:gojocalories/core/theme/app_colors.dart';
 import 'package:gojocalories/core/di/repository_providers.dart';
 import 'package:gojocalories/features/auth/data/repositories/auth_repository.dart';
@@ -152,26 +153,59 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
   Future<void> _signInWithGoogle() async {
     setState(() => _isLoading = true);
     try {
-      await GoogleSignIn.instance.initialize(
-        clientId: Platform.isIOS
-            ? '980076580409-4d78u72lc8o7aqfuoinvd72dk2tr27co.apps.googleusercontent.com'
-            : '980076580409-rgqujk89m5lhvsr3nfg24hhodk08uoeh.apps.googleusercontent.com',
-        serverClientId: const String.fromEnvironment(
-          'GOOGLE_WEB_CLIENT_ID',
-          defaultValue:
-              '980076580409-rgqujk89m5lhvsr3nfg24hhodk08uoeh.apps.googleusercontent.com',
-        ),
-      );
+      if (Platform.isIOS) {
+        await GoogleSignIn.instance.initialize(
+          clientId: EnvConfig.googleIosClientId,
+          serverClientId: EnvConfig.googleWebClientId,
+        );
+      } else if (Platform.isAndroid) {
+        final androidClientId = EnvConfig.googleAndroidClientId;
+        await GoogleSignIn.instance.initialize(
+          clientId: androidClientId,
+          serverClientId: EnvConfig.googleWebClientId,
+        );
+      } else {
+        await GoogleSignIn.instance.initialize(
+          serverClientId: EnvConfig.googleWebClientId,
+        );
+      }
+
       final account = await GoogleSignIn.instance.authenticate();
       final auth = account.authentication;
+      final idToken = auth.idToken;
+      if (idToken == null) {
+        throw Exception(
+          'Google did not return an ID token. Check Android OAuth setup.',
+        );
+      }
       final token =
-          await ref.read(authRepositoryProvider).googleLogin(auth.idToken!);
+          await ref.read(authRepositoryProvider).googleLogin(idToken);
       await _handleLoginSuccess(token);
+    } on GoogleSignInException catch (e) {
+      if (e.code == GoogleSignInExceptionCode.canceled) {
+        final message = e.toString().toLowerCase();
+        if (message.contains('[16]') ||
+            message.contains('account reauth failed')) {
+          _showError(_googleAndroidConfigError());
+        }
+        return;
+      }
+      _showError('Failed to sign in with Google: $e');
     } catch (e) {
       _showError('Failed to sign in with Google: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  String _googleAndroidConfigError() {
+    return 'Google Sign-In is not configured for this Android build.\n\n'
+        'In Google Cloud Console, create an Android OAuth client for '
+        'com.gojocalories.gojocalories and add these SHA-1 fingerprints:\n'
+        '• Release/upload key: 22:53:22:8A:6E:13:93:D6:3E:B2:57:CC:39:B4:66:92:62:06:F3:18\n'
+        '• Debug key: 2A:7F:D1:95:47:F8:0A:4F:9F:BC:6B:7E:97:EA:D1:74:C4:40:0B:BD\n'
+        '• Play App Signing key from Play Console → App integrity\n\n'
+        'Then clear Google Play Services cache and try again.';
   }
 
   Future<void> _signInWithApple() async {
@@ -245,15 +279,17 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        _SocialCircleButton(
-                          onTap: _isLoading ? null : _signInWithApple,
-                          child: const Icon(
-                            Icons.apple,
-                            size: 28,
-                            color: AppColors.textPrimary,
+                        if (Platform.isIOS) ...[
+                          _SocialCircleButton(
+                            onTap: _isLoading ? null : _signInWithApple,
+                            child: const Icon(
+                              Icons.apple,
+                              size: 28,
+                              color: AppColors.textPrimary,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 20),
+                          const SizedBox(width: 20),
+                        ],
                         _SocialCircleButton(
                           onTap: _isLoading ? null : _signInWithGoogle,
                           child: SvgPicture.asset(

@@ -20,4 +20,21 @@ class EnvConfig {
     if (url.startsWith('http')) return url;
     return '$apiOrigin$url';
   }
+
+  static const String _defaultGoogleWebClientId =
+      '980076580409-rgqujk89m5lhvsr3nfg24hhodk08uoeh.apps.googleusercontent.com';
+
+  static const String _defaultGoogleIosClientId =
+      '980076580409-4d78u72lc8o7aqfuoinvd72dk2tr27co.apps.googleusercontent.com';
+
+  static String get googleWebClientId =>
+      dotenv.env['GOOGLE_WEB_CLIENT_ID'] ?? _defaultGoogleWebClientId;
+
+  static String get googleIosClientId =>
+      dotenv.env['GOOGLE_IOS_CLIENT_ID'] ?? _defaultGoogleIosClientId;
+
+  /// Optional override. Android OAuth clients are usually resolved from
+  /// package name + signing SHA-1 when omitted.
+  static String? get googleAndroidClientId =>
+      dotenv.env['GOOGLE_ANDROID_CLIENT_ID'];
 }

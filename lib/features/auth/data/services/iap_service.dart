@@ -15,15 +15,7 @@ const Set<String> kProductIds = {kMonthlyProductId, kYearlyProductId};
 const String kAndroidPackageName = 'com.gojocalories.gojocalories';
 
 /// Possible states for the IAP purchase flow.
-enum IAPState {
-  idle,
-  loading,
-  purchasing,
-  verifying,
-  success,
-  error,
-  restored,
-}
+enum IAPState { idle, loading, purchasing, verifying, success, error, restored }
 
 /// Wraps the current state with an optional error message.
 class IAPStatus {
@@ -60,9 +52,7 @@ class IAPService {
   List<ProductDetails> products = [];
 
   /// Current purchase flow state.
-  final ValueNotifier<IAPStatus> status = ValueNotifier(
-    const IAPStatus(),
-  );
+  final ValueNotifier<IAPStatus> status = ValueNotifier(const IAPStatus());
 
   /// Whether the service has been initialized.
   bool _initialized = false;
@@ -132,9 +122,7 @@ class IAPService {
     final available = await _iap.isAvailable();
     debugPrint('IAPService: Store available = $available');
     if (!available) {
-      throw Exception(
-        '$_storeName is not available on this device.',
-      );
+      throw Exception('$_storeName is not available on this device.');
     }
 
     final response = await _iap.queryProductDetails(kProductIds);
@@ -145,10 +133,7 @@ class IAPService {
 
     if (response.error != null) {
       throw Exception(
-        _storeErrorMessage(
-          response.error!.message,
-          response.notFoundIDs,
-        ),
+        _storeErrorMessage(response.error!.message, response.notFoundIDs),
       );
     }
 
@@ -176,9 +161,7 @@ class IAPService {
 
     try {
       if (_isAndroid) {
-        final purchaseParam = GooglePlayPurchaseParam(
-          productDetails: product,
-        );
+        final purchaseParam = GooglePlayPurchaseParam(productDetails: product);
         await _iap.buyNonConsumable(purchaseParam: purchaseParam);
       } else {
         final purchaseParam = PurchaseParam(productDetails: product);
@@ -198,8 +181,8 @@ class IAPService {
     status.value = const IAPStatus(state: IAPState.loading);
     try {
       if (_isAndroid) {
-        final androidAddition =
-            _iap.getPlatformAddition<InAppPurchaseAndroidPlatformAddition>();
+        final androidAddition = _iap
+            .getPlatformAddition<InAppPurchaseAndroidPlatformAddition>();
         final response = await androidAddition.queryPastPurchases();
         if (response.error != null) {
           throw Exception(response.error!.message);
@@ -327,7 +310,8 @@ class IAPService {
       );
       status.value = IAPStatus(
         state: IAPState.error,
-        errorMessage: detail ??
+        errorMessage:
+            detail ??
             e.message ??
             'Purchase verification failed. Please try again.',
       );
@@ -375,10 +359,7 @@ class IAPService {
         '(Settings → Developer → Sandbox Apple Account) when testing debug builds.';
   }
 
-  String _storeErrorMessage(
-    String message,
-    List<String> notFoundIds,
-  ) {
+  String _storeErrorMessage(String message, List<String> notFoundIds) {
     if (_isIOS) {
       return _storeKitErrorMessage(message, notFoundIds);
     }
