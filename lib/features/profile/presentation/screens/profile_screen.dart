@@ -137,6 +137,19 @@ class ProfileScreen extends ConsumerWidget {
               ),
 
               const SizedBox(height: 20),
+              _SectionLabel(t('my_events')),
+
+              _GroupedListCard(
+                rows: [
+                  _SettingsRow(
+                    icon: LucideIcons.calendarCog,
+                    label: t('manage_my_events'),
+                    onTap: () => context.push(RoutePaths.myEvents),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 20),
               _SectionLabel(t('settings')),
 
               _GroupedListCard(

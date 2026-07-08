@@ -70,6 +70,8 @@ const Map<String, String> fr = {
   'profile_enter_name': 'Entrez votre nom',
   'profile_years_old': 'ans',
   'invite_friends': 'Inviter des amis',
+  'my_events': 'Mes événements',
+  'manage_my_events': 'Gérer mes événements',
   'referral_tagline': 'Parrainez un ami et gagnez 1\$',
   'referral_subtitle': 'Suivez vos parrainages et retirez vos gains.',
   'settings': 'Paramètres',

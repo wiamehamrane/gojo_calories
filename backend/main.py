@@ -144,6 +144,50 @@ try:
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """))
+        # Events — ensure table/columns exist on prod without relying on Alembic
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS events (
+                id VARCHAR(36) PRIMARY KEY,
+                creator_id VARCHAR(36) NOT NULL REFERENCES users(id),
+                title VARCHAR NOT NULL,
+                description TEXT,
+                event_type VARCHAR NOT NULL,
+                location_name VARCHAR,
+                latitude FLOAT,
+                longitude FLOAT,
+                start_time TIMESTAMP NOT NULL,
+                whatsapp_link VARCHAR,
+                image_url VARCHAR,
+                max_participants INTEGER,
+                audience VARCHAR NOT NULL DEFAULT 'mixed',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """))
+        conn.execute(text("ALTER TABLE events ADD COLUMN IF NOT EXISTS image_url VARCHAR;"))
+        conn.execute(text("ALTER TABLE events ADD COLUMN IF NOT EXISTS max_participants INTEGER;"))
+        conn.execute(text("ALTER TABLE events ADD COLUMN IF NOT EXISTS audience VARCHAR DEFAULT 'mixed';"))
+        conn.execute(text("UPDATE events SET audience = 'mixed' WHERE audience IS NULL;"))
+        conn.execute(text("""
+            DO $$ BEGIN
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name = 'events' AND column_name = 'audience'
+                ) THEN
+                    ALTER TABLE events ALTER COLUMN audience SET DEFAULT 'mixed';
+                END IF;
+            END $$;
+        """))
+        conn.execute(text("""
+            CREATE INDEX IF NOT EXISTS ix_events_audience ON events (audience);
+        """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS event_participants (
+                id VARCHAR(36) PRIMARY KEY,
+                event_id VARCHAR(36) NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+                user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+                joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """))
         # Ensure daily_stats has all expected columns
         conn.execute(text("""
             DO $$ BEGIN
@@ -159,7 +203,8 @@ try:
             END $$;
         """))
 except Exception as e:
-    print(f"Migration schema update error: {e}")
+    import logging
+    logging.getLogger(__name__).error("Migration schema update error: %s", e, exc_info=True)
 
 app = FastAPI(title="GojoCalories Backend API")
 

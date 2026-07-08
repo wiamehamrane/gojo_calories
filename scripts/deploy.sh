@@ -50,6 +50,8 @@ copilot env deploy --name prod
 
 echo "Deploying the API Service..."
 # 5. Deploy the Service (uses image.location from manifest.yml)
-copilot deploy --name api --env prod
+# --force ensures ECS picks up the newly pushed :latest image even when
+# CloudFormation reports no infrastructure changes.
+copilot deploy --name api --env prod --force
 
 echo "Deployment completed successfully!"

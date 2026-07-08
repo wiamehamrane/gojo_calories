@@ -70,6 +70,8 @@ const Map<String, String> nl = {
   'profile_enter_name': 'Voer uw naam in',
   'profile_years_old': 'jaar oud',
   'invite_friends': 'Nodig vrienden uit',
+  'my_events': 'Mijn evenementen',
+  'manage_my_events': 'Beheer mijn evenementen',
   'referral_tagline': 'Verwijs een vriend en verdien \$1',
   'referral_subtitle': 'Volg uw verwijzingen en neem inkomsten op.',
   'settings': 'Instellingen',

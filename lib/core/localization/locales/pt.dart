@@ -70,6 +70,8 @@ const Map<String, String> pt = {
   'profile_enter_name': 'Digite seu nome',
   'profile_years_old': 'anos',
   'invite_friends': 'Convide amigos',
+  'my_events': 'Meus eventos',
+  'manage_my_events': 'Gerenciar meus eventos',
   'referral_tagline': 'Indique um amigo e ganhe \$1',
   'referral_subtitle': 'Acompanhe suas referências e retire ganhos.',
   'settings': 'Configurações',

@@ -224,6 +224,7 @@ class Event(Base):
     title = Column(String, nullable=False, index=True)
     description = Column(Text, nullable=True)
     event_type = Column(String, nullable=False, index=True) # e.g. soccer, marathon, walk
+    audience = Column(String, nullable=False, default="mixed", index=True)  # "female" | "male" | "mixed"
     location_name = Column(String, nullable=True)
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)

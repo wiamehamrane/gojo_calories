@@ -70,6 +70,8 @@ const Map<String, String> ar = {
   'profile_enter_name': 'أدخل اسمك',
   'profile_years_old': 'سنة',
   'invite_friends': 'دعوة الأصدقاء',
+  'my_events': 'فعالياتي',
+  'manage_my_events': 'إدارة فعالياتي',
   'referral_tagline': 'ادعُ صديقاً واكسب \$1',
   'referral_subtitle': 'تتبع إحالاتك واسحب أرباحك.',
   'settings': 'الإعدادات',

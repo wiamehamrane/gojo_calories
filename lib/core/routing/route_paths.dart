@@ -10,6 +10,10 @@ abstract final class RoutePaths {
   static const scan = '/scan';
   static const log = '/log';
   static const events = '/events';
+  static const createEvent = '/events/create';
+  static const eventDetail = '/events/detail/:id';
+  static const myEvents = '/events/mine';
+  static const editEvent = '/events/edit';
   static const profile = '/profile';
 
   static const profilePersonal = '/profile/personal';

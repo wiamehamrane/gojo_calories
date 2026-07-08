@@ -31,6 +31,7 @@ final GoRouter appRouter = GoRouter(
       ],
     ),
     ...profileRoutes,
+    ...eventsRoutes,
     ...exerciseRoutes,
     ...referralRoutes,
     ...foodRoutes,
