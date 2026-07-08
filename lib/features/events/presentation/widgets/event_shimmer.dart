@@ -42,82 +42,11 @@ class _EventShimmerCardState extends State<EventShimmerCard>
           _animation.value,
         )!;
         return Container(
-          margin: const EdgeInsets.only(bottom: 16),
+          margin: const EdgeInsets.only(bottom: 12),
+          height: 160,
           decoration: BoxDecoration(
-            color: EventsTheme.cardBackground,
+            color: shimmerColor,
             borderRadius: BorderRadius.circular(EventsTheme.cardRadius),
-            border: Border.all(color: EventsTheme.cardStroke),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Image placeholder
-              Container(
-                height: 140,
-                decoration: BoxDecoration(
-                  color: shimmerColor,
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(EventsTheme.cardRadius),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Badge
-                    Container(
-                      height: 22,
-                      width: 72,
-                      decoration: BoxDecoration(
-                        color: shimmerColor,
-                        borderRadius: BorderRadius.circular(EventsTheme.chipRadius),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    // Title line 1
-                    Container(
-                      height: 18,
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: shimmerColor,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    // Title line 2
-                    Container(
-                      height: 18,
-                      width: 200,
-                      decoration: BoxDecoration(
-                        color: shimmerColor,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    // Meta rows
-                    Container(
-                      height: 14,
-                      width: 180,
-                      decoration: BoxDecoration(
-                        color: shimmerColor,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Container(
-                      height: 14,
-                      width: 140,
-                      decoration: BoxDecoration(
-                        color: shimmerColor,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
           ),
         );
       },

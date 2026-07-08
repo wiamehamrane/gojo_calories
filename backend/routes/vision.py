@@ -1,11 +1,12 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Query, Request
-from google import genai
 import os
 from typing import Optional, Any, List
 from dotenv import load_dotenv
 import json
+import base64
 from PIL import Image
 import io
+from openai import OpenAI, OpenAIError, RateLimitError
 from security import get_current_user_id
 from pydantic import BaseModel
 import logging
@@ -15,22 +16,73 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()
 
-_GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-if not _GEMINI_API_KEY:
-    logger.error("GEMINI_API_KEY is not set! Vision AI endpoints will fail.")
+_OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+_OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-5.4-mini")
+if not _OPENAI_API_KEY:
+    logger.error("OPENAI_API_KEY is not set! Vision AI endpoints will fail.")
 
 _FOODDATA_API_KEY = os.getenv("FOODDATA_CENTRAL_API_KEY")
 if not _FOODDATA_API_KEY:
     logger.error("FOODDATA_CENTRAL_API_KEY is not set! USDA food search will fail.")
 
 try:
-    client = genai.Client(api_key=_GEMINI_API_KEY)
-    logger.info("Gemini client initialised successfully.")
+    client = OpenAI(api_key=_OPENAI_API_KEY) if _OPENAI_API_KEY else None
+    if client:
+        logger.info("OpenAI client initialised successfully (model=%s).", _OPENAI_MODEL)
 except Exception as _e:
-    logger.error(f"Failed to initialise Gemini client: {_e}")
+    logger.error(f"Failed to initialise OpenAI client: {_e}")
     client = None
 
 router = APIRouter()
+
+
+def _strip_json_fences(text: str) -> str:
+    return text.replace("```json", "").replace("```", "").strip()
+
+
+def _generate_food_json(prompt: str, image_bytes: Optional[bytes] = None, mime_type: str = "image/jpeg") -> dict:
+    if client is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Vision AI is unavailable: OPENAI_API_KEY is not configured on the server.",
+        )
+
+    content: list[dict[str, Any]] = [{"type": "text", "text": prompt}]
+    if image_bytes is not None:
+        encoded = base64.standard_b64encode(image_bytes).decode("utf-8")
+        content.append(
+            {
+                "type": "image_url",
+                "image_url": {"url": f"data:{mime_type};base64,{encoded}"},
+            }
+        )
+
+    try:
+        response = client.chat.completions.create(
+            model=_OPENAI_MODEL,
+            messages=[{"role": "user", "content": content}],
+            response_format={"type": "json_object"},
+        )
+    except RateLimitError as e:
+        logger.warning("OpenAI rate limit exceeded: %s", e)
+        raise HTTPException(
+            status_code=503,
+            detail="AI service is temporarily unavailable due to high demand. Please try again in a few minutes.",
+        ) from e
+    except OpenAIError as e:
+        logger.error("OpenAI API error: %s", e)
+        raise HTTPException(status_code=503, detail="AI service is temporarily unavailable.") from e
+
+    raw_text = response.choices[0].message.content or ""
+    text = _strip_json_fences(raw_text)
+    try:
+        return json.loads(text), raw_text
+    except json.JSONDecodeError as je:
+        logger.error("JSON parse error: %s | raw=%s", je, raw_text[:500])
+        raise HTTPException(
+            status_code=422,
+            detail="AI could not parse the food data. Please try again.",
+        ) from je
 
 
 def _resolve_local_date(local_date: Optional[str]) -> datetime.date:
@@ -51,33 +103,38 @@ async def analyze_food_image(
     current_user_id: str = Depends(get_current_user_id),
 ):
     try:
-        if client is None:
-            raise HTTPException(status_code=503, detail="Vision AI is unavailable: GEMINI_API_KEY is not configured on the server.")
-
         # Read image
         contents = await file.read()
-        image = Image.open(io.BytesIO(contents))
+        Image.open(io.BytesIO(contents))  # validate image
         
         # Proper prompt asking for strict JSON
         prompt = """
-        Analyze this food image. Identify the overarching meal or food item and its individual ingredients.
-        Respond ONLY with a JSON object. No markdown formatting, no backticks, no explanations.
-        Format strictly like this:
-        {"name_en": "Food Name English", "name_fr": "Nom de l'aliment en français", "name_ar": "اسم الطعام بالعربية", "calories": 500, "protein": 20, "carbs": 50, "fat": 15, "ingredients": [{"name": "Ingredient", "amount": "1.5 cups", "calories": 45}, {"name": "Ingredient 2", "amount": "2 tbsp", "calories": 60}]}
-        Include 3 to 8 realistic, specific ingredients with accurate amounts and calorie estimates.
+        You are a nutrition estimation expert analyzing a food photo for a calorie-tracking app.
+
+TASK:
+1. Identify the overarching meal/dish shown in the image.
+2. Break it down into 3–8 individual visible ingredients or components.
+3. Estimate realistic portion sizes based on visual cues (plate size, utensils, hand/reference objects if visible).
+4. Estimate calories and macros per ingredient, then sum them for the total (do not estimate the total independently — it must equal the sum of ingredient calories, within rounding).
+
+RULES:
+- Base portion estimates on what is visibly on the plate, not a "standard serving."
+- If the image is ambiguous (multiple items, partially hidden food, unclear cooking method), make your best single estimate — do not ask for clarification or hedge.
+- If the image contains no food, or is too unclear to analyze, return {"error": "no_food_detected"} instead of the schema below.
+- Use standard household units for amounts (cups, tbsp, oz, g, pieces) — pick whichever is most natural for that ingredient.
+- Round calories to the nearest 5, protein/carbs/fat to the nearest 1g.
+- Provide translations that are natural/commonly used food terms in each language, not literal word-for-word translations.
+
+OUTPUT FORMAT:
+Respond with ONLY a raw JSON object. No markdown, no code fences, no backticks, no explanations, no text before or after the JSON.
+
+Schema:
+{"name_en": "Food Name English", "name_fr": "Nom de l'aliment en français", "name_ar": "اسم الطعام بالعربية", "calories": 500, "protein": 20, "carbs": 50, "fat": 15, "ingredients": [{"name": "Ingredient", "amount": "1.5 cups", "calories": 45, "protein": 3, "carbs": 5, "fat": 1}, {"name": "Ingredient 2", "amount": "2 tbsp", "calories": 60, "protein": 1, "carbs": 2, "fat": 6}]}
         """
 
-        
-        logger.info(f"Calling Gemini vision for user {current_user_id}")
-        response = client.models.generate_content(
-            model='gemini-flash-latest',
-            contents=[prompt, image]
-        )
-        
-        # Extract response text and parse JSON
-        raw_text = response.text
-        text = raw_text.replace('```json', '').replace('```', '').strip()
-        data = json.loads(text)
+        mime_type = file.content_type or "image/jpeg"
+        logger.info(f"Calling OpenAI vision for user {current_user_id}")
+        data, raw_text = _generate_food_json(prompt, image_bytes=contents, mime_type=mime_type)
         
         # Upload to S3 (non-fatal — if it fails we just skip the image URL)
         s3_url = None
@@ -180,17 +237,9 @@ async def analyze_food_image(
         data['created_at'] = log_created_at
         return data
         
-    except json.JSONDecodeError as je:
-        print(f"JSON Parsing Error: {je}")
-        print(f"Raw model output was: {raw_text}")
-        raise HTTPException(status_code=422, detail="AI could not parse the food in this image. Please try a clearer photo.")
     except HTTPException:
         raise
     except Exception as e:
-        err_str = str(e).lower()
-        if 'quota' in err_str or 'resource_exhausted' in err_str or '429' in err_str:
-            print(f"Gemini quota exceeded: {e}")
-            raise HTTPException(status_code=503, detail="AI service is temporarily unavailable due to high demand. Please try again in a few minutes.")
         print(f"Error analyzing image: {e}")
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
 
@@ -201,9 +250,6 @@ class TextQuery(BaseModel):
 @router.post("/analyze/text")
 async def analyze_food_text(body: TextQuery, current_user_id: str = Depends(get_current_user_id)):
     try:
-        if client is None:
-            raise HTTPException(status_code=503, detail="Vision AI is unavailable: GEMINI_API_KEY is not configured on the server.")
-
         prompt = f"""
         Estimate the nutritional macros for the following food item or meal description: "{body.query}"
         Respond ONLY with a JSON object. No markdown formatting, no backticks, no explanations. 
@@ -211,14 +257,8 @@ async def analyze_food_text(body: TextQuery, current_user_id: str = Depends(get_
         {{"name_en": "Food Name English", "name_fr": "Nom de l'aliment en français", "name_ar": "اسم الطعام بالعربية", "calories": 500, "protein": 20, "carbs": 50, "fat": 15}}
         """
         
-        logger.info(f"Calling Gemini text analysis for user {current_user_id}: {body.query!r}")
-        response = client.models.generate_content(
-            model='gemini-flash-latest',
-            contents=prompt
-        )
-        raw_text = response.text
-        text = raw_text.replace('```json', '').replace('```', '').strip()
-        data = json.loads(text)
+        logger.info(f"Calling OpenAI text analysis for user {current_user_id}: {body.query!r}")
+        data, raw_text = _generate_food_json(prompt)
         
         from models import FoodLog
         from database import get_db
@@ -245,10 +285,8 @@ async def analyze_food_text(body: TextQuery, current_user_id: str = Depends(get_
 
         return data
         
-    except json.JSONDecodeError as je:
-        print(f"JSON Parsing Error: {je}")
-        print(f"Raw model output was: {raw_text}")
-        raise HTTPException(status_code=500, detail="Failed to parse AI output into JSON.")
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"Error analyzing text: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -292,13 +330,7 @@ async def fix_food_log(body: FixRequest, current_user_id: str = Depends(get_curr
             {{"name_en": "...", "name_fr": "...", "name_ar": "...", "calories": 500, "protein": 20, "carbs": 50, "fat": 15, "ingredients": [...]}}
             """
             
-            response = client.models.generate_content(
-                model='gemini-flash-latest',
-                contents=prompt
-            )
-            raw_text = response.text
-            text = raw_text.replace('```json', '').replace('```', '').strip()
-            data = json.loads(text)
+            data, raw_text = _generate_food_json(prompt)
             
             diff_cal = int(data.get('calories', 0)) - log.calories
             diff_pro = int(data.get('protein', 0)) - log.protein
@@ -345,9 +377,6 @@ async def fix_food_log(body: FixRequest, current_user_id: str = Depends(get_curr
             data['created_at'] = log.created_at.isoformat() + "Z"
             return data
             
-    except json.JSONDecodeError as je:
-        print(f"JSON Parsing Error: {je}")
-        raise HTTPException(status_code=500, detail="Failed to parse AI output into JSON.")
     except HTTPException:
         raise
     except Exception as e:
@@ -516,10 +545,7 @@ async def get_food_ingredients(
     food_name: str,
     current_user_id: str = Depends(get_current_user_id),
 ):
-    """Uses Gemini to return a detailed ingredient breakdown for a given food item."""
-    if client is None:
-        raise HTTPException(status_code=503, detail="Vision AI unavailable.")
-
+    """Uses OpenAI to return a detailed ingredient breakdown for a given food item."""
     prompt = f"""
     For the food item "{food_name}", provide a detailed ingredient breakdown with estimated portion sizes and calories.
     Respond ONLY with a JSON object. No markdown, no backticks, no explanations.
@@ -529,20 +555,12 @@ async def get_food_ingredients(
     """
 
     try:
-        response = client.models.generate_content(
-            model='gemini-flash-latest',
-            contents=prompt,
-        )
-        raw_text = response.text
-        text = raw_text.replace('```json', '').replace('```', '').strip()
-        data = json.loads(text)
+        data, _raw_text = _generate_food_json(prompt)
         return data
-    except json.JSONDecodeError:
-        raise HTTPException(status_code=422, detail="AI could not generate ingredient data.")
+    except HTTPException:
+        raise
     except Exception as e:
-        err_str = str(e).lower()
-        if 'quota' in err_str or '429' in err_str:
-            raise HTTPException(status_code=503, detail="AI service temporarily unavailable.")
+        logger.error("Ingredient lookup error: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
 
 

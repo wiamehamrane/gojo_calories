@@ -5,6 +5,9 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/di/repository_providers.dart';
 import '../../../../core/routing/route_paths.dart';
+import '../../../../core/routing/app_navigation.dart';
+import '../../../../core/localization/locale_provider.dart';
+import '../../../../core/localization/translations.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class VerifyOTPScreen extends ConsumerStatefulWidget {
@@ -26,23 +29,26 @@ class _VerifyOTPScreenState extends ConsumerState<VerifyOTPScreen> {
       final data = await auth.getMe();
       if (!mounted) return;
       if (data['current_weight'] == null) {
-        context.go(RoutePaths.weightSetup);
+        AppNavigation.goToWeightSetup(context: context);
       } else if (data['has_paid'] != true) {
-        context.go(RoutePaths.paywall);
+        AppNavigation.goToPaywall(context: context);
       } else {
         await auth.setOnboarded(true);
         if (!mounted) return;
         context.go(RoutePaths.home);
       }
     } catch (_) {
-      if (mounted) context.go(RoutePaths.weightSetup);
+      if (mounted) AppNavigation.goToWeightSetup(context: context);
     }
   }
 
   Future<void> _verify() async {
     final otp = _otpCtrl.text.trim();
     if (otp.length != 6) {
-      setState(() => _error = "Please enter a 6-digit code.");
+      setState(() => _error = Translations.t(
+            ref.read(localeProvider),
+            'otp_six_digits_required',
+          ));
       return;
     }
 
@@ -60,7 +66,10 @@ class _VerifyOTPScreenState extends ConsumerState<VerifyOTPScreen> {
       if (!mounted) return;
       await _routeAfterVerification();
     } catch (e) {
-      setState(() => _error = "Invalid or expired code.");
+      setState(() => _error = Translations.t(
+            ref.read(localeProvider),
+            'otp_invalid_expired',
+          ));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -74,7 +83,7 @@ class _VerifyOTPScreenState extends ConsumerState<VerifyOTPScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text("Code resent successfully!"),
+          content: Text(Translations.t(ref.read(localeProvider), 'code_resent_success')),
           backgroundColor: AppColors.primaryDark,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           behavior: SnackBarBehavior.floating,
@@ -84,7 +93,7 @@ class _VerifyOTPScreenState extends ConsumerState<VerifyOTPScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text("Failed to resend code."),
+          content: Text(Translations.t(ref.read(localeProvider), 'failed_resend_code')),
           backgroundColor: AppColors.danger,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           behavior: SnackBarBehavior.floating,
@@ -95,6 +104,7 @@ class _VerifyOTPScreenState extends ConsumerState<VerifyOTPScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final lang = ref.watch(localeProvider);
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -111,9 +121,9 @@ class _VerifyOTPScreenState extends ConsumerState<VerifyOTPScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Verify your email',
-                style: TextStyle(
+              Text(
+                Translations.t(lang, 'verify_email_title'),
+                style: const TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.w800,
                   color: AppColors.textPrimary,
@@ -121,23 +131,13 @@ class _VerifyOTPScreenState extends ConsumerState<VerifyOTPScreen> {
                 ),
               ).animate().fadeIn().slideY(begin: 0.1),
               const SizedBox(height: 12),
-              Text.rich(
-                TextSpan(
-                  text: 'We sent a 6-digit code to ',
-                  style: const TextStyle(
-                    fontSize: 15,
-                    color: AppColors.textSecondary,
-                    height: 1.5,
-                  ),
-                  children: [
-                    TextSpan(
-                      text: widget.email,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
+              Text(
+                Translations.t(lang, 'verify_email_subtitle')
+                    .replaceAll('{email}', widget.email),
+                style: const TextStyle(
+                  fontSize: 15,
+                  color: AppColors.textSecondary,
+                  height: 1.5,
                 ),
               ).animate().fadeIn(delay: 100.ms),
               const SizedBox(height: 40),
@@ -199,9 +199,9 @@ class _VerifyOTPScreenState extends ConsumerState<VerifyOTPScreen> {
                             strokeWidth: 2.5,
                           ),
                         )
-                      : const Text(
-                          "Verify",
-                          style: TextStyle(
+                      : Text(
+                          Translations.t(lang, 'verify'),
+                          style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
@@ -213,9 +213,9 @@ class _VerifyOTPScreenState extends ConsumerState<VerifyOTPScreen> {
               Center(
                 child: GestureDetector(
                   onTap: _resend,
-                  child: const Text(
-                    "Didn't receive a code? Resend",
-                    style: TextStyle(
+                  child: Text(
+                    Translations.t(lang, 'didnt_receive_resend'),
+                    style: const TextStyle(
                       color: AppColors.primary,
                       fontSize: 14,
                       fontWeight: FontWeight.w600,

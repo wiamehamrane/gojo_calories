@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import '../../../../core/config/env_config.dart';
 import '../../../../core/network/api_client.dart';
 
 class EventsRepository {
@@ -19,6 +20,13 @@ class EventsRepository {
     return res.data as List<dynamic>;
   }
 
+  /// AI-powered search: sends a keyword, sport name, or free-form prompt
+  /// to the backend, which ranks upcoming events via OpenAI.
+  Future<List<dynamic>> aiSearchEvents(String query) async {
+    final res = await _dio.post('events/search/ai', data: {'query': query});
+    return res.data as List<dynamic>;
+  }
+
   Future<Map<String, dynamic>> getEvent(String eventId) async {
     final res = await _dio.get('events/$eventId');
     return res.data as Map<String, dynamic>;
@@ -29,14 +37,39 @@ class EventsRepository {
     return res.data as Map<String, dynamic>;
   }
 
-  Future<void> uploadEventImage(String eventId, File imageFile) async {
+  /// Events created by the current user (upcoming and past).
+  Future<List<dynamic>> getMyEvents() async {
+    final res = await _dio.get('events/mine');
+    return res.data as List<dynamic>;
+  }
+
+  Future<Map<String, dynamic>> updateEvent(
+    String eventId,
+    Map<String, dynamic> updates,
+  ) async {
+    final res = await _dio.patch('events/$eventId', data: updates);
+    return res.data as Map<String, dynamic>;
+  }
+
+  Future<void> deleteEvent(String eventId) async {
+    await _dio.delete('events/$eventId');
+  }
+
+  /// Uploads the event cover image. Returns the stored image URL.
+  Future<String> uploadEventImage(String eventId, File imageFile) async {
     final formData = FormData.fromMap({
-      'image': await MultipartFile.fromFile(
+      'file': await MultipartFile.fromFile(
         imageFile.path,
         filename: 'event_image.jpg',
       ),
     });
-    await _dio.post('events/$eventId/image', data: formData);
+    final res = await _dio.post('events/$eventId/image', data: formData);
+    final data = res.data as Map<String, dynamic>;
+    final url = data['image_url'] as String?;
+    if (url == null || url.isEmpty) {
+      throw Exception('Image upload did not return a URL');
+    }
+    return EnvConfig.resolveMediaUrl(url);
   }
 
   Future<void> joinEvent(String eventId) async {

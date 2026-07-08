@@ -1,4 +1,5 @@
 import 'package:go_router/go_router.dart';
+import '../../app/router_keys.dart';
 import '../../core/routing/route_paths.dart';
 import 'presentation/screens/splash_screen.dart';
 import 'presentation/screens/auth_screen.dart';
@@ -24,10 +25,12 @@ List<RouteBase> get authRoutes => [
       ),
       GoRoute(
         path: RoutePaths.weightSetup,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const WeightSetupScreen(),
       ),
       GoRoute(
         path: RoutePaths.paywall,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const PaywallScreen(),
       ),
     ];

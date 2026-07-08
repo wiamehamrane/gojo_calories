@@ -10,6 +10,10 @@ abstract final class RoutePaths {
   static const scan = '/scan';
   static const log = '/log';
   static const events = '/events';
+  static const createEvent = '/events/create';
+  static const eventDetail = '/events/detail/:id';
+  static const myEvents = '/events/mine';
+  static const editEvent = '/events/edit';
   static const profile = '/profile';
 
   static const profilePersonal = '/profile/personal';
@@ -29,4 +33,8 @@ abstract final class RoutePaths {
   static const foodDetail = '/food-detail';
   static const fixResults = '/fix-results';
   static const featureRequest = '/feature_request';
+
+  static const tasks = '/tasks';
+  static const createTask = '/tasks/create';
+  static const taskTimer = '/tasks/timer';
 }

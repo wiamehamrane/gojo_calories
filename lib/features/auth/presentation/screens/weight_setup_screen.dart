@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:dio/dio.dart' show DioException;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -5,6 +8,9 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gojocalories/core/theme/app_colors.dart';
 import 'package:gojocalories/core/di/repository_providers.dart';
+import 'package:gojocalories/core/routing/route_paths.dart';
+import 'package:gojocalories/core/utils/image.dart';
+import 'package:gojocalories/core/routing/app_navigation.dart';
 
 class WeightSetupScreen extends ConsumerStatefulWidget {
   const WeightSetupScreen({super.key});
@@ -15,6 +21,10 @@ class WeightSetupScreen extends ConsumerStatefulWidget {
 
 class _WeightSetupScreenState extends ConsumerState<WeightSetupScreen> {
   bool _isLoading = false;
+  bool _planComplete = false;
+  bool _allowContinue = false;
+  String? _planError;
+  Timer? _planWatchdog;
   late PageController _pageCtrl;
   int _currentIndex = 0;
   final int _totalPages = 8;
@@ -44,6 +54,7 @@ class _WeightSetupScreenState extends ConsumerState<WeightSetupScreen> {
 
   @override
   void dispose() {
+    _planWatchdog?.cancel();
     _pageCtrl.dispose();
     _ageCtrl.dispose();
     _heightCtrl.dispose();
@@ -77,18 +88,27 @@ class _WeightSetupScreenState extends ConsumerState<WeightSetupScreen> {
   }
 
   void _prevPage() {
+    if (_isLoading && _currentIndex == 7) return;
+
     if (_currentIndex > 0) {
       _pageCtrl.previousPage(
         duration: const Duration(milliseconds: 400),
         curve: Curves.fastOutSlowIn,
       );
-      _focusNodes[_currentIndex - 1].requestFocus();
+      final prev = _currentIndex - 1;
+      if (prev >= 0 && prev < _focusNodes.length) {
+        _focusNodes[prev].requestFocus();
+      } else {
+        FocusManager.instance.primaryFocus?.unfocus();
+      }
     } else {
-      context.go('/auth');
+      AppNavigation.goToAuth(context: context);
     }
   }
 
   Future<void> _submitWeights() async {
+    if (_isLoading) return;
+
     final currentStr = _currentWtCtrl.text.trim();
     final goalStr = _goalWtCtrl.text.trim();
     final ageStr = _ageCtrl.text.trim();
@@ -113,39 +133,109 @@ class _WeightSetupScreenState extends ConsumerState<WeightSetupScreen> {
       return;
     }
 
-    setState(() => _isLoading = true);
+    final unit = _isKg ? 'kg' : 'lbs';
+    final heightUnit = _isCm ? 'cm' : 'ft';
+
+    final auth = ref.read(authRepositoryProvider);
+    if (!await auth.hasStoredToken()) {
+      _showError('Your session expired. Please sign in again.');
+      if (mounted) context.go(RoutePaths.auth);
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _planError = null;
+      _allowContinue = false;
+      _planComplete = false;
+    });
+
+    if (_currentIndex != 7) {
+      _pageCtrl.jumpToPage(7);
+      setState(() => _currentIndex = 7);
+    }
+
+    _planWatchdog?.cancel();
+    _planWatchdog = Timer(const Duration(seconds: 8), _onPlanWatchdog);
 
     try {
-      final unit = _isKg ? 'kg' : 'lbs';
-      final heightUnit = _isCm ? 'cm' : 'ft';
+      await auth.updateWeight({
+        'current_weight': currentWt,
+        'goal_weight': goalWt,
+        'weight_unit': unit,
+        'height': height,
+        'height_unit': heightUnit,
+        'age': age,
+        'gender': _gender,
+        'activity_level': _activityLevel,
+        if (referralStr.isNotEmpty) 'referral_code': referralStr,
+      }).timeout(const Duration(seconds: 15));
 
-      await ref.read(authRepositoryProvider).updateWeight({
-          'current_weight': currentWt,
-          'goal_weight': goalWt,
-          'weight_unit': unit,
-          'height': height,
-          'height_unit': heightUnit,
-          'age': age,
-          'gender': _gender,
-          'activity_level': _activityLevel,
-          if (referralStr.isNotEmpty) 'referral_code': referralStr,
-        });
-
+      _planWatchdog?.cancel();
+      if (!mounted) return;
+      _planComplete = true;
       if (mounted) {
-        _pageCtrl.animateToPage(
-          7,
-          duration: const Duration(milliseconds: 600),
-          curve: Curves.easeInOut,
-        );
-        Future.delayed(const Duration(seconds: 3), () {
-          if (mounted) context.go('/onboarding/paywall');
-        });
+        setState(() => _isLoading = false);
+        AppNavigation.goToPaywall(context: context);
       }
+    } on TimeoutException {
+      if (!mounted) return;
+      setState(() {
+        _planError =
+            'Server took too long to respond. Tap Continue or try again.';
+        _allowContinue = true;
+      });
+    } on DioException catch (e) {
+      if (!mounted) return;
+      final status = e.response?.statusCode;
+      final detail = e.response?.data is Map
+          ? e.response?.data['detail']?.toString()
+          : null;
+      setState(() {
+        if (status == 401) {
+          _planError = 'Your session expired. Please sign in again.';
+        } else if (status == 404) {
+          _planError = 'Account not found. Please sign in again.';
+        } else {
+          _planError = detail ?? 'Could not save your plan. Please try again.';
+        }
+        _allowContinue = false;
+      });
     } catch (e) {
-      _showError('Connection error. Please try again.');
+      if (!mounted) return;
+      setState(() {
+        _planError = 'Could not save your plan. Please try again.';
+        _allowContinue = false;
+      });
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted && !_planComplete) {
+        setState(() => _isLoading = false);
+      }
     }
+  }
+
+  void _onPlanWatchdog() {
+    if (!mounted || _planComplete || _currentIndex != 7) return;
+    setState(() {
+      _planError ??=
+          'Still waiting for the server. Tap Continue or try again.';
+      _allowContinue = true;
+    });
+  }
+
+  void _continueToPaywall() {
+    _planWatchdog?.cancel();
+    _planComplete = true;
+    AppNavigation.goToPaywall(context: context);
+  }
+
+  Future<void> _retryPlanSubmit() async {
+    setState(() {
+      _planError = null;
+      _allowContinue = false;
+      _planComplete = false;
+    });
+    await _submitWeights();
   }
 
   void _showError(String msg) {
@@ -440,50 +530,118 @@ class _WeightSetupScreenState extends ConsumerState<WeightSetupScreen> {
       children: [
         const SizedBox(height: 40),
         SizedBox(
-          width: 120,
-          height: 120,
+          width: 140,
+          height: 140,
           child: Stack(
             alignment: Alignment.center,
             children: [
-              CircularProgressIndicator(
-                strokeWidth: 8,
-                color: AppColors.primary.withValues(alpha: 0.2),
-                value: 1.0,
-              ),
-              const CircularProgressIndicator(
-                strokeWidth: 8,
-                color: AppColors.primaryDark,
-              ),
-              const Text(
-                '🥑',
-                style: TextStyle(fontSize: 48),
-              ).animate(onPlay: (controller) => controller.repeat())
-               .scale(duration: 1000.ms, begin: const Offset(0.8, 0.8), end: const Offset(1.2, 1.2))
-               .then()
-               .scale(duration: 1000.ms, begin: const Offset(1.2, 1.2), end: const Offset(0.8, 0.8)),
+              if (_planError == null) ...[
+                CircularProgressIndicator(
+                  strokeWidth: 8,
+                  color: AppColors.primary.withValues(alpha: 0.2),
+                  value: 1.0,
+                ),
+                const CircularProgressIndicator(
+                  strokeWidth: 8,
+                  color: AppColors.primaryDark,
+                ),
+              ],
+              Image.asset(
+                ImageAsset.logoHeader,
+                width: 100,
+                height: 100,
+                fit: BoxFit.contain,
+              )
+                  .animate(
+                    onPlay: _planError == null
+                        ? (controller) => controller.repeat()
+                        : null,
+                  )
+                  .scale(
+                    duration: 1000.ms,
+                    begin: const Offset(0.92, 0.92),
+                    end: const Offset(1.05, 1.05),
+                  )
+                  .then()
+                  .scale(
+                    duration: 1000.ms,
+                    begin: const Offset(1.05, 1.05),
+                    end: const Offset(0.92, 0.92),
+                  ),
             ],
           ),
         ),
         const SizedBox(height: 48),
-        const Text(
-          'Perfecting your plan...',
+        Text(
+          _planError == null ? 'Perfecting your plan...' : 'Something went wrong',
           textAlign: TextAlign.center,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.w800,
             color: AppColors.textPrimary,
             letterSpacing: -0.5,
           ),
-        ).animate().fadeIn(duration: 600.ms).slideY(begin: 0.2),
+        ),
         const SizedBox(height: 12),
-        const Text(
-          'AI is calculating your custom nutritional needs.',
+        Text(
+          _planError ??
+              'AI is calculating your custom nutritional needs.',
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 16,
-            color: AppColors.textSecondary,
+            color: _planError == null
+                ? AppColors.textSecondary
+                : AppColors.danger,
           ),
-        ).animate().fadeIn(delay: 300.ms),
+        ),
+        if (_planError != null) ...[
+          const SizedBox(height: 24),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Column(
+              children: [
+                if (_allowContinue) ...[
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: FilledButton(
+                      onPressed: _continueToPaywall,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text('Continue'),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: FilledButton(
+                    onPressed: _isLoading ? null : _retryPlanSubmit,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.primaryDark,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text('Try again'),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextButton(
+                  onPressed: _isLoading
+                      ? null
+                      : () => context.go(RoutePaths.auth),
+                  child: const Text('Sign in again'),
+                ),
+              ],
+            ),
+          ),
+        ],
       ],
     );
   }

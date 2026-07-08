@@ -10,7 +10,10 @@ import models
 import logging
 from fastapi.staticfiles import StaticFiles
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=getattr(logging, os.getenv("LOG_LEVEL", "INFO").upper(), logging.INFO),
+    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+)
 logger = logging.getLogger(__name__)
 load_dotenv()
 
@@ -68,6 +71,18 @@ try:
         conn.execute(text("ALTER TABLE food_logs ADD COLUMN IF NOT EXISTS name_ar VARCHAR;"))
         conn.execute(text("ALTER TABLE food_logs ADD COLUMN IF NOT EXISTS image_url VARCHAR;"))
         conn.execute(text("ALTER TABLE food_logs ADD COLUMN IF NOT EXISTS ingredients JSON;"))
+        conn.execute(text("ALTER TABLE exercise_logs ADD COLUMN IF NOT EXISTS log_date DATE;"))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS exercise_logs (
+                id VARCHAR(36) PRIMARY KEY,
+                user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+                name VARCHAR NOT NULL,
+                duration_minutes INTEGER NOT NULL,
+                calories_burned INTEGER NOT NULL,
+                date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                log_date DATE
+            );
+        """))
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS saved_foods (
                 id VARCHAR(36) PRIMARY KEY,
@@ -129,6 +144,50 @@ try:
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """))
+        # Events — ensure table/columns exist on prod without relying on Alembic
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS events (
+                id VARCHAR(36) PRIMARY KEY,
+                creator_id VARCHAR(36) NOT NULL REFERENCES users(id),
+                title VARCHAR NOT NULL,
+                description TEXT,
+                event_type VARCHAR NOT NULL,
+                location_name VARCHAR,
+                latitude FLOAT,
+                longitude FLOAT,
+                start_time TIMESTAMP NOT NULL,
+                whatsapp_link VARCHAR,
+                image_url VARCHAR,
+                max_participants INTEGER,
+                audience VARCHAR NOT NULL DEFAULT 'mixed',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """))
+        conn.execute(text("ALTER TABLE events ADD COLUMN IF NOT EXISTS image_url VARCHAR;"))
+        conn.execute(text("ALTER TABLE events ADD COLUMN IF NOT EXISTS max_participants INTEGER;"))
+        conn.execute(text("ALTER TABLE events ADD COLUMN IF NOT EXISTS audience VARCHAR DEFAULT 'mixed';"))
+        conn.execute(text("UPDATE events SET audience = 'mixed' WHERE audience IS NULL;"))
+        conn.execute(text("""
+            DO $$ BEGIN
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name = 'events' AND column_name = 'audience'
+                ) THEN
+                    ALTER TABLE events ALTER COLUMN audience SET DEFAULT 'mixed';
+                END IF;
+            END $$;
+        """))
+        conn.execute(text("""
+            CREATE INDEX IF NOT EXISTS ix_events_audience ON events (audience);
+        """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS event_participants (
+                id VARCHAR(36) PRIMARY KEY,
+                event_id VARCHAR(36) NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+                user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+                joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """))
         # Ensure daily_stats has all expected columns
         conn.execute(text("""
             DO $$ BEGIN
@@ -144,9 +203,40 @@ try:
             END $$;
         """))
 except Exception as e:
-    print(f"Migration schema update error: {e}")
+    import logging
+    logging.getLogger(__name__).error("Migration schema update error: %s", e, exc_info=True)
 
 app = FastAPI(title="GojoCalories Backend API")
+
+# ── Request logging ────────────────────────────────────────────────────────────
+
+import time
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start = time.perf_counter()
+    client = request.client.host if request.client else "unknown"
+    logger.info(">> %s %s from %s", request.method, request.url.path, client)
+    try:
+        response = await call_next(request)
+        elapsed_ms = (time.perf_counter() - start) * 1000
+        logger.info(
+            "<< %s %s %s (%.0fms)",
+            request.method,
+            request.url.path,
+            response.status_code,
+            elapsed_ms,
+        )
+        return response
+    except Exception:
+        elapsed_ms = (time.perf_counter() - start) * 1000
+        logger.exception(
+            "!! %s %s failed (%.0fms)",
+            request.method,
+            request.url.path,
+            elapsed_ms,
+        )
+        raise
 
 # ── Global Exception Handlers ──────────────────────────────────────────────────
 
@@ -161,6 +251,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     errors = [f"{' → '.join(str(l) for l in e['loc'])}: {e['msg']}" for e in exc.errors()]
+    logger.warning("Validation error on %s %s: %s", request.method, request.url.path, "; ".join(errors))
     return JSONResponse(
         status_code=422,
         content={"detail": "; ".join(errors)},

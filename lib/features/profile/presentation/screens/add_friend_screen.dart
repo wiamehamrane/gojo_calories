@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/localization/locale_provider.dart';
+import '../../../../core/localization/translations.dart';
 import '../../../social/presentation/providers/friends_provider.dart';
 
 class AddFriendScreen extends ConsumerStatefulWidget {
@@ -28,10 +30,12 @@ class _AddFriendScreenState extends ConsumerState<AddFriendScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final lang = ref.watch(localeProvider);
+    String t(String k) => Translations.t(lang, k);
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Add to Circle', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(t('add_to_circle'), style: const TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.white,
         elevation: 0,
         foregroundColor: AppColors.textPrimary,
@@ -43,7 +47,7 @@ class _AddFriendScreenState extends ConsumerState<AddFriendScreen> {
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Search by name or email...',
+                hintText: t('search_by_name_email'),
                 prefixIcon: const Icon(LucideIcons.search, size: 20),
                 filled: true,
                 fillColor: AppColors.surfaceMuted,
@@ -60,7 +64,7 @@ class _AddFriendScreenState extends ConsumerState<AddFriendScreen> {
           if (_searching)
             const Expanded(child: Center(child: CircularProgressIndicator(color: AppColors.primary))),
           if (!_searching && _results.isEmpty && _searchController.text.length >= 2)
-            const Expanded(child: Center(child: Text('No users found'))),
+            Expanded(child: Center(child: Text(t('no_users_found')))),
           if (!_searching && _results.isNotEmpty)
             Expanded(
               child: ListView.separated(
@@ -78,7 +82,7 @@ class _AddFriendScreenState extends ConsumerState<AddFriendScreen> {
                         style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
                       ),
                     ),
-                    title: Text(user.name ?? 'No Name', style: const TextStyle(fontWeight: FontWeight.w600)),
+                    title: Text(user.name ?? t('no_name'), style: const TextStyle(fontWeight: FontWeight.w600)),
                     subtitle: Text(user.email, style: const TextStyle(fontSize: 12, color: AppColors.inactive)),
                     trailing: user.isFriend 
                       ? const Icon(LucideIcons.circleCheck, color: Colors.green, size: 22)
@@ -94,7 +98,7 @@ class _AddFriendScreenState extends ConsumerState<AddFriendScreen> {
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           ),
-                          child: const Text('Add', style: TextStyle(fontSize: 12)),
+                          child: Text(t('add'), style: const TextStyle(fontSize: 12)),
                         ),
                   );
                 },

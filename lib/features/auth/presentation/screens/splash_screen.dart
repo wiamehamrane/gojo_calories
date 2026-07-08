@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+
 import '../../../../core/di/repository_providers.dart';
+import '../../../../core/routing/app_navigation.dart';
 import '../../../../core/routing/route_paths.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
@@ -17,43 +18,61 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   void initState() {
     super.initState();
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.light);
-
-    Future.delayed(const Duration(milliseconds: 2000), () async {
-      if (!mounted) return;
-      final auth = ref.read(authRepositoryProvider);
-      final router = GoRouter.of(context);
-
-      if (await auth.hasStoredToken()) {
-        try {
-          final data = await auth.getMe();
-
-          if (data['is_email_verified'] != true) {
-            final email = data['email'] as String? ?? '';
-            router.go(
-              '${RoutePaths.verifyOtp}?email=${Uri.encodeComponent(email)}',
-            );
-            return;
-          }
-
-          if (data['current_weight'] == null) {
-            router.go(RoutePaths.weightSetup);
-          } else if (data['has_paid'] != true) {
-            router.go(RoutePaths.paywall);
-          } else {
-            await auth.setOnboarded(true);
-            router.go(RoutePaths.home);
-          }
-        } catch (_) {
-          if (await auth.isOnboarded()) {
-            router.go(RoutePaths.home);
-          } else {
-            router.go(RoutePaths.auth);
-          }
-        }
-      } else {
-        router.go(RoutePaths.auth);
-      }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future.delayed(const Duration(milliseconds: 800), _bootstrap);
     });
+  }
+
+  Future<void> _bootstrap() async {
+    if (!mounted) return;
+
+    final auth = ref.read(authRepositoryProvider);
+
+    try {
+      final hasToken = await auth.hasStoredToken();
+      if (!hasToken) {
+        debugPrint('[Splash] No token → auth');
+        if (!mounted) return;
+        AppNavigation.go(RoutePaths.auth, context: context);
+        return;
+      }
+
+      debugPrint('[Splash] Token found, fetching profile…');
+      final data = await auth.getMe().timeout(const Duration(seconds: 12));
+      if (!mounted) return;
+
+      debugPrint(
+        '[Splash] Profile loaded: verified=${data['is_email_verified']}, '
+        'weight=${data['current_weight']}, paid=${data['has_paid']}',
+      );
+
+      if (data['is_email_verified'] != true) {
+        final email = data['email'] as String? ?? '';
+        AppNavigation.go(
+          '${RoutePaths.verifyOtp}?email=${Uri.encodeComponent(email)}',
+          context: context,
+        );
+        return;
+      }
+
+      if (data['current_weight'] == null) {
+        debugPrint('[Splash] → weight setup');
+        AppNavigation.go(RoutePaths.weightSetup, context: context);
+      } else if (data['has_paid'] != true) {
+        debugPrint('[Splash] → paywall');
+        AppNavigation.go(RoutePaths.paywall, context: context);
+      } else {
+        await auth.setOnboarded(true);
+        debugPrint('[Splash] → home');
+        if (!mounted) return;
+        AppNavigation.go(RoutePaths.home, context: context);
+      }
+    } catch (e, st) {
+      debugPrint('[Splash] Bootstrap failed: $e\n$st');
+      await auth.clearSession();
+      if (!mounted) return;
+      AppNavigation.go(RoutePaths.auth, context: context);
+    }
   }
 
   @override

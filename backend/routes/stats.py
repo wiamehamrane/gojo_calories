@@ -147,6 +147,92 @@ def get_weekly_stats(
     return result
 
 
+@router.get("/calendar-progress")
+def get_calendar_progress(
+    end_date: Optional[str] = Query(None, description="Last day in range YYYY-MM-DD"),
+    days: int = Query(366, ge=1, le=366),
+    tz_offset: Optional[int] = Query(0, description="Timezone offset in minutes"),
+    db: Session = Depends(get_db),
+    current_user_id: str = Depends(get_current_user_id),
+):
+    """Per-day calorie budget vs consumed for the scrollable home calendar."""
+    from models import FoodLog
+    from utils.nutrition import calculate_daily_targets
+    from collections import defaultdict
+
+    if end_date:
+        try:
+            end = dt.datetime.strptime(end_date, "%Y-%m-%d").date()
+        except ValueError:
+            end = dt.datetime.utcnow().date()
+    else:
+        end = dt.datetime.utcnow().date()
+
+    start = end - dt.timedelta(days=days - 1)
+    offset = tz_offset or 0
+
+    user = db.query(User).filter(User.id == current_user_id).first()
+    default_budget = 2200
+    if user:
+        if user.manual_calories:
+            default_budget = user.manual_calories
+        else:
+            weight_kg = user.current_weight or 70.0
+            goal_weight_kg = user.goal_weight or 70.0
+            targets = calculate_daily_targets(
+                weight_kg=weight_kg,
+                height_cm=user.height or 170,
+                age=user.age or 30,
+                gender=user.gender or "male",
+                activity_level=user.activity_level or "sedentary",
+                goal_weight_kg=goal_weight_kg,
+            )
+            default_budget = targets["calorie_budget"]
+
+    stats_rows = db.query(DailyStats).filter(
+        DailyStats.user_id == current_user_id,
+        DailyStats.date >= dt.datetime.combine(start, dt.time.min),
+        DailyStats.date < dt.datetime.combine(end + dt.timedelta(days=1), dt.time.min),
+    ).all()
+
+    budget_by_date: dict = {}
+    for stat in stats_rows:
+        stat_day = stat.date.date() if hasattr(stat.date, "date") else stat.date
+        budget_by_date[stat_day] = stat.calorie_budget
+
+    window_start = (
+        dt.datetime.combine(start, dt.time.min) - dt.timedelta(minutes=offset)
+    )
+    window_end = (
+        dt.datetime.combine(end + dt.timedelta(days=1), dt.time.min)
+        - dt.timedelta(minutes=offset)
+    )
+    logs = db.query(FoodLog).filter(
+        FoodLog.user_id == current_user_id,
+        FoodLog.created_at >= window_start,
+        FoodLog.created_at < window_end,
+    ).all()
+
+    consumed_by_date: dict = defaultdict(int)
+    for log in logs:
+        local_date = (log.created_at + dt.timedelta(minutes=offset)).date()
+        if start <= local_date <= end:
+            consumed_by_date[local_date] += log.calories or 0
+
+    result = []
+    for i in range(days):
+        day = start + dt.timedelta(days=i)
+        budget = budget_by_date.get(day, default_budget)
+        consumed = consumed_by_date.get(day, 0)
+        result.append({
+            "date": day.isoformat(),
+            "calorie_budget": budget,
+            "calories_consumed": consumed,
+        })
+
+    return result
+
+
 @router.get("/streak")
 def get_streak(
     tz_offset: Optional[int] = Query(0, description="Timezone offset in minutes"),

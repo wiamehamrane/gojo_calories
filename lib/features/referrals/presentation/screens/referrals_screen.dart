@@ -34,15 +34,16 @@ class _ReferralsScreenState extends ConsumerState<ReferralsScreen> {
     }
   }
 
-  void _copyCode(BuildContext ctx, String code) {
+  void _copyCode(String code) {
+    final lang = ref.read(localeProvider);
     Clipboard.setData(ClipboardData(text: code));
-    ScaffoldMessenger.of(ctx).showSnackBar(
+    ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Row(
+        content: Row(
           children: [
-            Icon(LucideIcons.check, color: Colors.white, size: 16),
-            SizedBox(width: 8),
-            Text('Code copied!'),
+            const Icon(LucideIcons.check, color: Colors.white, size: 16),
+            const SizedBox(width: 8),
+            Text(Translations.t(lang, 'code_copied')),
           ],
         ),
         backgroundColor: Colors.black,
@@ -119,9 +120,9 @@ class _ReferralsScreenState extends ConsumerState<ReferralsScreen> {
           children: [
             const Icon(LucideIcons.wifiOff, size: 40, color: Color(0xFFCCCCCC)),
             const SizedBox(height: 16),
-            const Text(
-              'Could not load referral data.',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black),
+            Text(
+              Translations.t(lang, 'could_not_load_referrals'),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
@@ -133,7 +134,7 @@ class _ReferralsScreenState extends ConsumerState<ReferralsScreen> {
                   color: Colors.black,
                   borderRadius: BorderRadius.circular(999),
                 ),
-                child: const Text('Try Again', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                child: Text(Translations.t(lang, 'retry'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
               ),
             ),
           ],
@@ -143,6 +144,7 @@ class _ReferralsScreenState extends ConsumerState<ReferralsScreen> {
   }
 
   Widget _buildContent(BuildContext ctx, String lang) {
+    String t(String k) => Translations.t(lang, k);
     final balance = (_data?['balance'] as num?)?.toDouble() ?? 0.0;
     final totalEarned = (_data?['total_earned'] as num?)?.toDouble() ?? 0.0;
     final totalReferrals = _data?['total_referrals'] as int? ?? 0;
@@ -169,13 +171,13 @@ class _ReferralsScreenState extends ConsumerState<ReferralsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Row(
+                Row(
                   children: [
-                    Icon(LucideIcons.gift, color: Colors.white54, size: 14),
-                    SizedBox(width: 6),
+                    const Icon(LucideIcons.gift, color: Colors.white54, size: 14),
+                    const SizedBox(width: 6),
                     Text(
-                      'Available Balance',
-                      style: TextStyle(fontSize: 13, color: Colors.white54),
+                      t('available_balance'),
+                      style: const TextStyle(fontSize: 13, color: Colors.white54),
                     ),
                   ],
                 ),
@@ -191,7 +193,7 @@ class _ReferralsScreenState extends ConsumerState<ReferralsScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Total earned: \$${totalEarned.toStringAsFixed(2)}',
+                  '${t('total_earned_prefix')} \$${totalEarned.toStringAsFixed(2)}',
                   style: const TextStyle(fontSize: 13, color: Colors.white38),
                 ),
                 const SizedBox(height: 20),
@@ -215,7 +217,7 @@ class _ReferralsScreenState extends ConsumerState<ReferralsScreen> {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          balance > 0 ? 'Withdraw Earnings' : 'No balance to withdraw',
+                          balance > 0 ? t('withdraw_earnings') : t('no_balance_withdraw'),
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w700,
@@ -234,17 +236,17 @@ class _ReferralsScreenState extends ConsumerState<ReferralsScreen> {
           // ── Stats Row ──────────────────────────────────────────────────
           Row(
             children: [
-              _StatCard(icon: LucideIcons.users, value: '$totalReferrals', label: 'Friends'),
+              _StatCard(icon: LucideIcons.users, value: '$totalReferrals', label: t('friends_stat')),
               const SizedBox(width: 10),
-              _StatCard(icon: LucideIcons.trendingUp, value: '\$${totalEarned.toStringAsFixed(0)}', label: 'Earned'),
+              _StatCard(icon: LucideIcons.trendingUp, value: '\$${totalEarned.toStringAsFixed(0)}', label: t('earned_stat')),
               const SizedBox(width: 10),
-              _StatCard(icon: LucideIcons.banknote, value: '\$${totalWithdrawn.toStringAsFixed(0)}', label: 'Paid out'),
+              _StatCard(icon: LucideIcons.banknote, value: '\$${totalWithdrawn.toStringAsFixed(0)}', label: t('paid_out_stat')),
             ],
           ),
           const SizedBox(height: 20),
 
           // ── Referral Code ──────────────────────────────────────────────
-          const _SectionLabel('Your referral code'),
+          _SectionLabel(t('your_referral_code')),
           Container(
             decoration: BoxDecoration(
               color: const Color(0xFFF5F5F5),
@@ -267,7 +269,7 @@ class _ReferralsScreenState extends ConsumerState<ReferralsScreen> {
                       ),
                     ),
                     GestureDetector(
-                      onTap: () => _copyCode(ctx, code),
+                      onTap: () => _copyCode(code),
                       child: Container(
                         width: 42,
                         height: 42,
@@ -281,10 +283,10 @@ class _ReferralsScreenState extends ConsumerState<ReferralsScreen> {
                   ],
                 ),
                 const SizedBox(height: 12),
-                const Text(
-                  'Share this code with friends. You earn \$1 for every friend who signs up.',
+                Text(
+                  t('referral_code_hint'),
                   textAlign: TextAlign.left,
-                  style: TextStyle(fontSize: 13, color: Color(0xFF888888), height: 1.5),
+                  style: const TextStyle(fontSize: 13, color: Color(0xFF888888), height: 1.5),
                 ),
               ],
             ),
@@ -292,7 +294,7 @@ class _ReferralsScreenState extends ConsumerState<ReferralsScreen> {
           const SizedBox(height: 20),
 
           // ── How it works ───────────────────────────────────────────────
-          const _SectionLabel('How it works'),
+          _SectionLabel(t('how_it_works')),
           Container(
             decoration: BoxDecoration(
               border: Border.all(color: const Color(0xFFE8E8E8)),
@@ -304,22 +306,22 @@ class _ReferralsScreenState extends ConsumerState<ReferralsScreen> {
                 _StepRow(
                   num: '01',
                   icon: LucideIcons.share2,
-                  title: 'Share your code',
-                  subtitle: 'Send it to friends via any channel',
+                  title: t('how_step1_title'),
+                  subtitle: t('how_step1_desc'),
                 ),
                 const _Divider(),
                 _StepRow(
                   num: '02',
                   icon: LucideIcons.userPlus,
-                  title: 'Friend signs up',
-                  subtitle: 'They enter your code at registration',
+                  title: t('how_step2_title'),
+                  subtitle: t('how_step2_desc'),
                 ),
                 const _Divider(),
                 _StepRow(
                   num: '03',
                   icon: LucideIcons.dollarSign,
-                  title: 'You earn \$1',
-                  subtitle: 'Instantly credited to your balance',
+                  title: t('how_step3_title'),
+                  subtitle: t('how_step3_desc'),
                 ),
               ],
             ),
@@ -328,15 +330,15 @@ class _ReferralsScreenState extends ConsumerState<ReferralsScreen> {
 
           // ── Referral History ───────────────────────────────────────────
           if (history.isNotEmpty) ...[
-            const _SectionLabel('Friends joined'),
-            _ReferralHistoryCard(items: history),
+            _SectionLabel(t('friends_joined')),
+            _ReferralHistoryCard(items: history, lang: lang),
             const SizedBox(height: 20),
           ],
 
           // ── Withdrawal History ─────────────────────────────────────────
           if (withdrawals.isNotEmpty) ...[
-            const _SectionLabel('Withdrawal history'),
-            _WithdrawalHistoryCard(items: withdrawals),
+            _SectionLabel(t('withdrawal_history')),
+            _WithdrawalHistoryCard(items: withdrawals, lang: lang),
             const SizedBox(height: 20),
           ],
 
@@ -440,7 +442,8 @@ class _StepRow extends StatelessWidget {
 
 class _ReferralHistoryCard extends StatelessWidget {
   final List<Map<String, dynamic>> items;
-  const _ReferralHistoryCard({required this.items});
+  final String lang;
+  const _ReferralHistoryCard({required this.items, required this.lang});
 
   String _fmt(String? iso) {
     if (iso == null) return '';
@@ -462,7 +465,7 @@ class _ReferralHistoryCard extends StatelessWidget {
         children: items.asMap().entries.map((e) {
           final i = e.key;
           final item = e.value;
-          final name = item['referred_name'] as String? ?? 'Friend';
+          final name = item['referred_name'] as String? ?? Translations.t(lang, 'friend_default');
           return Column(
             children: [
               Padding(
@@ -508,7 +511,8 @@ class _ReferralHistoryCard extends StatelessWidget {
 
 class _WithdrawalHistoryCard extends StatelessWidget {
   final List<Map<String, dynamic>> items;
-  const _WithdrawalHistoryCard({required this.items});
+  final String lang;
+  const _WithdrawalHistoryCard({required this.items, required this.lang});
 
   String _fmt(String? iso) {
     if (iso == null) return '';
@@ -531,8 +535,10 @@ class _WithdrawalHistoryCard extends StatelessWidget {
           final i = e.key;
           final w = e.value;
           final amount = (w['amount'] as num?)?.toDouble() ?? 0.0;
-          final method = w['method'] as String? ?? 'PayPal';
+          final method = w['method'] as String? ?? Translations.t(lang, 'paypal');
           final isPaid = w['status'] == 'paid';
+          String t(String k) => Translations.t(lang, k);
+          final methodLabel = method == 'Bank Transfer' ? t('bank_transfer') : t('paypal');
 
           return Column(
             children: [
@@ -557,7 +563,10 @@ class _WithdrawalHistoryCard extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('\$${amount.toStringAsFixed(2)} via $method',
+                          Text(
+                            t('withdrawn_via')
+                                .replaceAll('{amount}', '\$${amount.toStringAsFixed(2)}')
+                                .replaceAll('{method}', methodLabel),
                               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black)),
                           Text(_fmt(w['created_at'] as String?),
                               style: const TextStyle(fontSize: 12, color: Color(0xFF888888))),
@@ -571,7 +580,7 @@ class _WithdrawalHistoryCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        isPaid ? 'Paid' : 'Pending',
+                        isPaid ? t('paid') : t('pending'),
                         style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: isPaid ? Colors.white : const Color(0xFF888888)),
                       ),
                     ),
@@ -615,9 +624,13 @@ class _WithdrawSheetState extends ConsumerState<_WithdrawSheet> {
   void dispose() { _amountCtrl.dispose(); super.dispose(); }
 
   Future<void> _submit() async {
+    String t(String k) => Translations.t(widget.lang, k);
     final amount = double.tryParse(_amountCtrl.text.trim());
-    if (amount == null || amount <= 0) { setState(() => _error = 'Please enter a valid amount.'); return; }
-    if (amount > widget.maxAmount) { setState(() => _error = 'Amount exceeds your balance of \$${widget.maxAmount.toStringAsFixed(2)}.'); return; }
+    if (amount == null || amount <= 0) { setState(() => _error = t('valid_amount_required')); return; }
+    if (amount > widget.maxAmount) {
+      setState(() => _error = t('amount_exceeds_balance').replaceAll('{amount}', '\$${widget.maxAmount.toStringAsFixed(2)}'));
+      return;
+    }
     setState(() { _loading = true; _error = null; });
     try {
       await ref.read(referralsRepositoryProvider).requestWithdrawal(
@@ -629,7 +642,7 @@ class _WithdrawSheetState extends ConsumerState<_WithdrawSheet> {
         widget.onSuccess();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Withdrawal request submitted!'),
+            content: Text(Translations.t(widget.lang, 'withdrawal_submitted')),
             backgroundColor: Colors.black,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -643,6 +656,7 @@ class _WithdrawSheetState extends ConsumerState<_WithdrawSheet> {
 
   @override
   Widget build(BuildContext context) {
+    String t(String k) => Translations.t(widget.lang, k);
     final mq = MediaQuery.of(context);
     return Container(
       decoration: const BoxDecoration(
@@ -661,11 +675,14 @@ class _WithdrawSheetState extends ConsumerState<_WithdrawSheet> {
             ),
           ),
           const SizedBox(height: 24),
-          const Text('Withdraw Earnings', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.black)),
+          Text(t('withdraw_earnings_title'), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.black)),
           const SizedBox(height: 4),
-          Text('Balance: \$${widget.maxAmount.toStringAsFixed(2)}', style: const TextStyle(fontSize: 14, color: Color(0xFF888888))),
+          Text(
+            t('balance_amount').replaceAll('{amount}', '\$${widget.maxAmount.toStringAsFixed(2)}'),
+            style: const TextStyle(fontSize: 14, color: Color(0xFF888888)),
+          ),
           const SizedBox(height: 24),
-          const Text('Amount', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF888888))),
+          Text(t('amount'), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF888888))),
           const SizedBox(height: 8),
           TextField(
             controller: _amountCtrl,
@@ -682,10 +699,15 @@ class _WithdrawSheetState extends ConsumerState<_WithdrawSheet> {
             ),
           ),
           const SizedBox(height: 20),
-          const Text('Method', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF888888))),
+          Text(t('method'), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF888888))),
           const SizedBox(height: 8),
           Row(
-            children: ['PayPal', 'Bank Transfer'].map((m) {
+            children: [
+              ('PayPal', t('paypal')),
+              ('Bank Transfer', t('bank_transfer')),
+            ].map((entry) {
+              final m = entry.$1;
+              final label = entry.$2;
               final selected = _method == m;
               return Expanded(
                 child: GestureDetector(
@@ -700,7 +722,7 @@ class _WithdrawSheetState extends ConsumerState<_WithdrawSheet> {
                     ),
                     alignment: Alignment.center,
                     child: Text(
-                      m,
+                      label,
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
@@ -728,7 +750,7 @@ class _WithdrawSheetState extends ConsumerState<_WithdrawSheet> {
               ),
               alignment: Alignment.center,
               child: Text(
-                _loading ? 'Submitting…' : 'Submit Request',
+                _loading ? t('submitting') : t('submit_request'),
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w700,

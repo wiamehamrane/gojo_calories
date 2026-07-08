@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/di/repository_providers.dart';
+import '../../../../core/localization/locale_provider.dart';
+import '../../../../core/localization/translations.dart';
 import '../providers/food_providers.dart';
 import '../../../../features/stats/presentation/providers/selected_date_provider.dart';
 import '../../../stats/presentation/providers/dashboard_provider.dart';
@@ -58,6 +60,8 @@ class _FoodDatabaseScreenState extends ConsumerState<FoodDatabaseScreen> {
 
   Future<void> _logFood(Map<String, dynamic> item) async {
     if (_logging) return;
+    final lang = ref.read(localeProvider);
+    String t(String k) => Translations.t(lang, k);
     setState(() => _logging = true);
     try {
       final name = item['name'] as String? ?? 'Food';
@@ -94,7 +98,7 @@ class _FoodDatabaseScreenState extends ConsumerState<FoodDatabaseScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('$name logged!'),
+          content: Text(t('food_logged_success').replaceAll('{name}', name)),
           backgroundColor: Colors.black,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -106,7 +110,7 @@ class _FoodDatabaseScreenState extends ConsumerState<FoodDatabaseScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Failed to log food. Please try again.'),
+          content: Text(t('failed_log_food')),
           backgroundColor: Colors.red.shade700,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -119,6 +123,8 @@ class _FoodDatabaseScreenState extends ConsumerState<FoodDatabaseScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final lang = ref.watch(localeProvider);
+    String t(String k) => Translations.t(lang, k);
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -129,9 +135,9 @@ class _FoodDatabaseScreenState extends ConsumerState<FoodDatabaseScreen> {
           icon: const Icon(LucideIcons.arrowLeft, color: Colors.black),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Food Library',
-          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Colors.black),
+        title: Text(
+          t('action_food_database'),
+          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Colors.black),
         ),
         centerTitle: true,
       ),
@@ -187,7 +193,7 @@ class _FoodDatabaseScreenState extends ConsumerState<FoodDatabaseScreen> {
           // ─── Results ───────────────────────────────────────────────────
           Expanded(
             child: _query.trim().length < 2
-                ? _buildEmptyState()
+                ? _buildEmptyState(lang)
                 : _results.isEmpty && !_searching
                     ? Center(
                         child: Column(
@@ -212,6 +218,7 @@ class _FoodDatabaseScreenState extends ConsumerState<FoodDatabaseScreen> {
                           item: _results[i],
                           onLog: () => _logFood(_results[i]),
                           isLogging: _logging,
+                          lang: lang,
                         ),
                       ),
           ),
@@ -220,7 +227,8 @@ class _FoodDatabaseScreenState extends ConsumerState<FoodDatabaseScreen> {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(String lang) {
+    String t(String k) => Translations.t(lang, k);
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -231,7 +239,7 @@ class _FoodDatabaseScreenState extends ConsumerState<FoodDatabaseScreen> {
             child: const Icon(LucideIcons.database, size: 32, color: Color(0xFFBBBBBB)),
           ),
           const SizedBox(height: 20),
-          const Text('Search 300,000+ foods', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Colors.black)),
+          Text(t('search_foods_database'), style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Colors.black)),
           const SizedBox(height: 8),
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 48),
@@ -253,8 +261,14 @@ class _FoodResultTile extends StatelessWidget {
   final Map<String, dynamic> item;
   final VoidCallback onLog;
   final bool isLogging;
+  final String lang;
 
-  const _FoodResultTile({required this.item, required this.onLog, required this.isLogging});
+  const _FoodResultTile({
+    required this.item,
+    required this.onLog,
+    required this.isLogging,
+    required this.lang,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -300,7 +314,10 @@ class _FoodResultTile extends StatelessWidget {
                     _Chip(label: '${fat}g F', color: AppColors.fats),
                   ],
                 ),
-                Text('per $serving', style: const TextStyle(fontSize: 10, color: Color(0xFFCCCCCC))),
+                Text(
+                  Translations.t(lang, 'per_serving').replaceAll('{serving}', serving),
+                  style: const TextStyle(fontSize: 10, color: Color(0xFFCCCCCC)),
+                ),
               ],
             ),
           ),

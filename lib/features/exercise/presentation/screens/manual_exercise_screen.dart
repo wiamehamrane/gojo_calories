@@ -1,16 +1,88 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/localization/locale_provider.dart';
+import '../../../../core/localization/translations.dart';
+import '../../../stats/presentation/providers/dashboard_provider.dart';
 
-class ManualExerciseScreen extends StatelessWidget {
+class ManualExerciseScreen extends ConsumerStatefulWidget {
   const ManualExerciseScreen({super.key});
 
   @override
+  ConsumerState<ManualExerciseScreen> createState() =>
+      _ManualExerciseScreenState();
+}
+
+class _ManualExerciseScreenState extends ConsumerState<ManualExerciseScreen> {
+  final _nameController = TextEditingController();
+  final _durationController = TextEditingController();
+  final _caloriesController = TextEditingController();
+  bool _saving = false;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _durationController.dispose();
+    _caloriesController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final lang = ref.read(localeProvider);
+    String t(String k) => Translations.t(lang, k);
+    final name = _nameController.text.trim();
+    final duration = int.tryParse(_durationController.text.trim()) ?? 0;
+    final calories = int.tryParse(_caloriesController.text.trim()) ?? 0;
+
+    if (name.isEmpty || duration <= 0 || calories <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(t('please_fill_valid_fields')),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _saving = true);
+    try {
+      await ref.read(dashboardProvider.notifier).logExercise(
+            name: name,
+            durationMinutes: duration,
+            caloriesBurned: calories,
+          );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            t('logged_kcal_burned').replaceAll('{calories}', '$calories'),
+          ),
+          backgroundColor: AppColors.primaryDark,
+        ),
+      );
+      Navigator.of(context).pop();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(t('failed_save_exercise')),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final lang = ref.watch(localeProvider);
+    String t(String k) => Translations.t(lang, k);
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Manual Entry', style: AppTextStyles.sectionHeader),
+        title: Text(t('manual_entry'), style: AppTextStyles.sectionHeader),
         backgroundColor: AppColors.surface,
         elevation: 0,
         iconTheme: const IconThemeData(color: AppColors.textPrimary),
@@ -20,11 +92,21 @@ class ManualExerciseScreen extends StatelessWidget {
         child: Column(
           children: [
             const SizedBox(height: 20),
-            _buildField('Exercise Name', 'e.g., Zumba class'),
+            _buildField(t('exercise_name'), t('exercise_name_hint'), _nameController),
             const SizedBox(height: 16),
-            _buildField('Duration (minutes)', '45', isNumber: true),
+            _buildField(
+              t('duration_minutes'),
+              '45',
+              _durationController,
+              isNumber: true,
+            ),
             const SizedBox(height: 16),
-            _buildField('Calories Burned', '320', isNumber: true),
+            _buildField(
+              t('calories_burned'),
+              '320',
+              _caloriesController,
+              isNumber: true,
+            ),
             const Spacer(),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
@@ -34,15 +116,24 @@ class ManualExerciseScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(999),
                 ),
               ),
-              onPressed: () {},
-              child: const Text(
-                'Save Entry',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 16,
-                ),
-              ),
+              onPressed: _saving ? null : _save,
+              child: _saving
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Text(
+                      t('save_entry'),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
+                      ),
+                    ),
             ),
             const SizedBox(height: 20),
           ],
@@ -51,7 +142,12 @@ class ManualExerciseScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildField(String label, String hint, {bool isNumber = false}) {
+  Widget _buildField(
+    String label,
+    String hint,
+    TextEditingController controller, {
+    bool isNumber = false,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -71,6 +167,7 @@ class ManualExerciseScreen extends StatelessWidget {
             border: Border.all(color: AppColors.border),
           ),
           child: TextField(
+            controller: controller,
             keyboardType: isNumber ? TextInputType.number : TextInputType.text,
             decoration: InputDecoration(
               border: InputBorder.none,

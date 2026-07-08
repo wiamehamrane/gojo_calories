@@ -51,6 +51,30 @@ class LanguageScreen extends ConsumerWidget {
             currentLang: lang,
             ref: ref,
           ),
+          const SizedBox(height: 10),
+          _LangOption(
+            code: 'es',
+            label: 'Español',
+            native: 'Español',
+            currentLang: lang,
+            ref: ref,
+          ),
+          const SizedBox(height: 10),
+          _LangOption(
+            code: 'nl',
+            label: 'Nederlands',
+            native: 'Nederlands',
+            currentLang: lang,
+            ref: ref,
+          ),
+          const SizedBox(height: 10),
+          _LangOption(
+            code: 'pt',
+            label: 'Português',
+            native: 'Português',
+            currentLang: lang,
+            ref: ref,
+          ),
         ],
       ),
     );
@@ -90,11 +114,7 @@ class _LangOption extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
           children: [
-            // Flag emoji
-            Text(
-              code == 'en' ? '🇬🇧' : (code == 'fr' ? '🇫🇷' : '🇲🇦'),
-              style: const TextStyle(fontSize: 28),
-            ),
+            _LanguageFlag(code: code),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -132,5 +152,103 @@ class _LangOption extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// Emoji flags render as broken boxes on many Android devices (each regional
+/// indicator shows separately). Use simple painted badges instead.
+class _LanguageFlag extends StatelessWidget {
+  final String code;
+  const _LanguageFlag({required this.code});
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: SizedBox(width: 36, height: 28, child: _buildFlag()),
+    );
+  }
+
+  Widget _buildFlag() {
+    switch (code) {
+      case 'fr':
+        return const Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(child: ColoredBox(color: Color(0xFF002395))),
+            Expanded(child: ColoredBox(color: Colors.white)),
+            Expanded(child: ColoredBox(color: Color(0xFFED2939))),
+          ],
+        );
+      case 'ar':
+        return Container(
+          color: const Color(0xFFC1272D),
+          alignment: Alignment.center,
+          child: const Text(
+            '★',
+            style: TextStyle(
+              color: Color(0xFF006233),
+              fontSize: 14,
+              height: 1,
+            ),
+          ),
+        );
+      case 'es':
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              flex: 2,
+              child: Container(color: const Color(0xFFAA151B)),
+            ),
+            Expanded(
+              flex: 1,
+              child: Container(color: const Color(0xFFF1BF00)),
+            ),
+            Expanded(
+              flex: 2,
+              child: Container(color: const Color(0xFFAA151B)),
+            ),
+          ],
+        );
+      case 'nl':
+        return const Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(child: ColoredBox(color: Color(0xFFAE1C28))),
+            Expanded(child: ColoredBox(color: Colors.white)),
+            Expanded(child: ColoredBox(color: Color(0xFF21468B))),
+          ],
+        );
+      case 'pt':
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              flex: 2,
+              child: Container(color: const Color(0xFF006600)),
+            ),
+            Expanded(
+              flex: 3,
+              child: Container(color: const Color(0xFFFF0000)),
+            ),
+          ],
+        );
+      case 'en':
+      default:
+        return Container(
+          color: const Color(0xFF012169),
+          alignment: Alignment.center,
+          child: const Text(
+            'EN',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              height: 1,
+            ),
+          ),
+        );
+    }
   }
 }

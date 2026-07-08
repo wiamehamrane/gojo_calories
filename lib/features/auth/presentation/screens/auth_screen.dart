@@ -3,12 +3,12 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gojocalories/core/theme/app_colors.dart';
 import 'package:gojocalories/core/di/repository_providers.dart';
 import 'package:gojocalories/features/auth/data/repositories/auth_repository.dart';
 import 'package:gojocalories/core/routing/route_paths.dart';
+import 'package:gojocalories/core/routing/app_navigation.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
@@ -26,6 +26,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
   bool _isLoading = false;
   bool _obscurePass = true;
   bool _agreedToPrivacy = false;
+  bool _showEmailSheet = false;
 
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
@@ -36,6 +37,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
   void initState() {
     super.initState();
     _tab = TabController(length: 2, vsync: this);
+    _tab.addListener(() => setState(() {}));
   }
 
   @override
@@ -64,16 +66,16 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
         return;
       }
       if (data['current_weight'] == null) {
-        context.go(RoutePaths.weightSetup);
+        AppNavigation.goToWeightSetup(context: context);
       } else if (data['has_paid'] != true) {
-        context.go(RoutePaths.paywall);
+        AppNavigation.goToPaywall(context: context);
       } else {
         await auth.setOnboarded(true);
         if (!mounted) return;
         context.go(RoutePaths.home);
       }
     } catch (e) {
-      if (mounted) context.go(RoutePaths.weightSetup);
+      if (mounted) AppNavigation.goToWeightSetup(context: context);
     }
   }
 
@@ -162,7 +164,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
       );
       final account = await GoogleSignIn.instance.authenticate();
       final auth = account.authentication;
-      final token = await ref.read(authRepositoryProvider).googleLogin(auth.idToken!);
+      final token =
+          await ref.read(authRepositoryProvider).googleLogin(auth.idToken!);
       await _handleLoginSuccess(token);
     } catch (e) {
       _showError('Failed to sign in with Google: $e');
@@ -182,7 +185,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
         webAuthenticationOptions: WebAuthenticationOptions(
           clientId: 'com.gojocalories.gojocalories.web',
           redirectUri: Uri.parse(
-              'https://api.gojocalories.com/callbacks/sign_in_with_apple'),
+            'https://api.gojocalories.com/callbacks/sign_in_with_apple',
+          ),
         ),
       );
       final token = await ref.read(authRepositoryProvider).appleLogin(
@@ -202,373 +206,532 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
     }
   }
 
+  void _openEmailSheet() {
+    FocusScope.of(context).unfocus();
+    setState(() => _showEmailSheet = true);
+  }
+
+  void _closeEmailSheet() {
+    FocusScope.of(context).unfocus();
+    setState(() => _showEmailSheet = false);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final bottom = MediaQuery.of(context).viewInsets.bottom;
     return Scaffold(
-      backgroundColor: Colors.white,
+      resizeToAvoidBottomInset: false,
+      backgroundColor:
+          _showEmailSheet ? const Color(0xFFB5B5B5) : const Color(0xFFF7F7F7),
       body: Stack(
         children: [
-          // Removed decorative blobs as per white-theme request
-
           SafeArea(
             child: GestureDetector(
               onTap: () => FocusScope.of(context).unfocus(),
-              child: SingleChildScrollView(
-                padding: EdgeInsets.fromLTRB(24, 32, 24, 24 + bottom),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Logo + wordmark
-                    Row(
+              child: Column(
+                children: [
+                  const Spacer(flex: 3),
+                  const Text(
+                    'GojoCalories',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textPrimary,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  const Spacer(flex: 4),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 48),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Center(
-                            child: Text('🥑', style: const TextStyle(fontSize: 22)),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Text(
-                          'GojoCalories',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.primaryDark,
-                            letterSpacing: -0.3,
-                          ),
-                        ),
-                      ],
-                    ).animate().fadeIn(duration: 500.ms),
-
-                    const SizedBox(height: 40),
-
-                    Text(
-                          'Your nutrition,\nperfectly tracked.',
-                          style: const TextStyle(
-                            fontSize: 34,
-                            fontWeight: FontWeight.w800,
+                        _SocialCircleButton(
+                          onTap: _isLoading ? null : _signInWithApple,
+                          child: const Icon(
+                            Icons.apple,
+                            size: 28,
                             color: AppColors.textPrimary,
-                            height: 1.15,
-                            letterSpacing: -0.8,
-                          ),
-                        )
-                        .animate()
-                        .slideY(
-                          begin: 0.15,
-                          duration: 500.ms,
-                          curve: Curves.easeOutQuad,
-                        )
-                        .fadeIn(),
-
-                    const SizedBox(height: 8),
-
-                    Text(
-                      'AI-powered calorie tracking with a 3-day free trial.',
-                      style: const TextStyle(
-                        fontSize: 15,
-                        color: AppColors.textSecondary,
-                        height: 1.5,
-                      ),
-                    ).animate().fadeIn(delay: 100.ms),
-
-                    const SizedBox(height: 36),
-
-                    // Tab selector
-                    Container(
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceMuted,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: TabBar(
-                        controller: _tab,
-                        indicator: BoxDecoration(
-                          color: AppColors.primaryDark,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        indicatorSize: TabBarIndicatorSize.tab,
-                        dividerColor: Colors.transparent,
-                        labelColor: Colors.white,
-                        unselectedLabelColor: AppColors.textSecondary,
-                        labelStyle: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        tabs: const [
-                          Tab(text: 'Create Account'),
-                          Tab(text: 'Log In'),
-                        ],
-                        onTap: (_) => setState(() {}),
-                      ),
-                    ).animate().fadeIn(delay: 150.ms),
-
-                    const SizedBox(height: 24),
-
-                    // Form card
-                    Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: AppColors.surface,
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: AppColors.border),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.04),
-                                blurRadius: 16,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            children: [
-                              // Name field removed as per user request
-
-                              _buildField(
-                                controller: _emailCtrl,
-                                focusNode: _emailFocus,
-                                label: 'Email',
-                                hint: 'you@example.com',
-                                icon: Icons.mail_outline_rounded,
-                                keyboardType: TextInputType.emailAddress,
-                                textInputAction: TextInputAction.next,
-                                onSubmitted: (_) => FocusScope.of(
-                                  context,
-                                ).requestFocus(_passFocus),
-                              ),
-
-                              const SizedBox(height: 14),
-
-                              _buildField(
-                                controller: _passwordCtrl,
-                                focusNode: _passFocus,
-                                label: 'Password',
-                                hint: '••••••••',
-                                icon: Icons.lock_outline_rounded,
-                                obscure: _obscurePass,
-                                textInputAction: _tab.index == 0
-                                    ? TextInputAction.next
-                                    : TextInputAction.done,
-                                onSubmitted: (_) => _tab.index == 0
-                                    ? FocusScope.of(context).nextFocus()
-                                    : _submitEmail(),
-                                suffix: GestureDetector(
-                                  onTap: () => setState(
-                                    () => _obscurePass = !_obscurePass,
-                                  ),
-                                  child: Icon(
-                                    _obscurePass
-                                        ? Icons.visibility_off_outlined
-                                        : Icons.visibility_outlined,
-                                    color: AppColors.textSecondary,
-                                    size: 20,
-                                  ),
-                                ),
-                              ),
-
-                              if (_tab.index == 0)
-                                Padding(
-                                  padding: const EdgeInsets.only(
-                                    top: 6,
-                                    bottom: 20,
-                                  ),
-                                  child: Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: Checkbox(
-                                          value: _agreedToPrivacy,
-                                          onChanged: (val) {
-                                            setState(() {
-                                              _agreedToPrivacy = val ?? false;
-                                            });
-                                          },
-                                          activeColor: AppColors.primary,
-                                          side: const BorderSide(
-                                            color: AppColors.textPlaceholder,
-                                            width: 1.5,
-                                          ),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              4,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: GestureDetector(
-                                          onTap: () => launchUrl(
-                                            Uri.parse(
-                                              'https://gojocalories.com/privacy-policy',
-                                            ),
-                                          ),
-                                          child: const Text.rich(
-                                            TextSpan(
-                                              text:
-                                                  'I agree to the Terms of Use & ',
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: AppColors.textSecondary,
-                                                height: 1.4,
-                                              ),
-                                              children: [
-                                                TextSpan(
-                                                  text: 'Privacy Policy.',
-                                                  style: TextStyle(
-                                                    color:
-                                                        AppColors.primaryDark,
-                                                    decoration: TextDecoration
-                                                        .underline,
-                                                    fontWeight: FontWeight.w600,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                )
-                              else
-                                Padding(
-                                  padding: const EdgeInsets.only(bottom: 20),
-                                  child: Center(
-                                    child: GestureDetector(
-                                      onTap: () => launchUrl(
-                                        Uri.parse(
-                                          'https://gojocalories.com/privacy-policy',
-                                        ),
-                                      ),
-                                      child: const Text.rich(
-                                        TextSpan(
-                                          text:
-                                              'By logging in you agree to our Terms & ',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: AppColors.textSecondary,
-                                            height: 1.4,
-                                          ),
-                                          children: [
-                                            TextSpan(
-                                              text: 'Privacy Policy.',
-                                              style: TextStyle(
-                                                color: AppColors.primaryDark,
-                                                decoration:
-                                                    TextDecoration.underline,
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        textAlign: TextAlign.center,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-
-                              // Primary CTA
-                              _PrimaryButton(
-                                label: _tab.index == 0
-                                    ? 'Create Account'
-                                    : 'Log In',
-                                isLoading: _isLoading,
-                                onTap: _submitEmail,
-                              ),
-                            ],
-                          ),
-                        )
-                        .animate()
-                        .slideY(
-                          begin: 0.1,
-                          delay: 200.ms,
-                          duration: 500.ms,
-                          curve: Curves.easeOutQuad,
-                        )
-                        .fadeIn(),
-
-                    const SizedBox(height: 20),
-
-                    // Divider
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Divider(color: AppColors.border, height: 1),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          child: Text(
-                            'or continue with',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: AppColors.textSecondary,
-                            ),
                           ),
                         ),
-                        Expanded(
-                          child: Divider(color: AppColors.border, height: 1),
-                        ),
-                      ],
-                    ).animate().fadeIn(delay: 300.ms),
-
-                    const SizedBox(height: 16),
-
-                    // Social buttons row
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _SocialButton(
-                            label: 'Google',
-                            icon: _googleIcon(),
-                            onTap: _signInWithGoogle,
+                        const SizedBox(width: 20),
+                        _SocialCircleButton(
+                          onTap: _isLoading ? null : _signInWithGoogle,
+                          child: SvgPicture.asset(
+                            'assets/icons/google_logo.svg',
+                            width: 24,
+                            height: 24,
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        // Apple Sign in ONLY on iOS/macOS typically, but we can leave it for both if testing
-                        Expanded(
-                          child: _SocialButton(
-                            label: 'Apple',
-                            icon: const Icon(
-                              Icons.apple_rounded,
-                              size: 20,
-                              color: AppColors.textPrimary,
-                            ),
-                            onTap: _signInWithApple,
+                        const SizedBox(width: 20),
+                        _SocialCircleButton(
+                          onTap: _isLoading ? null : _openEmailSheet,
+                          child: const Icon(
+                            Icons.mail_outline,
+                            size: 24,
+                            color: AppColors.textPrimary,
                           ),
                         ),
                       ],
-                    ).animate().fadeIn(delay: 350.ms),
-                  ],
-                ),
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    child: _LegalFooter(
+                      onTermsTap: () => launchUrl(
+                        Uri.parse('https://gojocalories.com/terms'),
+                      ),
+                      onPrivacyTap: () => launchUrl(
+                        Uri.parse('https://gojocalories.com/privacy-policy'),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 24 + MediaQuery.of(context).padding.bottom),
+                ],
               ),
             ),
           ),
+
+          if (_showEmailSheet)
+            GestureDetector(
+              onTap: _closeEmailSheet,
+              child: Container(color: Colors.black.withValues(alpha: 0.08)),
+            ),
+
+          if (_showEmailSheet)
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: GestureDetector(
+                onTap: () {},
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.92,
+                  ),
+                  child: _EmailAuthSheet(
+                    tabController: _tab,
+                    emailCtrl: _emailCtrl,
+                    passwordCtrl: _passwordCtrl,
+                    emailFocus: _emailFocus,
+                    passFocus: _passFocus,
+                    obscurePass: _obscurePass,
+                    agreedToPrivacy: _agreedToPrivacy,
+                    isLoading: _isLoading,
+                    onToggleObscure: () =>
+                        setState(() => _obscurePass = !_obscurePass),
+                    onAgreedChanged: (v) =>
+                        setState(() => _agreedToPrivacy = v),
+                    onSubmit: _submitEmail,
+                    onPrivacyTap: () => launchUrl(
+                      Uri.parse('https://gojocalories.com/privacy-policy'),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+          if (_isLoading)
+            Container(
+              color: Colors.black.withValues(alpha: 0.12),
+              child: const Center(
+                child: CircularProgressIndicator(color: AppColors.primaryDark),
+              ),
+            ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildField({
-    required TextEditingController controller,
-    FocusNode? focusNode,
-    required String label,
-    required String hint,
-    required IconData icon,
-    TextInputType keyboardType = TextInputType.text,
-    TextInputAction textInputAction = TextInputAction.next,
-    bool obscure = false,
-    Widget? suffix,
-    void Function(String)? onSubmitted,
-  }) {
+class _SocialCircleButton extends StatelessWidget {
+  final Widget child;
+  final VoidCallback? onTap;
+
+  const _SocialCircleButton({required this.child, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 64,
+        height: 64,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          border: Border.all(color: const Color(0xFFE0E0E0)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Center(child: child),
+      ),
+    );
+  }
+}
+
+class _LegalFooter extends StatelessWidget {
+  final VoidCallback onTermsTap;
+  final VoidCallback onPrivacyTap;
+
+  const _LegalFooter({
+    required this.onTermsTap,
+    required this.onPrivacyTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        const Text(
+          'By continuing, you agree to our',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 12,
+            color: AppColors.textSecondary,
+            height: 1.4,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Wrap(
+          alignment: WrapAlignment.center,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            GestureDetector(
+              onTap: onTermsTap,
+              child: const Text(
+                'Terms of Service',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textPrimary,
+                  decoration: TextDecoration.underline,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            const Text(
+              ' and ',
+              style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+            ),
+            GestureDetector(
+              onTap: onPrivacyTap,
+              child: const Text(
+                'Privacy Policy',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textPrimary,
+                  decoration: TextDecoration.underline,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _EmailAuthSheet extends StatelessWidget {
+  final TabController tabController;
+  final TextEditingController emailCtrl;
+  final TextEditingController passwordCtrl;
+  final FocusNode emailFocus;
+  final FocusNode passFocus;
+  final bool obscurePass;
+  final bool agreedToPrivacy;
+  final bool isLoading;
+  final VoidCallback onToggleObscure;
+  final ValueChanged<bool> onAgreedChanged;
+  final VoidCallback onSubmit;
+  final VoidCallback onPrivacyTap;
+
+  const _EmailAuthSheet({
+    required this.tabController,
+    required this.emailCtrl,
+    required this.passwordCtrl,
+    required this.emailFocus,
+    required this.passFocus,
+    required this.obscurePass,
+    required this.agreedToPrivacy,
+    required this.isLoading,
+    required this.onToggleObscure,
+    required this.onAgreedChanged,
+    required this.onSubmit,
+    required this.onPrivacyTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isCreate = tabController.index == 0;
+    final keyboardInset = MediaQuery.of(context).viewInsets.bottom;
+
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: AnimatedPadding(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+          padding: EdgeInsets.only(bottom: keyboardInset),
+          child: SingleChildScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+            child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFD0D0D0),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              _AnimatedAuthTabBar(tabController: tabController),
+              const SizedBox(height: 24),
+              _AuthField(
+                label: 'Email',
+                controller: emailCtrl,
+                focusNode: emailFocus,
+                hint: 'you@example.com',
+                icon: Icons.mail_outline,
+                keyboardType: TextInputType.emailAddress,
+                textInputAction: TextInputAction.next,
+                onSubmitted: (_) => FocusScope.of(context).requestFocus(passFocus),
+              ),
+              const SizedBox(height: 16),
+              _AuthField(
+                label: 'Password',
+                controller: passwordCtrl,
+                focusNode: passFocus,
+                hint: '••••••••',
+                icon: Icons.lock_outline,
+                obscure: obscurePass,
+                textInputAction:
+                    isCreate ? TextInputAction.next : TextInputAction.done,
+                onSubmitted: (_) => onSubmit(),
+                suffix: GestureDetector(
+                  onTap: onToggleObscure,
+                  child: Icon(
+                    obscurePass
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined,
+                    color: AppColors.textSecondary,
+                    size: 20,
+                  ),
+                ),
+              ),
+              if (isCreate) ...[
+                const SizedBox(height: 14),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: Checkbox(
+                        value: agreedToPrivacy,
+                        onChanged: (val) => onAgreedChanged(val ?? false),
+                        activeColor: AppColors.primary,
+                        side: const BorderSide(
+                          color: AppColors.textPlaceholder,
+                          width: 1.5,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: onPrivacyTap,
+                        child: Text.rich(
+                          TextSpan(
+                            text: 'I agree to the Terms of Use & ',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textSecondary,
+                              height: 1.4,
+                            ),
+                            children: [
+                              TextSpan(
+                                text: 'Privacy Policy',
+                                style: TextStyle(
+                                  color: AppColors.primary,
+                                  decoration: TextDecoration.underline,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              const SizedBox(height: 20),
+              _PrimaryButton(
+                label: isCreate ? 'Create Account' : 'Log In',
+                isLoading: isLoading,
+                onTap: onSubmit,
+              ),
+            ],
+          ),
+        ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AnimatedAuthTabBar extends StatelessWidget {
+  final TabController tabController;
+
+  const _AnimatedAuthTabBar({required this.tabController});
+
+  static const _duration = Duration(milliseconds: 320);
+  static const _curve = Curves.easeInOutCubic;
+
+  void _selectTab(int index) {
+    if (tabController.index == index) return;
+    tabController.animateTo(index, duration: _duration, curve: _curve);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final tabWidth = (constraints.maxWidth - 6) / 2;
+
+        return Container(
+          height: 44,
+          padding: const EdgeInsets.all(3),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF0F0F0),
+            borderRadius: BorderRadius.circular(22),
+          ),
+          child: AnimatedBuilder(
+            animation: tabController.animation!,
+            builder: (context, child) {
+              final position = tabController.animation!.value;
+
+              return Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Positioned(
+                    left: position * tabWidth,
+                    width: tabWidth,
+                    top: 0,
+                    bottom: 0,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: AppColors.primary,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primary.withValues(alpha: 0.25),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () => _selectTab(0),
+                          child: Center(
+                            child: Text(
+                              'Create Account',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Color.lerp(
+                                  AppColors.textPrimary,
+                                  AppColors.textSecondary,
+                                  position,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () => _selectTab(1),
+                          child: Center(
+                            child: Text(
+                              'Log In',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Color.lerp(
+                                  AppColors.textSecondary,
+                                  AppColors.textPrimary,
+                                  position,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _AuthField extends StatelessWidget {
+  final String label;
+  final TextEditingController controller;
+  final FocusNode? focusNode;
+  final String hint;
+  final IconData icon;
+  final TextInputType keyboardType;
+  final TextInputAction textInputAction;
+  final bool obscure;
+  final Widget? suffix;
+  final void Function(String)? onSubmitted;
+
+  const _AuthField({
+    required this.label,
+    required this.controller,
+    this.focusNode,
+    required this.hint,
+    required this.icon,
+    this.keyboardType = TextInputType.text,
+    this.textInputAction = TextInputAction.next,
+    this.obscure = false,
+    this.suffix,
+    this.onSubmitted,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -576,16 +739,15 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
           label,
           style: const TextStyle(
             fontSize: 13,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w700,
             color: AppColors.textPrimary,
           ),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 8),
         Container(
           decoration: BoxDecoration(
-            color: AppColors.background,
+            color: const Color(0xFFF0F0F0),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.border),
           ),
           child: Row(
             children: [
@@ -616,8 +778,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                 ),
               ),
               if (suffix != null) ...[
-                const SizedBox(width: 6),
-                suffix,
+                suffix!,
                 const SizedBox(width: 14),
               ],
             ],
@@ -626,22 +787,13 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
       ],
     );
   }
-
-  Widget _googleIcon() {
-    return SvgPicture.asset(
-      'assets/icons/google_logo.svg',
-      width: 20,
-      height: 20,
-    );
-  }
 }
-
-// ─── Reusable Widgets ─────────────────────────────────────────────────────────
 
 class _PrimaryButton extends StatelessWidget {
   final String label;
   final bool isLoading;
   final VoidCallback onTap;
+
   const _PrimaryButton({
     required this.label,
     required this.isLoading,
@@ -657,16 +809,9 @@ class _PrimaryButton extends StatelessWidget {
         height: 52,
         decoration: BoxDecoration(
           color: isLoading
-              ? AppColors.primaryDark.withValues(alpha: 0.7)
-              : AppColors.primaryDark,
+              ? AppColors.primary.withValues(alpha: 0.7)
+              : AppColors.primary,
           borderRadius: BorderRadius.circular(14),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primaryDark.withValues(alpha: 0.3),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
         ),
         child: Center(
           child: isLoading
@@ -686,47 +831,6 @@ class _PrimaryButton extends StatelessWidget {
                     color: Colors.white,
                   ),
                 ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SocialButton extends StatelessWidget {
-  final String label;
-  final Widget icon;
-  final VoidCallback onTap;
-  const _SocialButton({
-    required this.label,
-    required this.icon,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 50,
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            icon,
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
-              ),
-            ),
-          ],
         ),
       ),
     );

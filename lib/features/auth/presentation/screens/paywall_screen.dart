@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,6 +10,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'package:gojocalories/features/auth/presentation/providers/iap_provider.dart';
 import 'package:gojocalories/features/auth/data/services/iap_service.dart';
+import 'package:gojocalories/core/localization/locale_provider.dart';
+import 'package:gojocalories/core/localization/translations.dart';
 
 class PaywallScreen extends ConsumerStatefulWidget {
   const PaywallScreen({super.key});
@@ -45,10 +48,13 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
         _onPurchaseSuccess(iapStatus.state == IAPState.restored);
         break;
       case IAPState.error:
-        if (iapStatus.errorMessage != null) {
+        final msg = iapStatus.errorMessage;
+        if (msg != null &&
+            !msg.toLowerCase().contains('cancel') &&
+            !(kDebugMode && msg.toLowerCase().contains('storekit'))) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(iapStatus.errorMessage!),
+              content: Text(msg),
               backgroundColor: Colors.redAccent,
               duration: const Duration(seconds: 4),
             ),
@@ -85,10 +91,11 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
   }
 
   Future<void> _handlePurchase() async {
+    final lang = ref.read(localeProvider);
     if (_selectedProductId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select a plan'),
+        SnackBar(
+          content: Text(Translations.t(lang, 'please_select_plan')),
           backgroundColor: Colors.orange,
         ),
       );
@@ -99,6 +106,42 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
       (p) => p.id == _selectedProductId,
     );
     await _iapService.buySubscription(product);
+  }
+
+  Widget _buildPlansUnavailable({
+    required String message,
+    required VoidCallback onRetry,
+    required String lang,
+  }) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            const Icon(
+              LucideIcons.circleAlert,
+              color: Colors.redAccent,
+              size: 32,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.redAccent,
+                fontSize: 14,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextButton(
+              onPressed: onRetry,
+              child: Text(Translations.t(lang, 'retry')),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _handleRestore() async {
@@ -114,6 +157,8 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final lang = ref.watch(localeProvider);
+    String t(String k) => Translations.t(lang, k);
     // Design Tokens
     const Color background = Colors.white;
     const Color primaryDark = Color(0xFF1E3A1A);
@@ -121,6 +166,11 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
     const Color featureBg = Color(0xFFF8FDF7);
 
     final productsAsync = ref.watch(iapProductsProvider);
+    final plansFailed = productsAsync.hasError;
+    final hasProducts = productsAsync.maybeWhen(
+      data: (products) => products.isNotEmpty,
+      orElse: () => false,
+    );
 
     return Scaffold(
       backgroundColor: background,
@@ -139,257 +189,220 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
         ),
       ),
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Icon
-                      const Center(
-                        child: Text('🥑', style: TextStyle(fontSize: 48)),
-                      ).animate().scale(
-                            duration: 500.ms,
-                            curve: Curves.easeOutBack,
-                          ),
-                      const SizedBox(height: 24),
-
-                      // Headline
-                      const Text(
-                        'GojoCalories',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.w800,
-                          color: primaryDark,
-                          letterSpacing: -0.5,
-                        ),
-                      )
-                          .animate()
-                          .slideY(begin: 0.1, duration: 400.ms)
-                          .fadeIn(),
-                      const SizedBox(height: 8),
-
-                      // Subtitle
-                      const Text(
-                        'Your AI-Powered Nutrition Coach',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: primaryMedium,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ).animate().fadeIn(delay: 150.ms),
-                      const SizedBox(height: 40),
-
-                      // Feature List
-                      _buildFeatureRow(
-                        'AI Food Scanner',
-                        'Snap a photo, get instant calories & macros',
-                        featureBg,
-                        primaryMedium,
-                        200,
-                      ),
-                      _buildFeatureRow(
-                        'Smart Daily Tracking',
-                        'Stay on target with personalized goals',
-                        featureBg,
-                        primaryMedium,
-                        250,
-                      ),
-                      _buildFeatureRow(
-                        'Unlimited Meal History',
-                        'Track your journey, day by day',
-                        featureBg,
-                        primaryMedium,
-                        300,
-                      ),
-
-                      const SizedBox(height: 32),
-
-                      // Plan Selection Cards
-                      productsAsync.when(
-                        data: (products) {
-                          if (products.isEmpty) {
-                            return const Center(
-                              child: Padding(
-                                padding: EdgeInsets.all(16.0),
-                                child: Text(
-                                  'Subscription plans are loading...\nPlease try again shortly.',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: Color(0xFF6B8B67),
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ),
-                            );
-                          }
-
-                          // Auto-select yearly if nothing selected
-                          if (_selectedProductId == null) {
-                            WidgetsBinding.instance.addPostFrameCallback((_) {
-                              if (mounted) {
-                                setState(() {
-                                  _selectedProductId =
-                                      products.any(
-                                            (p) => p.id == kYearlyProductId,
-                                          )
-                                          ? kYearlyProductId
-                                          : products.first.id;
-                                });
-                              }
-                            });
-                          }
-
-                          return Column(
-                            children: products.map((product) {
-                              return _buildPlanCard(
-                                product: product,
-                                isSelected:
-                                    _selectedProductId == product.id,
-                                primaryDark: primaryDark,
-                                primaryMedium: primaryMedium,
-                                onTap: () {
-                                  setState(() {
-                                    _selectedProductId = product.id;
-                                  });
-                                },
-                              );
-                            }).toList(),
-                          );
-                        },
-                        loading: () => const Center(
-                          child: Padding(
-                            padding: EdgeInsets.all(24.0),
-                            child: CircularProgressIndicator(
-                              color: Color(0xFF1E3A1A),
-                            ),
-                          ),
-                        ),
-                        error: (e, _) => Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Column(
-                              children: [
-                                Icon(
-                                  LucideIcons.circleAlert,
-                                  color: Colors.redAccent,
-                                  size: 32,
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Could not load plans.\n${e.toString()}',
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(
-                                    color: Colors.redAccent,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                TextButton(
-                                  onPressed: () =>
-                                      ref.refresh(iapProductsProvider),
-                                  child: const Text('Retry'),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+              // Icon
+              const Center(
+                child: Text('🥑', style: TextStyle(fontSize: 48)),
+              ).animate().scale(
+                    duration: 500.ms,
+                    curve: Curves.easeOutBack,
                   ),
-                ),
-              ),
+              const SizedBox(height: 24),
 
-              const SizedBox(height: 16),
-
-              // CTA Button
-              ElevatedButton(
-                onPressed: _isProcessing ? null : _handlePurchase,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryDark,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 20),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  elevation: 0,
-                ),
-                child: _isProcessing
-                    ? const SizedBox(
-                        height: 24,
-                        width: 24,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : Text(
-                        _iapService.status.value.state == IAPState.verifying
-                            ? 'Verifying...'
-                            : 'Start Your Journey',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // Footer
+              // Headline
               const Text(
-                'Cancel anytime. No commitment.',
+                'GojoCalories',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 14, color: Colors.grey),
-              ),
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.w800,
+                  color: primaryDark,
+                  letterSpacing: -0.5,
+                ),
+              )
+                  .animate()
+                  .slideY(begin: 0.1, duration: 400.ms)
+                  .fadeIn(),
               const SizedBox(height: 8),
 
-              // Restore & Legal Links
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  GestureDetector(
-                    onTap: _isProcessing ? null : _handleRestore,
-                    child: const Text(
-                      'Restore Purchase',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey,
-                        decoration: TextDecoration.underline,
+              // Subtitle
+              const Text(
+                'Your AI-Powered Nutrition Coach',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: primaryMedium,
+                  fontWeight: FontWeight.w500,
+                ),
+              ).animate().fadeIn(delay: 150.ms),
+              const SizedBox(height: 32),
+
+              if (!plansFailed) ...[
+                _buildFeatureRow(
+                  'AI Food Scanner',
+                  'Snap a photo, get instant calories & macros',
+                  featureBg,
+                  primaryMedium,
+                  200,
+                ),
+                _buildFeatureRow(
+                  'Smart Daily Tracking',
+                  'Stay on target with personalized goals',
+                  featureBg,
+                  primaryMedium,
+                  250,
+                ),
+                _buildFeatureRow(
+                  'Unlimited Meal History',
+                  'Track your journey, day by day',
+                  featureBg,
+                  primaryMedium,
+                  300,
+                ),
+                const SizedBox(height: 24),
+              ],
+
+              // Plan Selection Cards
+              productsAsync.when(
+                data: (products) {
+                  if (products.isEmpty) {
+                    return const Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: Text(
+                        'Subscription plans are loading...\nPlease try again shortly.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Color(0xFF6B8B67),
+                          fontSize: 14,
+                        ),
+                      ),
+                    );
+                  }
+
+                  if (_selectedProductId == null) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted) {
+                        setState(() {
+                          _selectedProductId =
+                              products.any((p) => p.id == kYearlyProductId)
+                                  ? kYearlyProductId
+                                  : products.first.id;
+                        });
+                      }
+                    });
+                  }
+
+                  return Column(
+                    children: products.map((product) {
+                      return _buildPlanCard(
+                        product: product,
+                        isSelected: _selectedProductId == product.id,
+                        primaryDark: primaryDark,
+                        primaryMedium: primaryMedium,
+                        onTap: () {
+                          setState(() => _selectedProductId = product.id);
+                        },
+                      );
+                    }).toList(),
+                  );
+                },
+                loading: () => const Padding(
+                  padding: EdgeInsets.all(24.0),
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      color: Color(0xFF1E3A1A),
+                    ),
+                  ),
+                ),
+                error: (e, _) => _buildPlansUnavailable(
+                  message: e.toString().replaceFirst('Exception: ', ''),
+                  onRetry: () => ref.refresh(iapProductsProvider),
+                  lang: lang,
+                ),
+              ),
+
+              if (hasProducts) ...[
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: _isProcessing ? null : _handlePurchase,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryDark,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: _isProcessing
+                      ? const SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : Text(
+                          _iapService.status.value.state == IAPState.verifying
+                              ? 'Verifying...'
+                              : 'Start Your Journey',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                ),
+              ],
+
+              if (hasProducts) ...[
+                const SizedBox(height: 12),
+                const Text(
+                  'Cancel anytime. No commitment.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 14, color: Colors.grey),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: [
+                    GestureDetector(
+                      onTap: _isProcessing ? null : _handleRestore,
+                      child: Text(
+                        t('restore_purchases'),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                          decoration: TextDecoration.underline,
+                        ),
                       ),
                     ),
-                  ),
-                  const Text(
-                    '  |  ',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                  GestureDetector(
-                    onTap: () => launchUrl(Uri.parse('https://gojocalories.com/privacy')),
-                    child: const Text(
-                      'Privacy Policy',
-                      style: TextStyle(fontSize: 12, color: Colors.grey, decoration: TextDecoration.underline),
+                    GestureDetector(
+                      onTap: () => launchUrl(
+                        Uri.parse('https://gojocalories.com/privacy'),
+                      ),
+                      child: Text(
+                        t('privacy_policy'),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
                     ),
-                  ),
-                  const Text(
-                    '  |  ',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                  GestureDetector(
-                    onTap: () => launchUrl(Uri.parse('https://gojocalories.com/tos')),
-                    child: const Text(
-                      'Terms of Use (EULA)',
-                      style: TextStyle(fontSize: 12, color: Colors.grey, decoration: TextDecoration.underline),
+                    GestureDetector(
+                      onTap: () =>
+                          launchUrl(Uri.parse('https://gojocalories.com/tos')),
+                      child: const Text(
+                        'Terms of Use (EULA)',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
+                  ],
+                ),
+              ],
+              const SizedBox(height: 16),
             ],
           ),
         ),
@@ -459,12 +472,15 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                 children: [
                   Row(
                     children: [
-                      Text(
-                        label,
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: isSelected ? primaryDark : Colors.black87,
+                      Flexible(
+                        child: Text(
+                          label,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: isSelected ? primaryDark : Colors.black87,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       if (isYearly) ...[
@@ -503,12 +519,15 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
             ),
 
             // Price
-            Text(
-              product.price,
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                color: isSelected ? primaryDark : Colors.black87,
+            Flexible(
+              child: Text(
+                product.price,
+                textAlign: TextAlign.end,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: isSelected ? primaryDark : Colors.black87,
+                ),
               ),
             ),
           ],

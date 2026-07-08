@@ -21,6 +21,7 @@ optional_bearer = HTTPBearer(auto_error=False)
 
 GOOGLE_WEB_CLIENT_ID = os.getenv("GOOGLE_WEB_CLIENT_ID", "dummy_if_not_set")
 GOOGLE_IOS_CLIENT_ID = "980076580409-4d78u72lc8o7aqfuoinvd72dk2tr27co.apps.googleusercontent.com"
+DEV_MODE = os.getenv("DEV_MODE", "false").lower() == "true"
 
 def _generate_code(length: int = 6) -> str:
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
@@ -28,11 +29,19 @@ def _generate_code(length: int = 6) -> str:
 def _generate_otp() -> str:
     return ''.join(random.choices(string.digits, k=6))
 
-def _set_verification_code(user: User, background_tasks: BackgroundTasks):
+def _set_verification_code(user: User) -> str:
     otp = _generate_otp()
     user.verification_code = otp
     user.verification_code_expires_at = datetime.datetime.utcnow() + datetime.timedelta(minutes=15)
-    background_tasks.add_task(email_service.send_verification_code_email, user.email, otp)
+    return otp
+
+
+def _deliver_verification_code(user: User) -> None:
+    otp = _set_verification_code(user)
+    try:
+        email_service.send_verification_code_email_or_raise(user.email, otp)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 def _get_optional_user_id(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(optional_bearer),
@@ -132,9 +141,24 @@ def register(user: UserCreate, background_tasks: BackgroundTasks, db: Session = 
         db.add(referral_record)
         db.commit()
     
-    new_user.is_email_verified = False
-    _set_verification_code(new_user, background_tasks)
+    new_user.is_email_verified = DEV_MODE
+    if DEV_MODE:
+        new_user.verification_code = None
+        new_user.verification_code_expires_at = None
+    else:
+        _deliver_verification_code(new_user)
     db.commit()
+
+    if DEV_MODE:
+        access_token = create_access_token(data={"sub": str(new_user.id)})
+        return {
+            "status": "success",
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user_id": new_user.id,
+            "name": new_user.name,
+            "referral_code": new_user.referral_code,
+        }
 
     return {
         "status": "success",
@@ -151,7 +175,7 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
     if not db_user or not verify_password(user.password, db_user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    if not db_user.is_email_verified:
+    if not db_user.is_email_verified and not DEV_MODE:
         raise HTTPException(status_code=403, detail="Email not verified")
     
     access_token = create_access_token(data={"sub": str(db_user.id)})
@@ -222,7 +246,7 @@ def resend_verification(
     if user.is_email_verified:
         return {"status": "success", "message": "Email already verified"}
 
-    _set_verification_code(user, background_tasks)
+    _deliver_verification_code(user)
     db.commit()
     return {"status": "success", "message": "Verification code sent"}
 

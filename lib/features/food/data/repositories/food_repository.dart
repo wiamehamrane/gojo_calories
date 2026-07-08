@@ -6,6 +6,12 @@ import '../../../../core/network/api_client.dart';
 class FoodRepository {
   final Dio _dio = ApiClient.instance;
 
+  /// Vision AI + image upload can take 30–60s on production (OpenAI + S3).
+  static final _visionOptions = Options(
+    sendTimeout: const Duration(seconds: 60),
+    receiveTimeout: const Duration(seconds: 90),
+  );
+
   Future<Map<String, dynamic>> analyzeImage(
     File image, {
     required String localDate,
@@ -20,6 +26,7 @@ class FoodRepository {
       'food/analyze',
       data: formData,
       queryParameters: {'local_date': localDate},
+      options: _visionOptions,
     );
     return res.data as Map<String, dynamic>;
   }
@@ -83,6 +90,7 @@ class FoodRepository {
     final res = await _dio.post(
       'food/analyze/fix',
       data: {'log_id': logId, 'prompt': prompt},
+      options: _visionOptions,
     );
     return res.data as Map<String, dynamic>;
   }

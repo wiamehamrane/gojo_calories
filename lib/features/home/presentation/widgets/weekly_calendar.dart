@@ -1,99 +1,162 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import '../../../../features/stats/presentation/providers/selected_date_provider.dart';
+import '../../../stats/presentation/providers/calendar_progress_provider.dart';
+import '../../../../core/localization/locale_provider.dart';
 import '../../../../core/theme/app_colors.dart';
-import 'dotted_circle_painter.dart';
+import 'calendar_day_colors.dart';
+import 'day_progress_ring.dart';
 
-class WeeklyCalendar extends ConsumerWidget {
+class WeeklyCalendar extends ConsumerStatefulWidget {
   const WeeklyCalendar({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final now = DateTime.now();
-    final selectedDate = ref.watch(selectedDateProvider);
-    final days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  ConsumerState<WeeklyCalendar> createState() => _WeeklyCalendarState();
+}
 
-    // Start of current week (Sunday)
-    final startOfWeek = now.subtract(Duration(days: now.weekday % 7));
+class _WeeklyCalendarState extends ConsumerState<WeeklyCalendar> {
+  static const _pastDays = 365;
+  static const _itemWidth = 52.0;
+
+  late final ScrollController _scrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollToDate(ref.read(selectedDateProvider), animate: false);
+    });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  DateTime _normalize(DateTime d) => DateTime(d.year, d.month, d.day);
+
+  DateTime get _today {
+    final now = DateTime.now();
+    return DateTime(now.year, now.month, now.day);
+  }
+
+  DateTime _startDate() => _today.subtract(const Duration(days: _pastDays));
+
+  DateTime _dateAtIndex(int index) => _startDate().add(Duration(days: index));
+
+  int _indexForDate(DateTime date) {
+    final diff = _normalize(date).difference(_startDate()).inDays;
+    return diff.clamp(0, _pastDays);
+  }
+
+  bool _sameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
+  void _scrollToDate(DateTime date, {bool animate = true}) {
+    if (!_scrollController.hasClients) return;
+
+    final index = _indexForDate(date);
+    final viewport = MediaQuery.of(context).size.width;
+    final offset =
+        (index * _itemWidth) - (viewport / 2) + (_itemWidth / 2);
+    final max = _scrollController.position.maxScrollExtent;
+    final target = offset.clamp(0.0, max);
+
+    if (animate) {
+      _scrollController.animateTo(
+        target,
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOutCubic,
+      );
+    } else {
+      _scrollController.jumpTo(target);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final selectedDate = ref.watch(selectedDateProvider);
+    final progressAsync = ref.watch(calendarProgressProvider);
+    final progressMap =
+        progressAsync.hasValue ? progressAsync.value : null;
+    final today = _today;
+    final lang = ref.watch(localeProvider);
+    final locale = toIntlLocale(lang);
+
+    ref.listen<DateTime>(selectedDateProvider, (previous, next) {
+      if (previous != null && !_sameDay(previous, next)) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _scrollToDate(next);
+        });
+      }
+    });
 
     return SizedBox(
       height: 72,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: List.generate(7, (i) {
-          final dayDate = startOfWeek.add(Duration(days: i));
-          final isSelected = dayDate.year == selectedDate.year &&
-              dayDate.month == selectedDate.month &&
-              dayDate.day == selectedDate.day;
-          final isFuture = dayDate.isAfter(now);
+      child: ListView.builder(
+        controller: _scrollController,
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        itemCount: _pastDays + 1,
+        itemBuilder: (context, index) {
+          final dayDate = _dateAtIndex(index);
+          final isSelected = _sameDay(dayDate, selectedDate);
+          final isToday = _sameDay(dayDate, today);
+          final dayLabel = DateFormat('EEE', locale).format(dayDate);
           final dayOfMonth = dayDate.day;
+          final dayColor = CalendarDayColors.forDate(dayDate);
+          final dayProgress = lookupCalendarProgress(progressMap, dayDate);
+          final progress = dayProgress?.progress ?? 0.0;
+          final isOverGoal = dayProgress?.isOverGoal ?? false;
+          final hasData = (dayProgress?.caloriesConsumed ?? 0) > 0;
 
-          Widget decorationWidget;
-          if (isSelected) {
-            decorationWidget = Container(
-              width: 36,
-              height: 36,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.primaryDark,
-              ),
-              child: Center(
-                child: Text(
-                  "$dayOfMonth",
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            );
-          } else {
-            decorationWidget = SizedBox(
-              width: 36,
-              height: 36,
-              child: CustomPaint(
-                painter: DottedCirclePainter(
-                  color: isFuture ? const Color(0xFFDDDDDD) : AppColors.inactive.withValues(alpha: 0.6),
-                  strokeWidth: 2.0,
-                  dashWidth: 4.0,
-                  dashSpace: 3.0,
-                ),
-                child: Center(
-                  child: Text(
-                    "$dayOfMonth",
+          return SizedBox(
+            width: _itemWidth,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {
+                ref.read(selectedDateProvider.notifier).setDate(dayDate);
+              },
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    dayLabel,
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: 11,
                       fontWeight: FontWeight.w700,
-                      color: isFuture ? AppColors.inactive : Colors.black, // pure black based on spec
+                      color: isSelected
+                          ? AppColors.textPrimary
+                          : const Color(0xFF6B6B6B),
                     ),
                   ),
-                ),
-              ),
-            );
-          }
-
-          return GestureDetector(
-            onTap: isFuture
-                ? null
-                : () => ref.read(selectedDateProvider.notifier).setDate(dayDate),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  days[i],
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: isSelected ? AppColors.textPrimary : (isFuture ? AppColors.inactive : const Color(0xFF6B6B6B)), // pure grey
+                  const SizedBox(height: 6),
+                  DayProgressRing(
+                    dayOfMonth: dayOfMonth,
+                    progress: progress,
+                    isOverGoal: isOverGoal,
+                    isSelected: isSelected,
+                    dayColor: dayColor,
+                    hasData: hasData,
                   ),
-                ),
-                const SizedBox(height: 6),
-                decorationWidget,
-              ],
+                  if (isToday && !isSelected)
+                    Container(
+                      margin: const EdgeInsets.only(top: 4),
+                      width: 4,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: dayColor,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                ],
+              ),
             ),
           );
-        }),
+        },
       ),
     );
   }

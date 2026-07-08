@@ -4,6 +4,8 @@ class Event {
   final String title;
   final String? description;
   final String eventType;
+  /// Who can attend: `female`, `male`, or `mixed`.
+  final String audience;
   final String? locationName;
   final double? latitude;
   final double? longitude;
@@ -21,6 +23,7 @@ class Event {
     required this.title,
     this.description,
     required this.eventType,
+    this.audience = 'mixed',
     this.locationName,
     this.latitude,
     this.longitude,
@@ -40,6 +43,7 @@ class Event {
       title: json['title'] as String,
       description: json['description'] as String?,
       eventType: json['event_type'] as String,
+      audience: (json['audience'] as String?)?.toLowerCase() ?? 'mixed',
       locationName: json['location_name'] as String?,
       latitude: json['latitude'] != null ? (json['latitude'] as num).toDouble() : null,
       longitude: json['longitude'] != null ? (json['longitude'] as num).toDouble() : null,
@@ -60,6 +64,7 @@ class Event {
       'title': title,
       'description': description,
       'event_type': eventType,
+      'audience': audience,
       'location_name': locationName,
       'latitude': latitude,
       'longitude': longitude,

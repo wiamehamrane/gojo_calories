@@ -20,11 +20,18 @@ class AppErrorHandler {
           if (statusCode == 401) {
             return 'Your session has expired. Please sign in again.';
           }
+          if (statusCode == 404 && error.requestOptions.path.contains('auth/me')) {
+            return 'Your account was not found. Please sign in again.';
+          }
           if (statusCode == 404) {
             return 'The requested information was not found.';
           }
           if (statusCode == 400 && detail != null) return detail.toString();
+          if (statusCode == 503 && detail != null) return detail.toString();
           if (statusCode != null && statusCode >= 500) {
+            if (detail != null && detail.toString().isNotEmpty) {
+              return detail.toString();
+            }
             return 'Server error. Please try again later.';
           }
           return detail?.toString() ?? 'An unexpected error occurred.';

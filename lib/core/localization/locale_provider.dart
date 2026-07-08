@@ -33,7 +33,31 @@ Locale toFlutterLocale(String code) {
       return const Locale('fr');
     case 'ar':
       return const Locale('ar');
+    case 'es':
+      return const Locale('es');
+    case 'nl':
+      return const Locale('nl');
+    case 'pt':
+      return const Locale('pt');
     default:
       return const Locale('en');
+  }
+}
+
+/// Intl / DateFormat locale string for the app language code.
+String toIntlLocale(String code) {
+  switch (code) {
+    case 'fr':
+      return 'fr_FR';
+    case 'ar':
+      return 'ar';
+    case 'es':
+      return 'es_ES';
+    case 'nl':
+      return 'nl_NL';
+    case 'pt':
+      return 'pt_BR';
+    default:
+      return 'en_US';
   }
 }

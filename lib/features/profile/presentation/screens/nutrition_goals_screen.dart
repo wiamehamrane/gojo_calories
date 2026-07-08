@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/localization/locale_provider.dart';
+import '../../../../core/localization/translations.dart';
 import '../providers/profile_providers.dart';
 import '../../../stats/presentation/providers/dashboard_provider.dart';
 
@@ -22,11 +24,19 @@ class _NutritionGoalsScreenState extends ConsumerState<NutritionGoalsScreen> {
   @override
   void initState() {
     super.initState();
-    final stats = ref.read(dashboardProvider);
-    _caloriesCtrl = TextEditingController(text: stats.calorieBudget.toString());
-    _proteinCtrl = TextEditingController(text: stats.proteinTarget.toString());
-    _carbsCtrl = TextEditingController(text: stats.carbsTarget.toString());
-    _fatsCtrl = TextEditingController(text: stats.fatTarget.toString());
+    final stats = ref.read(dashboardProvider).value;
+    _caloriesCtrl = TextEditingController(
+      text: (stats?.calorieBudget ?? 2200).toString(),
+    );
+    _proteinCtrl = TextEditingController(
+      text: (stats?.proteinTarget ?? 150).toString(),
+    );
+    _carbsCtrl = TextEditingController(
+      text: (stats?.carbsTarget ?? 200).toString(),
+    );
+    _fatsCtrl = TextEditingController(
+      text: (stats?.fatTarget ?? 65).toString(),
+    );
   }
 
   @override
@@ -39,6 +49,8 @@ class _NutritionGoalsScreenState extends ConsumerState<NutritionGoalsScreen> {
   }
 
   Future<void> _saveTargets() async {
+    final lang = ref.read(localeProvider);
+    String t(String k) => Translations.t(lang, k);
     setState(() => _isLoading = true);
     try {
       await ref.read(nutritionGoalsProvider.notifier).saveGoals({
@@ -52,13 +64,13 @@ class _NutritionGoalsScreenState extends ConsumerState<NutritionGoalsScreen> {
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Nutrition goals updated!')),
+          SnackBar(content: Text(t('nutrition_goals_saved'))),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to save targets')),
+          SnackBar(content: Text(t('failed_save_targets'))),
         );
       }
     } finally {
@@ -68,11 +80,13 @@ class _NutritionGoalsScreenState extends ConsumerState<NutritionGoalsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final lang = ref.watch(localeProvider);
+    String t(String k) => Translations.t(lang, k);
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text(
-          'Edit Nutrition Goals',
+        title: Text(
+          t('edit_nutrition_goals'),
           style: AppTextStyles.sectionHeader,
         ),
         backgroundColor: AppColors.surface,
@@ -82,13 +96,13 @@ class _NutritionGoalsScreenState extends ConsumerState<NutritionGoalsScreen> {
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
         children: [
-          _buildGoalField("Daily Calorie Budget", _caloriesCtrl, "kcal"),
+          _buildGoalField(t('daily_calorie_budget'), _caloriesCtrl, "kcal"),
           const SizedBox(height: 16),
-          _buildGoalField("Protein Target", _proteinCtrl, "g"),
+          _buildGoalField(t('protein_target'), _proteinCtrl, "g"),
           const SizedBox(height: 16),
-          _buildGoalField("Carbs Target", _carbsCtrl, "g"),
+          _buildGoalField(t('carbs_target'), _carbsCtrl, "g"),
           const SizedBox(height: 16),
-          _buildGoalField("Fats Target", _fatsCtrl, "g"),
+          _buildGoalField(t('fats_target'), _fatsCtrl, "g"),
           const SizedBox(height: 32),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -101,7 +115,7 @@ class _NutritionGoalsScreenState extends ConsumerState<NutritionGoalsScreen> {
             onPressed: _isLoading ? null : _saveTargets,
             child: _isLoading 
               ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-              : const Text('Save Targets', style: AppTextStyles.buttonLabel),
+              : Text(t('save_targets'), style: AppTextStyles.buttonLabel),
           ),
         ],
       ),

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/localization/locale_provider.dart';
+import '../../../../core/localization/translations.dart';
 import '../providers/profile_providers.dart';
 
 class PersonalDetailsScreen extends ConsumerStatefulWidget {
@@ -57,6 +59,8 @@ class _PersonalDetailsScreenState extends ConsumerState<PersonalDetailsScreen> {
   }
 
   Future<void> _saveChanges() async {
+    final lang = ref.read(localeProvider);
+    String t(String k) => Translations.t(lang, k);
     setState(() => _isLoading = true);
     try {
       await ref.read(personalDetailsProvider.notifier).saveProfile({
@@ -85,7 +89,7 @@ class _PersonalDetailsScreenState extends ConsumerState<PersonalDetailsScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to save changes.')),
+          SnackBar(content: Text(t('failed_save_details'))),
         );
       }
     } finally {
@@ -94,13 +98,15 @@ class _PersonalDetailsScreenState extends ConsumerState<PersonalDetailsScreen> {
   }
   @override
   Widget build(BuildContext context) {
+    final lang = ref.watch(localeProvider);
+    String t(String k) => Translations.t(lang, k);
     final profileAsync = ref.watch(profileProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text(
-          'Personal Details',
+        title: Text(
+          t('personal_details'),
           style: AppTextStyles.sectionHeader,
         ),
         backgroundColor: AppColors.surface,
@@ -143,7 +149,7 @@ class _PersonalDetailsScreenState extends ConsumerState<PersonalDetailsScreen> {
                 onPressed: _isLoading ? null : _saveChanges,
                 child: _isLoading 
                   ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                  : const Text('Save Details', style: AppTextStyles.buttonLabel),
+                  : Text(t('save_details'), style: AppTextStyles.buttonLabel),
               ),
               const SizedBox(height: 40),
             ],

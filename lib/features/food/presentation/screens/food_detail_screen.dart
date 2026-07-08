@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -9,7 +8,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../../../core/theme/app_colors.dart';
 
-import '../../../../core/config/env_config.dart';
+import '../../../../core/widgets/cached_food_image.dart';
 import '../../../../core/localization/locale_provider.dart';
 import '../../../../core/localization/translations.dart';
 import '../../../stats/presentation/providers/selected_date_provider.dart';
@@ -127,6 +126,7 @@ class _FoodDetailScreenState extends ConsumerState<FoodDetailScreen> {
 
   Future<void> _toggleSave() async {
     if (_savingInProgress) return;
+    final lang = ref.read(localeProvider);
     setState(() { _savingInProgress = true; });
     
     final wasSaved = _saved;
@@ -156,7 +156,7 @@ class _FoodDetailScreenState extends ConsumerState<FoodDetailScreen> {
       setState(() { _saved = wasSaved; });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to update saved foods')),
+          SnackBar(content: Text(Translations.t(lang, 'failed_update_saved_foods'))),
         );
       }
     } finally {
@@ -180,9 +180,7 @@ class _FoodDetailScreenState extends ConsumerState<FoodDetailScreen> {
     final lang = ref.read(localeProvider);
     final name = _displayName(lang);
     final cal = (log['calories'] as num? ?? 0).toInt() * _quantity;
-    SharePlus.instance.share(
-      ShareParams(text: 'I just logged $name — $cal kcal 🔥  via GojoCalories'),
-    );
+    Share.share('I just logged $name — $cal kcal 🔥  via GojoCalories');
   }
 
   void _showMenu() {
@@ -213,6 +211,7 @@ class _FoodDetailScreenState extends ConsumerState<FoodDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final lang = ref.watch(localeProvider);
+    String t(String k) => Translations.t(lang, k);
     final displayName = _displayName(lang);
     final imageUrl = log['image_url'] as String?;
     final calories = (log['calories'] as num? ?? 0).toInt();
@@ -393,7 +392,7 @@ class _FoodDetailScreenState extends ConsumerState<FoodDetailScreen> {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('Calories', style: TextStyle(fontSize: 12, color: Color(0xFF888888))),
+                                Text(t('calories_label'), style: const TextStyle(fontSize: 12, color: Color(0xFF888888))),
                                 Text(
                                   '${calories * _quantity}',
                                   style: const TextStyle(
@@ -501,12 +500,12 @@ class _FoodDetailScreenState extends ConsumerState<FoodDetailScreen> {
                                 borderRadius: BorderRadius.circular(14),
                                 border: Border.all(color: const Color(0xFFEEEEEE), style: BorderStyle.solid),
                               ),
-                              child: const Row(
+                              child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(LucideIcons.plus, size: 16, color: Color(0xFF888888)),
-                                  SizedBox(width: 8),
-                                  Text('Add ingredient', style: TextStyle(color: Color(0xFF888888), fontSize: 14)),
+                                  const Icon(LucideIcons.plus, size: 16, color: Color(0xFF888888)),
+                                  const SizedBox(width: 8),
+                                  Text(t('add_ingredient'), style: const TextStyle(color: Color(0xFF888888), fontSize: 14)),
                                 ],
                               ),
                             ),
@@ -609,38 +608,12 @@ class _FoodDetailScreenState extends ConsumerState<FoodDetailScreen> {
 
   Widget _buildHeroImage(String? imageUrl) {
     if (imageUrl != null && imageUrl.isNotEmpty) {
-      // Local file path (camera/gallery before upload completes)
-      if (imageUrl.startsWith('file://') || (imageUrl.startsWith('/') && !imageUrl.startsWith('/uploads/'))) {
-        final path = imageUrl.replaceFirst('file://', '');
-        return Image.file(
-          File(path),
-          fit: BoxFit.cover,
-          errorBuilder: (_, e, s) => _placeholder(),
-        );
-      }
-      // Relative network path
-      if (imageUrl.startsWith('/uploads/')) {
-        final fullUrl = EnvConfig.resolveMediaUrl(imageUrl);
-        return Image.network(
-          fullUrl,
-          fit: BoxFit.cover,
-          errorBuilder: (_, e, s) => _placeholder(),
-          loadingBuilder: (ctx, child, progress) {
-            if (progress == null) return child;
-            return _ShimmerPlaceholder();
-          },
-        );
-      }
-      // Network image — show shimmer while loading, never fallback to placeholder mid-load
-      return Image.network(
-        imageUrl,
+      return CachedFoodImage(
+        imageUrl: imageUrl,
         fit: BoxFit.cover,
-        errorBuilder: (_, e, s) => _placeholder(),
-        loadingBuilder: (ctx, child, progress) {
-          if (progress == null) return child; // fully loaded
-          // Show animated shimmer while loading
-          return _ShimmerPlaceholder();
-        },
+        memCacheWidth: 1200,
+        placeholder: _ShimmerPlaceholder(),
+        errorWidget: _placeholder(),
       );
     }
     return _placeholder();

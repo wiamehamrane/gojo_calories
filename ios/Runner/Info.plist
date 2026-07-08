@@ -76,6 +76,17 @@
 	<string>This app uses your location to find nearby restaurants and food options.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>This app saves meal photos to your photo library.</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>GojoCalories reads your steps, active calories, and weight from Apple Health to keep your dashboard up to date.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>GojoCalories can write nutrition and activity data to Apple Health when you log meals or workouts.</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
 	<key>GIDClientID</key>
 	<string>980076580409-4d78u72lc8o7aqfuoinvd72dk2tr27co.apps.googleusercontent.com</string>
 	<key>CFBundleURLTypes</key>

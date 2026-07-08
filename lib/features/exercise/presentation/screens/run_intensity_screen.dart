@@ -1,19 +1,33 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/localization/locale_provider.dart';
+import '../../../../core/localization/translations.dart';
+import '../../../stats/presentation/providers/dashboard_provider.dart';
 
 enum RunIntensity { high, medium, low }
 
-class RunIntensityScreen extends StatefulWidget {
+int _estimateRunCalories(RunIntensity intensity, int minutes) {
+  const double bodyWeightKg = 75.0;
+  final double met = switch (intensity) {
+    RunIntensity.high => 14.0,
+    RunIntensity.medium => 9.8,
+    RunIntensity.low => 3.5,
+  };
+  return (met * bodyWeightKg * (minutes / 60)).round();
+}
+
+class RunIntensityScreen extends ConsumerStatefulWidget {
   const RunIntensityScreen({super.key});
 
   @override
-  State<RunIntensityScreen> createState() => _RunIntensityScreenState();
+  ConsumerState<RunIntensityScreen> createState() => _RunIntensityScreenState();
 }
 
-class _RunIntensityScreenState extends State<RunIntensityScreen> {
+class _RunIntensityScreenState extends ConsumerState<RunIntensityScreen> {
   RunIntensity? _selectedIntensity = RunIntensity.medium;
   final List<String> _durations = [
     "15 mins",
@@ -23,9 +37,70 @@ class _RunIntensityScreenState extends State<RunIntensityScreen> {
     "120 mins",
   ];
   int _selectedDurationIndex = 1;
+  final _manualDurationController = TextEditingController();
+  bool _saving = false;
+
+  @override
+  void dispose() {
+    _manualDurationController.dispose();
+    super.dispose();
+  }
+
+  int get _durationMinutes {
+    final manual = int.tryParse(_manualDurationController.text.trim());
+    if (manual != null && manual > 0) return manual;
+    return int.parse(_durations[_selectedDurationIndex].split(' ').first);
+  }
+
+  Future<void> _saveRun() async {
+    final intensity = _selectedIntensity ?? RunIntensity.medium;
+    final minutes = _durationMinutes;
+    if (minutes <= 0) return;
+
+    final calories = _estimateRunCalories(intensity, minutes);
+    final intensityLabel = switch (intensity) {
+      RunIntensity.high => 'High',
+      RunIntensity.medium => 'Medium',
+      RunIntensity.low => 'Low',
+    };
+
+    setState(() => _saving = true);
+    try {
+      await ref.read(dashboardProvider.notifier).logExercise(
+            name: 'Run ($intensityLabel)',
+            durationMinutes: minutes,
+            caloriesBurned: calories,
+          );
+      if (!mounted) return;
+      final lang = ref.read(localeProvider);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            Translations.t(lang, 'logged_kcal_burned')
+                .replaceAll('{calories}', '$calories'),
+          ),
+          backgroundColor: AppColors.primaryDark,
+        ),
+      );
+      Navigator.of(context).pop();
+    } catch (_) {
+      if (!mounted) return;
+      final lang = ref.read(localeProvider);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(Translations.t(lang, 'failed_save_run')),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final lang = ref.watch(localeProvider);
+    String t(String k) => Translations.t(lang, k);
     final safeBottom = MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
@@ -39,15 +114,15 @@ class _RunIntensityScreenState extends State<RunIntensityScreen> {
         ),
         title: Row(
           mainAxisSize: MainAxisSize.min,
-          children: const [
-            Icon(
+          children: [
+            const Icon(
               LucideIcons.footprints,
               size: 18,
               color: AppColors.textPrimary,
             ),
             Text(
-              " Run",
-              style: TextStyle(
+              ' ${t('run')}',
+              style: const TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.w600,
                 color: AppColors.textPrimary,
@@ -69,14 +144,14 @@ class _RunIntensityScreenState extends State<RunIntensityScreen> {
                 children: [
                   // Section header
                   Row(
-                    children: const [
-                      Icon(
+                    children: [
+                      const Icon(
                         LucideIcons.sparkles,
                         size: 18,
                         color: AppColors.inactive,
                       ),
-                      SizedBox(width: 6),
-                      Text("Set intensity", style: AppTextStyles.sectionHeader),
+                      const SizedBox(width: 6),
+                      Text(t('set_intensity'), style: AppTextStyles.sectionHeader),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -129,14 +204,14 @@ class _RunIntensityScreenState extends State<RunIntensityScreen> {
 
                   // Duration header
                   Row(
-                    children: const [
-                      Icon(
+                    children: [
+                      const Icon(
                         LucideIcons.timer,
                         size: 18,
                         color: AppColors.inactive,
                       ),
-                      SizedBox(width: 6),
-                      Text("Duration", style: AppTextStyles.sectionHeader),
+                      const SizedBox(width: 6),
+                      Text(t('duration'), style: AppTextStyles.sectionHeader),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -201,13 +276,14 @@ class _RunIntensityScreenState extends State<RunIntensityScreen> {
                       horizontal: 16,
                       vertical: 4,
                     ),
-                    child: const TextField(
+                    child: TextField(
+                      controller: _manualDurationController,
                       keyboardType: TextInputType.number,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w500,
                       ),
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
                         border: InputBorder.none,
                         hintText: "Or enter manual time...",
                         hintStyle: TextStyle(
@@ -240,11 +316,17 @@ class _RunIntensityScreenState extends State<RunIntensityScreen> {
                     borderRadius: BorderRadius.circular(18),
                   ),
                 ),
-                child: const Text("Continue", style: AppTextStyles.buttonLabel),
-                onPressed: () {
-                  // handle save log
-                  Navigator.pop(context);
-                },
+                onPressed: _saving ? null : _saveRun,
+                child: _saving
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Text(t('continue_btn'), style: AppTextStyles.buttonLabel),
               ),
             ),
           ),

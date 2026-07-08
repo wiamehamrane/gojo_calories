@@ -6,12 +6,16 @@ Endpoints:
   POST /webhook         — Handle Apple S2S notifications (renewal, expiry, refund)
 """
 
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from database import get_db
 import models
 from security import get_current_user
+from apple_jws_verifier import is_jws_transaction, verify_jws_transaction
+from appstoreserverlibrary.signed_data_verifier import VerificationException
 import logging
 import os
 import httpx
@@ -38,14 +42,14 @@ VALID_PRODUCT_IDS = {
 
 class VerifyReceiptRequest(BaseModel):
     receipt_data: str  # Base64-encoded receipt from StoreKit
-    product_id: str | None = None
+    product_id: Optional[str] = None
 
 
 class AppleReceiptResponse(BaseModel):
     status: str
     subscription_active: bool
-    expires_at: str | None = None
-    product_id: str | None = None
+    expires_at: Optional[str] = None
+    product_id: Optional[str] = None
 
 
 async def _verify_with_apple(receipt_data: str, use_sandbox: bool = False) -> dict:
@@ -63,7 +67,7 @@ async def _verify_with_apple(receipt_data: str, use_sandbox: bool = False) -> di
         return response.json()
 
 
-def _extract_latest_subscription(receipt_response: dict) -> dict | None:
+def _extract_latest_subscription(receipt_response: dict) -> Optional[dict]:
     """
     Extract the latest active subscription info from Apple's receipt response.
     Returns the most recent transaction for our subscription products.
@@ -93,6 +97,96 @@ def _extract_latest_subscription(receipt_response: dict) -> dict | None:
     return our_subs[0]
 
 
+def _unlock_subscription_for_user(
+    *,
+    db: Session,
+    current_user: models.User,
+    original_transaction_id: str,
+    product_id: str,
+    expires_at: datetime.datetime,
+    is_active: bool,
+) -> dict:
+    """Persist subscription state after Apple validation."""
+    existing_user = db.query(models.User).filter(
+        models.User.apple_original_transaction_id == original_transaction_id,
+        models.User.id != current_user.id,
+    ).first()
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This subscription is already associated with another account.",
+        )
+
+    current_user.has_paid = is_active
+    current_user.subscription_source = "apple"
+    current_user.apple_original_transaction_id = original_transaction_id
+    current_user.subscription_expires_at = expires_at
+    db.commit()
+
+    logger.info(
+        f"Apple subscription verified for user {current_user.id}: "
+        f"product={product_id}, active={is_active}, expires={expires_at.isoformat()}"
+    )
+
+    return {
+        "status": "success",
+        "subscription_active": is_active,
+        "expires_at": expires_at.isoformat(),
+        "product_id": product_id,
+    }
+
+
+def _verify_jws_and_unlock(
+    jws: str,
+    current_user: models.User,
+    db: Session,
+) -> dict:
+    """Verify a StoreKit 2 signed transaction and unlock premium access."""
+    try:
+        decoded = verify_jws_transaction(jws)
+    except VerificationException as exc:
+        logger.warning(f"StoreKit 2 JWS verification failed: {exc.status}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Apple transaction verification failed ({exc.status.name})",
+        ) from exc
+
+    product_id = decoded.productId or ""
+    if product_id not in VALID_PRODUCT_IDS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No valid subscription found in transaction",
+        )
+
+    original_transaction_id = decoded.originalTransactionId or ""
+    if not original_transaction_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No valid subscription found in transaction",
+        )
+
+    if decoded.revocationDate is not None:
+        expires_at = datetime.datetime.utcfromtimestamp(decoded.revocationDate / 1000)
+        is_active = False
+    elif decoded.expiresDate:
+        expires_at = datetime.datetime.utcfromtimestamp(decoded.expiresDate / 1000)
+        is_active = expires_at > datetime.datetime.utcnow()
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No valid subscription found in transaction",
+        )
+
+    return _unlock_subscription_for_user(
+        db=db,
+        current_user=current_user,
+        original_transaction_id=original_transaction_id,
+        product_id=product_id,
+        expires_at=expires_at,
+        is_active=is_active,
+    )
+
+
 @router.post("/verify-receipt")
 async def verify_receipt(
     request: VerifyReceiptRequest,
@@ -114,6 +208,10 @@ async def verify_receipt(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Missing receipt data",
         )
+
+    # StoreKit 2 sends a signed JWS per transaction, not a legacy app receipt.
+    if is_jws_transaction(request.receipt_data):
+        return _verify_jws_and_unlock(request.receipt_data, current_user, db)
 
     try:
         # Step 1: Verify with Apple production
@@ -149,35 +247,14 @@ async def verify_receipt(
         original_transaction_id = latest_sub.get("original_transaction_id", "")
         product_id = latest_sub.get("product_id", "")
 
-        # Step 5: Check if another user already owns this transaction
-        existing_user = db.query(models.User).filter(
-            models.User.apple_original_transaction_id == original_transaction_id,
-            models.User.id != current_user.id,
-        ).first()
-        if existing_user:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="This subscription is already associated with another account.",
-            )
-
-        # Step 6: Update user
-        current_user.has_paid = is_active
-        current_user.subscription_source = "apple"
-        current_user.apple_original_transaction_id = original_transaction_id
-        current_user.subscription_expires_at = expires_at
-        db.commit()
-
-        logger.info(
-            f"Apple receipt verified for user {current_user.id}: "
-            f"product={product_id}, active={is_active}, expires={expires_at.isoformat()}"
+        return _unlock_subscription_for_user(
+            db=db,
+            current_user=current_user,
+            original_transaction_id=original_transaction_id,
+            product_id=product_id,
+            expires_at=expires_at,
+            is_active=is_active,
         )
-
-        return {
-            "status": "success",
-            "subscription_active": is_active,
-            "expires_at": expires_at.isoformat(),
-            "product_id": product_id,
-        }
 
     except HTTPException:
         raise
