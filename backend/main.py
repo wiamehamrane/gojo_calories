@@ -19,7 +19,7 @@ load_dotenv()
 
 os.makedirs("uploads", exist_ok=True)
 
-from routes import vision, auth, stats, groups, referrals, payments, notifications, exercises, recipes, events, apple_iap, google_iap, memories, feed, friends, promo
+from routes import vision, auth, stats, groups, referrals, payments, notifications, exercises, recipes, events, apple_iap, google_iap, memories, feed, friends, promo, clan
 from routes.admin import router as admin_router
 
 if os.getenv("WIPE_DB") == "true":
@@ -109,6 +109,43 @@ try:
         """))
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_promo_codes_influencer ON promo_codes (influencer_id);"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_promo_redemptions_code ON promo_redemptions (promo_code_id);"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_plan VARCHAR;"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_discount_used BOOLEAN DEFAULT FALSE;"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS clan_id VARCHAR(36);"))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS clans (
+                id VARCHAR(36) PRIMARY KEY,
+                owner_user_id VARCHAR(36) NOT NULL UNIQUE REFERENCES users(id),
+                plan_id VARCHAR NOT NULL DEFAULT 'monthly',
+                stripe_subscription_id VARCHAR,
+                status VARCHAR DEFAULT 'active',
+                max_members INTEGER DEFAULT 5,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS clan_members (
+                id VARCHAR(36) PRIMARY KEY,
+                clan_id VARCHAR(36) NOT NULL REFERENCES clans(id) ON DELETE CASCADE,
+                user_id VARCHAR(36) NOT NULL UNIQUE REFERENCES users(id),
+                role VARCHAR DEFAULT 'member',
+                addon_active BOOLEAN DEFAULT FALSE,
+                joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS clan_invites (
+                id VARCHAR(36) PRIMARY KEY,
+                clan_id VARCHAR(36) NOT NULL REFERENCES clans(id) ON DELETE CASCADE,
+                email VARCHAR NOT NULL,
+                token VARCHAR NOT NULL UNIQUE,
+                status VARCHAR DEFAULT 'pending',
+                expires_at TIMESTAMP NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_clan_members_clan ON clan_members (clan_id);"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_clan_invites_clan ON clan_invites (clan_id);"))
         # Multilingual food names
         conn.execute(text("ALTER TABLE food_logs ADD COLUMN IF NOT EXISTS name_en VARCHAR;"))
         conn.execute(text("ALTER TABLE food_logs ADD COLUMN IF NOT EXISTS name_fr VARCHAR;"))
@@ -333,6 +370,7 @@ def health_check():
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(payments.router, prefix="/api/payments", tags=["Payments"])
 app.include_router(promo.router, prefix="/api/payments", tags=["Promo"])
+app.include_router(clan.router, prefix="/api/clan", tags=["Clan"])
 app.include_router(apple_iap.router, prefix="/api/payments/apple", tags=["Apple IAP"])
 app.include_router(google_iap.router, prefix="/api/payments/google", tags=["Google IAP"])
 

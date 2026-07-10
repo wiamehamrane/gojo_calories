@@ -170,6 +170,11 @@ class ProfileScreen extends ConsumerWidget {
                     onTap: () => context.push('/profile/language'),
                   ),
                   _SettingsRow(
+                    icon: LucideIcons.users,
+                    label: t('clan_title'),
+                    onTap: () => context.push(RoutePaths.profileClan),
+                  ),
+                  _SettingsRow(
                     icon: LucideIcons.creditCard,
                     label: t('manage_subscription'),
                     onTap: () async {

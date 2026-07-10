@@ -30,10 +30,21 @@ router = APIRouter()
 PACKAGE_NAME = os.getenv("GOOGLE_PLAY_PACKAGE_NAME", "com.gojocalories.gojocalories")
 GOOGLE_PLAY_SCOPES = ["https://www.googleapis.com/auth/androidpublisher"]
 
-VALID_PRODUCT_IDS = {
-    "gojo_pro_monthly",
-    "gojo_pro_yearly",
-}
+from services.pricing_catalog import (
+    ALL_PRODUCT_IDS,
+    CLAN_ADDON_PRODUCT_IDS,
+    REFERRAL_DURATION_PERIODS,
+    REFERRAL_PAY_PERCENT,
+    plan_id_from_product,
+)
+from services.clan_service import (
+    activate_clan_member,
+    get_or_create_clan_for_owner,
+    sync_clan_member_access,
+)
+from services.subscription_service import apply_referral_iap_credit
+
+VALID_PRODUCT_IDS = ALL_PRODUCT_IDS
 
 # Canceled subscriptions remain active until expiry.
 ACTIVE_SUBSCRIPTION_STATES = {
@@ -189,11 +200,54 @@ def _unlock_subscription_for_user(
             detail="This subscription is already associated with another account.",
         )
 
+    if product_id in CLAN_ADDON_PRODUCT_IDS:
+        clan = db.query(models.Clan).filter(models.Clan.owner_user_id == current_user.id).first()
+        if clan:
+            pending_member = (
+                db.query(models.ClanMember)
+                .filter(
+                    models.ClanMember.clan_id == clan.id,
+                    models.ClanMember.role == "member",
+                    models.ClanMember.addon_active.is_(False),
+                )
+                .order_by(models.ClanMember.joined_at)
+                .first()
+            )
+            if pending_member:
+                pending_member.addon_active = True
+                member_user = db.query(models.User).filter(models.User.id == pending_member.user_id).first()
+                if member_user:
+                    activate_clan_member(db, clan, member_user, current_user)
+        db.commit()
+        return {
+            "status": "success",
+            "subscription_active": is_active,
+            "expires_at": expires_at.isoformat(),
+            "product_id": product_id,
+            "type": "clan_addon",
+        }
+
     current_user.has_paid = is_active
     current_user.subscription_source = "google"
     current_user.google_order_id = order_id
     current_user.google_purchase_token = purchase_token
     current_user.subscription_expires_at = expires_at
+    plan_id = plan_id_from_product(product_id)
+    if plan_id:
+        current_user.subscription_plan = plan_id
+
+    if is_active and plan_id and current_user.referred_by and not current_user.referral_discount_used:
+        apply_referral_iap_credit(
+            current_user,
+            plan_id,
+            pay_percent=REFERRAL_PAY_PERCENT,
+            duration_periods=REFERRAL_DURATION_PERIODS,
+        )
+
+    if is_active and plan_id:
+        clan = get_or_create_clan_for_owner(db, current_user, plan_id)
+        sync_clan_member_access(db, clan, active=True, expires_at=current_user.subscription_expires_at)
+
     db.commit()
 
     logger.info(
@@ -291,6 +345,11 @@ def _apply_subscription_update(
     user.google_order_id = order_id
     user.google_purchase_token = purchase_token
     user.subscription_expires_at = expires_at
+
+    clan = db.query(models.Clan).filter(models.Clan.owner_user_id == user.id).first()
+    if clan:
+        sync_clan_member_access(db, clan, active=is_active, expires_at=expires_at if is_active else None)
+
     db.commit()
 
     logger.info(

@@ -21,6 +21,7 @@ abstract final class RoutePaths {
   static const profileLanguage = '/profile/language';
   static const profileNutrition = '/profile/nutrition';
   static const profileReferrals = '/profile/referrals';
+  static const profileClan = '/profile/clan';
 
   static const logExercise = '/log_exercise';
   static const runIntensity = '/run_intensity';

@@ -9,8 +9,28 @@ import '../../../../core/network/api_client.dart';
 
 /// Product identifiers — must match App Store Connect / Google Play Console.
 const String kMonthlyProductId = 'gojo_pro_monthly';
+const String kSixMonthProductId = 'gojo_pro_six_month';
 const String kYearlyProductId = 'gojo_pro_yearly';
-const Set<String> kProductIds = {kMonthlyProductId, kYearlyProductId};
+const String kClanAddonMonthlyId = 'gojo_clan_addon_monthly';
+const String kClanAddonSixMonthId = 'gojo_clan_addon_six_month';
+const String kClanAddonYearlyId = 'gojo_clan_addon_yearly';
+
+const Set<String> kProductIds = {
+  kMonthlyProductId,
+  kSixMonthProductId,
+  kYearlyProductId,
+};
+
+const Set<String> kClanAddonProductIds = {
+  kClanAddonMonthlyId,
+  kClanAddonSixMonthId,
+  kClanAddonYearlyId,
+};
+
+const Set<String> kAllProductIds = {
+  ...kProductIds,
+  ...kClanAddonProductIds,
+};
 
 const String kAndroidPackageName = 'com.gojocalories.gojocalories';
 
@@ -138,7 +158,7 @@ class IAPService {
     }
 
     if (response.notFoundIDs.isNotEmpty) {
-      throw Exception(_productNotFoundMessage(response.notFoundIDs));
+      debugPrint('IAPService: some products not found: ${response.notFoundIDs}');
     }
 
     if (response.productDetails.isEmpty) {
@@ -147,12 +167,23 @@ class IAPService {
 
     products = response.productDetails.toList()
       ..sort((a, b) {
-        if (a.id == kYearlyProductId) return -1;
-        if (b.id == kYearlyProductId) return 1;
-        return 0;
+        const order = [kYearlyProductId, kSixMonthProductId, kMonthlyProductId];
+        final ai = order.indexOf(a.id);
+        final bi = order.indexOf(b.id);
+        if (ai == -1 && bi == -1) return a.id.compareTo(b.id);
+        if (ai == -1) return 1;
+        if (bi == -1) return -1;
+        return ai.compareTo(bi);
       });
 
     return products;
+  }
+
+  /// Load a single clan add-on product for purchase.
+  Future<ProductDetails?> loadClanAddonProduct(String productId) async {
+    final response = await _iap.queryProductDetails({productId});
+    if (response.productDetails.isEmpty) return null;
+    return response.productDetails.first;
   }
 
   /// Initiate a subscription purchase.
@@ -284,15 +315,16 @@ class IAPService {
         );
       }
 
-      if (response.statusCode == 200 &&
-          response.data['status'] == 'success' &&
-          response.data['subscription_active'] == true) {
+      if (response.statusCode == 200 && response.data['status'] == 'success') {
+        final isClanAddon = response.data['type'] == 'clan_addon';
+        final active = response.data['subscription_active'] == true;
+        if (isClanAddon || active) {
         if (purchase.status == PurchaseStatus.restored) {
           status.value = const IAPStatus(state: IAPState.restored);
         } else {
           status.value = const IAPStatus(state: IAPState.success);
         }
-      } else {
+      } }else {
         final detail = response.data['detail'] ?? 'Verification failed';
         status.value = IAPStatus(
           state: IAPState.error,

@@ -51,6 +51,9 @@ class User(Base):
     google_order_id = Column(String, nullable=True, index=True)
     google_purchase_token = Column(String, nullable=True, index=True)
     subscription_expires_at = Column(DateTime, nullable=True)
+    subscription_plan = Column(String, nullable=True)  # monthly | six_month | yearly | lifetime
+    referral_discount_used = Column(Boolean, default=False, nullable=False)
+    clan_id = Column(String(36), ForeignKey("clans.id"), nullable=True, index=True)
 
     # Referral system
     referral_code = Column(String, unique=True, nullable=True, index=True)
@@ -349,3 +352,47 @@ class PromoRedemption(Base):
 
     promo_code = relationship("PromoCode", back_populates="redemptions")
     user = relationship("User")
+
+
+class Clan(Base):
+    __tablename__ = "clans"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid, index=True)
+    owner_user_id = Column(String(36), ForeignKey("users.id"), nullable=False, unique=True, index=True)
+    plan_id = Column(String, nullable=False, default="monthly")  # monthly | six_month | yearly
+    stripe_subscription_id = Column(String, nullable=True, index=True)
+    status = Column(String, default="active", nullable=False)  # active | canceled
+    max_members = Column(Integer, default=5, nullable=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    owner = relationship("User", foreign_keys=[owner_user_id])
+    members = relationship("ClanMember", back_populates="clan", cascade="all, delete-orphan")
+    invites = relationship("ClanInvite", back_populates="clan", cascade="all, delete-orphan")
+
+
+class ClanMember(Base):
+    __tablename__ = "clan_members"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid, index=True)
+    clan_id = Column(String(36), ForeignKey("clans.id"), nullable=False, index=True)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, unique=True, index=True)
+    role = Column(String, default="member", nullable=False)  # owner | member
+    addon_active = Column(Boolean, default=False, nullable=False)
+    joined_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    clan = relationship("Clan", back_populates="members")
+    user = relationship("User", foreign_keys=[user_id])
+
+
+class ClanInvite(Base):
+    __tablename__ = "clan_invites"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid, index=True)
+    clan_id = Column(String(36), ForeignKey("clans.id"), nullable=False, index=True)
+    email = Column(String, nullable=False, index=True)
+    token = Column(String, unique=True, nullable=False, index=True)
+    status = Column(String, default="pending", nullable=False)  # pending | accepted | expired | canceled
+    expires_at = Column(DateTime, nullable=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    clan = relationship("Clan", back_populates="invites")

@@ -6,6 +6,7 @@ import 'presentation/screens/preferences_screen.dart';
 import 'presentation/screens/language_screen.dart';
 import 'presentation/screens/nutrition_goals_screen.dart';
 import 'presentation/screens/feature_request_screen.dart';
+import '../clan/presentation/screens/clan_screen.dart';
 
 List<RouteBase> get profileShellRoutes => [
       GoRoute(
@@ -34,5 +35,9 @@ List<RouteBase> get profileRoutes => [
       GoRoute(
         path: RoutePaths.featureRequest,
         builder: (context, state) => const FeatureRequestScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.profileClan,
+        builder: (context, state) => const ClanScreen(),
       ),
     ];

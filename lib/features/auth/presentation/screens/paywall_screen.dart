@@ -9,6 +9,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:gojocalories/features/auth/presentation/providers/iap_provider.dart';
+import 'package:gojocalories/features/auth/presentation/providers/catalog_provider.dart';
 import 'package:gojocalories/features/auth/data/services/iap_service.dart';
 import 'package:gojocalories/core/localization/locale_provider.dart';
 import 'package:gojocalories/core/localization/translations.dart';
@@ -202,10 +203,24 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
     const Color featureBg = Color(0xFFF8FDF7);
 
     final productsAsync = ref.watch(iapProductsProvider);
+    final catalogAsync = ref.watch(subscriptionCatalogProvider);
     final plansFailed = productsAsync.hasError;
     final hasProducts = productsAsync.maybeWhen(
       data: (products) => products.isNotEmpty,
       orElse: () => false,
+    );
+
+    final catalogPlans = catalogAsync.maybeWhen(
+      data: (c) => (c['plans'] as List?)?.cast<Map<String, dynamic>>() ?? [],
+      orElse: () => <Map<String, dynamic>>[],
+    );
+    final referralOffer = catalogAsync.maybeWhen(
+      data: (c) => c['referral_offer'] as Map<String, dynamic>?,
+      orElse: () => null,
+    );
+    final defaultPlanId = catalogAsync.maybeWhen(
+      data: (c) => c['default_plan_id'] as String? ?? 'yearly',
+      orElse: () => 'yearly',
     );
 
     return Scaffold(
@@ -267,6 +282,35 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
               ).animate().fadeIn(delay: 150.ms),
               const SizedBox(height: 32),
 
+              if (referralOffer?['eligible'] == true) ...[
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE8F7FA),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFF00B4CC).withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(LucideIcons.gift, color: Color(0xFF007D8F), size: 20),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          referralOffer?['headline'] as String? ??
+                              t('referral_discount_banner'),
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Color(0xFF007D8F),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+
               if (!plansFailed) ...[
                 _buildFeatureRow(
                   'AI Food Scanner',
@@ -309,23 +353,57 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                     );
                   }
 
+                  final productById = {
+                    for (final p in products) p.id: p,
+                  };
+
+                  final displayPlans = catalogPlans.isNotEmpty
+                      ? catalogPlans
+                      : products
+                          .map(
+                            (p) => {
+                              'store_product_id': p.id,
+                              'name': p.id,
+                              'tagline': '',
+                              'display_price': p.price,
+                            },
+                          )
+                          .toList();
+
                   if (_selectedProductId == null) {
                     WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (mounted) {
-                        setState(() {
-                          _selectedProductId =
-                              products.any((p) => p.id == kYearlyProductId)
-                                  ? kYearlyProductId
-                                  : products.first.id;
-                        });
+                      if (!mounted) return;
+                      String? defaultProductId;
+                      for (final plan in displayPlans) {
+                        if (plan['id'] == defaultPlanId) {
+                          defaultProductId =
+                              plan['store_product_id'] as String?;
+                          break;
+                        }
                       }
+                      setState(() {
+                        _selectedProductId = defaultProductId ??
+                            (products.any((p) => p.id == kYearlyProductId)
+                                ? kYearlyProductId
+                                : products.first.id);
+                      });
                     });
                   }
 
                   return Column(
-                    children: products.map((product) {
+                    children: displayPlans.map((plan) {
+                      final storeId = plan['store_product_id'] as String?;
+                      final product = storeId != null
+                          ? productById[storeId]
+                          : null;
+                      if (product == null && storeId != null) {
+                        return const SizedBox.shrink();
+                      }
+                      if (product == null) return const SizedBox.shrink();
+
                       return _buildPlanCard(
                         product: product,
+                        planMeta: plan,
                         isSelected: _selectedProductId == product.id,
                         primaryDark: primaryDark,
                         primaryMedium: primaryMedium,
@@ -487,14 +565,22 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
 
   Widget _buildPlanCard({
     required ProductDetails product,
+    required Map<String, dynamic> planMeta,
     required bool isSelected,
     required Color primaryDark,
     required Color primaryMedium,
     required VoidCallback onTap,
   }) {
-    final isYearly = product.id == kYearlyProductId;
-    final label = isYearly ? 'Yearly' : 'Monthly';
-    final subtitle = isYearly ? 'Best Value — Save 57%' : 'Flexible month-to-month';
+    final label = planMeta['name'] as String? ?? product.title;
+    final subtitle = planMeta['tagline'] as String? ?? product.description;
+    final badge = planMeta['badge'] as String?;
+    final referralPrice = planMeta['referral_display_price'] as String?;
+    final displayPrice =
+        (referralPrice != null && referralPrice.isNotEmpty)
+            ? referralPrice
+            : (planMeta['display_price'] as String? ?? product.price);
+    final showReferralStrikethrough =
+        referralPrice != null && referralPrice.isNotEmpty;
 
     return GestureDetector(
       onTap: _isProcessing ? null : onTap,
@@ -558,7 +644,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      if (isYearly) ...[
+                      if (badge != null) ...[
                         const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(
@@ -569,9 +655,9 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                             color: const Color(0xFF4CAF50),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Text(
-                            'BEST VALUE',
-                            style: TextStyle(
+                          child: Text(
+                            badge,
+                            style: const TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
                               color: Colors.white,
@@ -595,20 +681,34 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
 
             // Price
             Flexible(
-              child: Text(
-                product.price,
-                textAlign: TextAlign.end,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: isSelected ? primaryDark : Colors.black87,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  if (showReferralStrikethrough)
+                    Text(
+                      product.price,
+                      style: TextStyle(
+                        fontSize: 12,
+                        decoration: TextDecoration.lineThrough,
+                        color: Colors.grey.shade500,
+                      ),
+                    ),
+                  Text(
+                    displayPrice,
+                    textAlign: TextAlign.end,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: isSelected ? primaryDark : Colors.black87,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
         ),
       ),
-    ).animate().fadeIn(delay: (isYearly ? 350 : 400).ms);
+    ).animate().fadeIn(delay: 350.ms);
   }
 
   Widget _buildFeatureRow(

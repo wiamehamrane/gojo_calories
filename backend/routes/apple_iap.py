@@ -23,6 +23,27 @@ import datetime
 import json
 import base64
 
+import logging
+import os
+import httpx
+import datetime
+import json
+import base64
+
+from services.pricing_catalog import (
+    ALL_PRODUCT_IDS,
+    CLAN_ADDON_PRODUCT_IDS,
+    REFERRAL_DURATION_PERIODS,
+    REFERRAL_PAY_PERCENT,
+    plan_id_from_product,
+)
+from services.clan_service import (
+    activate_clan_member,
+    get_or_create_clan_for_owner,
+    sync_clan_member_access,
+)
+from services.subscription_service import apply_referral_iap_credit
+
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
@@ -33,11 +54,7 @@ APPLE_SANDBOX_VERIFY_URL = "https://sandbox.itunes.apple.com/verifyReceipt"
 # Shared secret from App Store Connect (In-App Purchase → Shared Secret)
 APPLE_SHARED_SECRET = os.getenv("APPLE_SHARED_SECRET", "")
 
-# Our product identifiers
-VALID_PRODUCT_IDS = {
-    "gojo_pro_monthly",
-    "gojo_pro_yearly",
-}
+VALID_PRODUCT_IDS = ALL_PRODUCT_IDS
 
 
 class VerifyReceiptRequest(BaseModel):
@@ -117,10 +134,58 @@ def _unlock_subscription_for_user(
             detail="This subscription is already associated with another account.",
         )
 
+    plan_id = plan_id_from_product(product_id)
+
+    if product_id in CLAN_ADDON_PRODUCT_IDS:
+        clan = db.query(models.Clan).filter(models.Clan.owner_user_id == current_user.id).first()
+        if not clan:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Create a clan subscription before purchasing add-ons.",
+            )
+        pending_member = (
+            db.query(models.ClanMember)
+            .filter(
+                models.ClanMember.clan_id == clan.id,
+                models.ClanMember.role == "member",
+                models.ClanMember.addon_active.is_(False),
+            )
+            .order_by(models.ClanMember.joined_at)
+            .first()
+        )
+        if pending_member:
+            pending_member.addon_active = True
+            member_user = db.query(models.User).filter(models.User.id == pending_member.user_id).first()
+            if member_user:
+                activate_clan_member(db, clan, member_user, current_user)
+        db.commit()
+        return {
+            "status": "success",
+            "subscription_active": is_active,
+            "expires_at": expires_at.isoformat(),
+            "product_id": product_id,
+            "type": "clan_addon",
+        }
+
     current_user.has_paid = is_active
     current_user.subscription_source = "apple"
     current_user.apple_original_transaction_id = original_transaction_id
     current_user.subscription_expires_at = expires_at
+    if plan_id:
+        current_user.subscription_plan = plan_id
+
+    if is_active and plan_id and current_user.referred_by and not current_user.referral_discount_used:
+        apply_referral_iap_credit(
+            current_user,
+            plan_id,
+            pay_percent=REFERRAL_PAY_PERCENT,
+            duration_periods=REFERRAL_DURATION_PERIODS,
+        )
+
+    if is_active and plan_id:
+        clan = get_or_create_clan_for_owner(db, current_user, plan_id)
+        sync_clan_member_access(db, clan, active=True, expires_at=current_user.subscription_expires_at)
+
     db.commit()
 
     logger.info(
@@ -347,10 +412,16 @@ async def apple_webhook(request: Request, db: Session = Depends(get_db)):
 
                         elif notification_type in ("EXPIRED", "REVOKE"):
                             user.has_paid = False
+                            clan = db.query(models.Clan).filter(models.Clan.owner_user_id == user.id).first()
+                            if clan:
+                                sync_clan_member_access(db, clan, active=False, expires_at=None)
                             logger.info(f"Apple subscription expired/revoked for user {user.id}")
 
                         elif notification_type == "REFUND":
                             user.has_paid = False
+                            clan = db.query(models.Clan).filter(models.Clan.owner_user_id == user.id).first()
+                            if clan:
+                                sync_clan_member_access(db, clan, active=False, expires_at=None)
                             logger.info(f"Apple subscription refunded for user {user.id}")
 
                         elif notification_type == "DID_CHANGE_RENEWAL_STATUS" and subtype == "AUTO_RENEW_DISABLED":
