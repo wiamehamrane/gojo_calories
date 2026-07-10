@@ -54,6 +54,11 @@ def get_current_user(user_id: str = Depends(get_current_user_id), db: Session = 
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found",
         )
+    if user.is_banned:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account has been suspended.",
+        )
     return user
 
 def require_paid_user(user_id: str = Depends(get_current_user_id), db = Depends(get_db)):
@@ -62,5 +67,13 @@ def require_paid_user(user_id: str = Depends(get_current_user_id), db = Depends(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Payment required to access this feature."
+        )
+    return user
+
+def require_admin_user(user: models.User = Depends(get_current_user)):
+    if not user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required."
         )
     return user

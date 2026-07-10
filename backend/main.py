@@ -20,6 +20,7 @@ load_dotenv()
 os.makedirs("uploads", exist_ok=True)
 
 from routes import vision, auth, stats, groups, referrals, payments, notifications, exercises, recipes, events, apple_iap, google_iap, memories, feed, friends
+from routes.admin import router as admin_router
 
 if os.getenv("WIPE_DB") == "true":
     logger.warning("WIPE_DB is true. Dropping all tables via SCHEMA wipe...")
@@ -67,6 +68,8 @@ try:
         # Social & Privacy
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR;"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS share_phone BOOLEAN DEFAULT FALSE;"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE;"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_banned BOOLEAN DEFAULT FALSE;"))
         # Multilingual food names
         conn.execute(text("ALTER TABLE food_logs ADD COLUMN IF NOT EXISTS name_en VARCHAR;"))
         conn.execute(text("ALTER TABLE food_logs ADD COLUMN IF NOT EXISTS name_fr VARCHAR;"))
@@ -262,7 +265,13 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 # ──────────────────────────────────────────────────────────────────────────────
 
-allowed_origins = os.getenv("ALLOWED_ORIGINS", "*").split(",")
+_raw_origins = os.getenv("ALLOWED_ORIGINS", "*")
+allowed_origins = [
+    origin.strip()
+    for part in _raw_origins.replace("\n", ",").split(",")
+    for origin in [part.strip()]
+    if origin
+]
 
 app.add_middleware(
     CORSMiddleware,
@@ -299,6 +308,7 @@ app.include_router(events.router, prefix="/api/events", tags=["Events"])
 app.include_router(memories.router, prefix="/api/memories", tags=["Memories"])
 app.include_router(feed.router, prefix="/api/feed", tags=["Feed"])
 app.include_router(friends.router, prefix="/api/friends", tags=["Friends"])
+app.include_router(admin_router.router, prefix="/api/admin", tags=["Admin"])
 
 # Apple Sign-In callback — must be at root path to match the redirectUri
 # configured in the Flutter app: https://api.gojocalories.com/callbacks/sign_in_with_apple
