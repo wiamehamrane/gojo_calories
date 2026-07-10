@@ -12,6 +12,7 @@ import 'package:gojocalories/features/auth/presentation/providers/iap_provider.d
 import 'package:gojocalories/features/auth/data/services/iap_service.dart';
 import 'package:gojocalories/core/localization/locale_provider.dart';
 import 'package:gojocalories/core/localization/translations.dart';
+import 'package:gojocalories/core/network/api_client.dart';
 
 class PaywallScreen extends ConsumerStatefulWidget {
   const PaywallScreen({super.key});
@@ -23,6 +24,8 @@ class PaywallScreen extends ConsumerStatefulWidget {
 class _PaywallScreenState extends ConsumerState<PaywallScreen> {
   String? _selectedProductId;
   late final IAPService _iapService;
+  final _promoController = TextEditingController();
+  bool _redeemingPromo = false;
 
   @override
   void initState() {
@@ -33,6 +36,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
 
   @override
   void dispose() {
+    _promoController.dispose();
     _iapService.status.removeListener(_onIAPStatusChanged);
     super.dispose();
   }
@@ -106,6 +110,38 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
       (p) => p.id == _selectedProductId,
     );
     await _iapService.buySubscription(product);
+  }
+
+  Future<void> _redeemPromo() async {
+    final lang = ref.read(localeProvider);
+    final code = _promoController.text.trim();
+    if (code.isEmpty || _redeemingPromo) return;
+
+    setState(() => _redeemingPromo = true);
+    try {
+      await ApiClient.instance.post(
+        'payments/redeem-promo',
+        data: {'code': code},
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(Translations.t(lang, 'promo_redeemed')),
+          backgroundColor: const Color(0xFF1E3A1A),
+        ),
+      );
+      await _onPurchaseSuccess(false);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(Translations.t(lang, 'promo_invalid')),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _redeemingPromo = false);
+    }
   }
 
   Widget _buildPlansUnavailable({
@@ -351,6 +387,45 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
 
               if (hasProducts) ...[
                 const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _promoController,
+                        textCapitalization: TextCapitalization.characters,
+                        decoration: InputDecoration(
+                          hintText: t('promo_code_hint'),
+                          filled: true,
+                          fillColor: const Color(0xFFF8FDF7),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: const BorderSide(color: Color(0xFFE8E8E8)),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: const BorderSide(color: Color(0xFFE8E8E8)),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    TextButton(
+                      onPressed: _redeemingPromo ? null : _redeemPromo,
+                      child: _redeemingPromo
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Text(t('redeem_promo')),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
                 const Text(
                   'Cancel anytime. No commitment.',
                   textAlign: TextAlign.center,

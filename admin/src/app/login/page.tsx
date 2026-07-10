@@ -17,8 +17,8 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
     try {
-      await login(email, password);
-      router.push("/dashboard");
+      const data = await login(email, password);
+      router.push(data.role === "influencer" ? "/my-stats" : "/dashboard");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Login failed");
     } finally {

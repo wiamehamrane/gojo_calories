@@ -16,6 +16,7 @@ class User(Base):
     hashed_password = Column(String)
     is_email_verified = Column(Boolean, default=False, nullable=False)
     is_admin = Column(Boolean, default=False, nullable=False)
+    is_influencer = Column(Boolean, default=False, nullable=False)
     is_banned = Column(Boolean, default=False, nullable=False)
     verification_code = Column(String(6), nullable=True)
     verification_code_expires_at = Column(DateTime, nullable=True)
@@ -300,3 +301,51 @@ class Friendship(Base):
     
     user = relationship("User", foreign_keys=[user_id])
     friend = relationship("User", foreign_keys=[friend_id])
+
+
+class Influencer(Base):
+    __tablename__ = "influencers"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid, index=True)
+    user_id = Column(String(36), ForeignKey("users.id"), unique=True, nullable=False, index=True)
+    display_name = Column(String, nullable=False)
+    handle = Column(String, nullable=True, index=True)
+    platform = Column(String, nullable=True)  # instagram, tiktok, youtube, etc.
+    notes = Column(Text, nullable=True)
+    commission_rate = Column(Float, nullable=True)
+    panel_access = Column(Boolean, default=True, nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    user = relationship("User")
+    promo_codes = relationship("PromoCode", back_populates="influencer", cascade="all, delete-orphan")
+
+
+class PromoCode(Base):
+    __tablename__ = "promo_codes"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid, index=True)
+    influencer_id = Column(String(36), ForeignKey("influencers.id"), nullable=False, index=True)
+    code = Column(String, unique=True, nullable=False, index=True)
+    plan_type = Column(String, nullable=False)  # monthly | yearly | lifetime | trial_7d
+    max_redemptions = Column(Integer, nullable=True)
+    redemption_count = Column(Integer, default=0, nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
+    expires_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    influencer = relationship("Influencer", back_populates="promo_codes")
+    redemptions = relationship("PromoRedemption", back_populates="promo_code", cascade="all, delete-orphan")
+
+
+class PromoRedemption(Base):
+    __tablename__ = "promo_redemptions"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid, index=True)
+    promo_code_id = Column(String(36), ForeignKey("promo_codes.id"), nullable=False, index=True)
+    user_id = Column(String(36), ForeignKey("users.id"), unique=True, nullable=False, index=True)
+    plan_granted = Column(String, nullable=False)
+    redeemed_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    promo_code = relationship("PromoCode", back_populates="redemptions")
+    user = relationship("User")

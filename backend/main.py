@@ -19,7 +19,7 @@ load_dotenv()
 
 os.makedirs("uploads", exist_ok=True)
 
-from routes import vision, auth, stats, groups, referrals, payments, notifications, exercises, recipes, events, apple_iap, google_iap, memories, feed, friends
+from routes import vision, auth, stats, groups, referrals, payments, notifications, exercises, recipes, events, apple_iap, google_iap, memories, feed, friends, promo
 from routes.admin import router as admin_router
 
 if os.getenv("WIPE_DB") == "true":
@@ -70,6 +70,45 @@ try:
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS share_phone BOOLEAN DEFAULT FALSE;"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE;"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_banned BOOLEAN DEFAULT FALSE;"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_influencer BOOLEAN DEFAULT FALSE;"))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS influencers (
+                id VARCHAR(36) PRIMARY KEY,
+                user_id VARCHAR(36) NOT NULL UNIQUE REFERENCES users(id),
+                display_name VARCHAR NOT NULL,
+                handle VARCHAR,
+                platform VARCHAR,
+                notes TEXT,
+                commission_rate FLOAT,
+                panel_access BOOLEAN DEFAULT TRUE,
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS promo_codes (
+                id VARCHAR(36) PRIMARY KEY,
+                influencer_id VARCHAR(36) NOT NULL REFERENCES influencers(id) ON DELETE CASCADE,
+                code VARCHAR NOT NULL UNIQUE,
+                plan_type VARCHAR NOT NULL,
+                max_redemptions INTEGER,
+                redemption_count INTEGER DEFAULT 0,
+                is_active BOOLEAN DEFAULT TRUE,
+                expires_at TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS promo_redemptions (
+                id VARCHAR(36) PRIMARY KEY,
+                promo_code_id VARCHAR(36) NOT NULL REFERENCES promo_codes(id) ON DELETE CASCADE,
+                user_id VARCHAR(36) NOT NULL UNIQUE REFERENCES users(id),
+                plan_granted VARCHAR NOT NULL,
+                redeemed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_promo_codes_influencer ON promo_codes (influencer_id);"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_promo_redemptions_code ON promo_redemptions (promo_code_id);"))
         # Multilingual food names
         conn.execute(text("ALTER TABLE food_logs ADD COLUMN IF NOT EXISTS name_en VARCHAR;"))
         conn.execute(text("ALTER TABLE food_logs ADD COLUMN IF NOT EXISTS name_fr VARCHAR;"))
@@ -293,6 +332,7 @@ def health_check():
 
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(payments.router, prefix="/api/payments", tags=["Payments"])
+app.include_router(promo.router, prefix="/api/payments", tags=["Promo"])
 app.include_router(apple_iap.router, prefix="/api/payments/apple", tags=["Apple IAP"])
 app.include_router(google_iap.router, prefix="/api/payments/google", tags=["Google IAP"])
 

@@ -18,6 +18,7 @@ const _kCancelText = Color(0xFF8E8E93);
 const _kStartButton = Color(0xFFDDF8E4);
 const _kStartText = Color(0xFF248A3D);
 const _kPickerHeight = 216.0;
+const _kActionButtonSize = 84.0;
 
 class CreateTaskScreen extends ConsumerStatefulWidget {
   const CreateTaskScreen({super.key});
@@ -28,52 +29,25 @@ class CreateTaskScreen extends ConsumerStatefulWidget {
 
 class _CreateTaskScreenState extends ConsumerState<CreateTaskScreen> {
   Duration _duration = const Duration(hours: 1, minutes: 30);
-  String _taskName = '';
+  late final TextEditingController _nameController;
+  late final TextEditingController _descriptionController;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController();
+    _descriptionController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
+  }
 
   String _defaultTaskName(String lang) =>
       Translations.t(lang, 'tasks_default_name');
-
-  String _displayTaskName(String lang) {
-    final trimmed = _taskName.trim();
-    if (trimmed.isEmpty) return _defaultTaskName(lang);
-    return trimmed;
-  }
-
-  Future<void> _editTaskName() async {
-    final lang = ref.read(localeProvider);
-    final controller = TextEditingController(text: _displayTaskName(lang));
-
-    final result = await showCupertinoDialog<String>(
-      context: context,
-      builder: (context) => CupertinoAlertDialog(
-        title: Text(Translations.t(lang, 'tasks_row_label')),
-        content: Padding(
-          padding: const EdgeInsets.only(top: 12),
-          child: CupertinoTextField(
-            controller: controller,
-            autofocus: true,
-            textCapitalization: TextCapitalization.sentences,
-            placeholder: Translations.t(lang, 'tasks_name_hint'),
-          ),
-        ),
-        actions: [
-          CupertinoDialogAction(
-            onPressed: () => Navigator.pop(context),
-            child: Text(Translations.t(lang, 'cancel')),
-          ),
-          CupertinoDialogAction(
-            isDefaultAction: true,
-            onPressed: () => Navigator.pop(context, controller.text.trim()),
-            child: Text(Translations.t(lang, 'save')),
-          ),
-        ],
-      ),
-    );
-
-    controller.dispose();
-    if (result == null || !mounted) return;
-    setState(() => _taskName = result);
-  }
 
   Future<void> _startTask() async {
     final lang = ref.read(localeProvider);
@@ -86,13 +60,16 @@ class _CreateTaskScreenState extends ConsumerState<CreateTaskScreen> {
       return;
     }
 
-    final title = _taskName.trim().isEmpty
+    final title = _nameController.text.trim().isEmpty
         ? _defaultTaskName(lang)
-        : _taskName.trim();
+        : _nameController.text.trim();
+
+    final description = _descriptionController.text.trim();
 
     final task = await ref.read(tasksProvider.notifier).addTask(
           title: title,
           durationSeconds: durationSeconds,
+          description: description.isEmpty ? null : description,
         );
 
     if (!mounted || task == null) return;
@@ -108,9 +85,12 @@ class _CreateTaskScreenState extends ConsumerState<CreateTaskScreen> {
       value: SystemUiOverlayStyle.dark,
       child: Scaffold(
         backgroundColor: _kBackground,
+        resizeToAvoidBottomInset: true,
         body: SafeArea(
           bottom: false,
-          child: LayoutBuilder(
+          child: GestureDetector(
+            onTap: () => FocusScope.of(context).unfocus(),
+            child: LayoutBuilder(
             builder: (context, constraints) {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -129,86 +109,118 @@ class _CreateTaskScreenState extends ConsumerState<CreateTaskScreen> {
                     ),
                   ),
                   Expanded(
-                    child: Column(
-                      children: [
-                        const Spacer(),
-                        SizedBox(
-                          height: _kPickerHeight,
-                          width: constraints.maxWidth,
-                          child: CupertinoTheme(
-                            data: const CupertinoThemeData(
-                              brightness: Brightness.light,
-                              primaryColor: _kStartText,
-                              textTheme: CupertinoTextThemeData(
-                                pickerTextStyle: TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w400,
-                                  color: Color(0xFFAEAEB2),
+                    child: SingleChildScrollView(
+                      padding: EdgeInsets.only(
+                        bottom: MediaQuery.viewInsetsOf(context).bottom,
+                      ),
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          minHeight: constraints.maxHeight - 60,
+                        ),
+                        child: Column(
+                          children: [
+                            const SizedBox(height: 24),
+                            SizedBox(
+                              height: _kPickerHeight,
+                              width: constraints.maxWidth,
+                              child: CupertinoTheme(
+                                data: const CupertinoThemeData(
+                                  brightness: Brightness.light,
+                                  primaryColor: _kStartText,
+                                  textTheme: CupertinoTextThemeData(
+                                    pickerTextStyle: TextStyle(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.w400,
+                                      color: Color(0xFFAEAEB2),
+                                    ),
+                                    dateTimePickerTextStyle: TextStyle(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.w400,
+                                      color: _kPrimaryText,
+                                    ),
+                                  ),
                                 ),
-                                dateTimePickerTextStyle: TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w400,
-                                  color: _kPrimaryText,
+                                child: CupertinoTimerPicker(
+                                  key: const ValueKey('task_duration_picker'),
+                                  mode: CupertinoTimerPickerMode.hms,
+                                  initialTimerDuration: _duration,
+                                  backgroundColor: Colors.transparent,
+                                  onTimerDurationChanged: (duration) {
+                                    _duration = duration;
+                                    HapticFeedback.selectionClick();
+                                  },
                                 ),
                               ),
                             ),
-                            child: CupertinoTimerPicker(
-                              key: const ValueKey('task_duration_picker'),
-                              mode: CupertinoTimerPickerMode.hms,
-                              initialTimerDuration: _duration,
-                              backgroundColor: Colors.transparent,
-                              onTimerDurationChanged: (duration) {
-                                _duration = duration;
-                                HapticFeedback.selectionClick();
-                              },
+                            const SizedBox(height: 20),
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 40),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  _CircleActionButton(
+                                    label: Translations.t(lang, 'cancel'),
+                                    backgroundColor: _kCancelButton,
+                                    foregroundColor: _kCancelText,
+                                    onTap: () => context.pop(),
+                                  ),
+                                  _CircleActionButton(
+                                    label: Translations.t(
+                                      lang,
+                                      'tasks_start_short',
+                                    ),
+                                    backgroundColor: _kStartButton,
+                                    foregroundColor: _kStartText,
+                                    onTap: _startTask,
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                        ),
-                        const Spacer(),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 36),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: _CircleActionButton(
-                                  label: Translations.t(lang, 'cancel'),
-                                  backgroundColor: _kCancelButton,
-                                  foregroundColor: _kCancelText,
-                                  onTap: () => context.pop(),
-                                ),
+                            const SizedBox(height: 28),
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 16),
+                              child: _SettingsGroup(
+                                children: [
+                                  _SettingsInputRow(
+                                    label: Translations.t(
+                                      lang,
+                                      'tasks_row_label',
+                                    ),
+                                    controller: _nameController,
+                                    placeholder: Translations.t(
+                                      lang,
+                                      'tasks_name_hint',
+                                    ),
+                                  ),
+                                  _SettingsInputRow(
+                                    label: Translations.t(
+                                      lang,
+                                      'tasks_description_label',
+                                    ),
+                                    controller: _descriptionController,
+                                    placeholder: Translations.t(
+                                      lang,
+                                      'tasks_description_hint',
+                                    ),
+                                    maxLines: 2,
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 32),
-                              Expanded(
-                                child: _CircleActionButton(
-                                  label: Translations.t(lang, 'tasks_start_short'),
-                                  backgroundColor: _kStartButton,
-                                  foregroundColor: _kStartText,
-                                  onTap: _startTask,
-                                ),
-                              ),
-                            ],
-                          ),
+                            ),
+                            const SizedBox(height: 24),
+                          ],
                         ),
-                        const SizedBox(height: 28),
-                      ],
+                      ),
                     ),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: _SettingsGroup(
-                      children: [
-                        _SettingsRow(
-                          label: Translations.t(lang, 'tasks_row_label'),
-                          value: _displayTaskName(lang),
-                          onTap: _editTaskName,
-                        ),
-                      ],
-                    ),
-                  ),
-                  SizedBox(height: MediaQuery.paddingOf(context).bottom + 16),
+                  SizedBox(height: MediaQuery.paddingOf(context).bottom + 8),
                 ],
               );
             },
+            ),
           ),
         ),
       ),
@@ -231,35 +243,28 @@ class _CircleActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final size = constraints.maxWidth.clamp(0.0, 148.0);
-        return Center(
-          child: SizedBox(
-            width: size,
-            height: size,
-            child: Material(
-              color: backgroundColor,
-              shape: const CircleBorder(),
-              clipBehavior: Clip.antiAlias,
-              child: InkWell(
-                onTap: onTap,
-                customBorder: const CircleBorder(),
-                child: Center(
-                  child: Text(
-                    label,
-                    style: TextStyle(
-                      color: foregroundColor,
-                      fontSize: 17,
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                ),
+    return SizedBox(
+      width: _kActionButtonSize,
+      height: _kActionButtonSize,
+      child: Material(
+        color: backgroundColor,
+        shape: const CircleBorder(),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          customBorder: const CircleBorder(),
+          child: Center(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: foregroundColor,
+                fontSize: 17,
+                fontWeight: FontWeight.w400,
               ),
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 }
@@ -294,59 +299,58 @@ class _SettingsGroup extends StatelessWidget {
   }
 }
 
-class _SettingsRow extends StatelessWidget {
+class _SettingsInputRow extends StatelessWidget {
   final String label;
-  final String value;
-  final VoidCallback onTap;
+  final TextEditingController controller;
+  final String placeholder;
+  final int maxLines;
 
-  const _SettingsRow({
+  const _SettingsInputRow({
     required this.label,
-    required this.value,
-    required this.onTap,
+    required this.controller,
+    required this.placeholder,
+    this.maxLines = 1,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-          child: Row(
-            children: [
-              Text(
-                label,
-                style: const TextStyle(
-                  color: _kPrimaryText,
-                  fontSize: 17,
-                  fontWeight: FontWeight.w400,
-                ),
-              ),
-              const Spacer(),
-              Flexible(
-                child: Text(
-                  value,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.right,
-                  style: const TextStyle(
-                    color: _kSecondaryText,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 6),
-              Icon(
-                CupertinoIcons.chevron_forward,
-                size: 16,
-                color: _kSecondaryText.withValues(alpha: 0.7),
-              ),
-            ],
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Row(
+        crossAxisAlignment:
+            maxLines > 1 ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              color: _kPrimaryText,
+              fontSize: 17,
+              fontWeight: FontWeight.w400,
+            ),
           ),
-        ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: CupertinoTextField(
+              controller: controller,
+              placeholder: placeholder,
+              maxLines: maxLines,
+              textCapitalization: TextCapitalization.sentences,
+              textAlign: TextAlign.right,
+              decoration: const BoxDecoration(),
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              style: const TextStyle(
+                color: _kSecondaryText,
+                fontSize: 17,
+                fontWeight: FontWeight.w400,
+              ),
+              placeholderStyle: TextStyle(
+                color: _kSecondaryText.withValues(alpha: 0.7),
+                fontSize: 17,
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

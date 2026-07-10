@@ -8,21 +8,32 @@ import {
   Gift,
   Bell,
   LogOut,
+  Megaphone,
+  BarChart3,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { getRole } from "@/lib/api";
 
-const navItems = [
+const adminNavItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/users", label: "Users", icon: Users },
   { href: "/subscriptions", label: "Subscriptions", icon: CreditCard },
+  { href: "/influencers", label: "Influencers", icon: Megaphone },
   { href: "/events", label: "Events", icon: Calendar },
   { href: "/referrals", label: "Referrals", icon: Gift },
   { href: "/notifications", label: "Notifications", icon: Bell },
 ];
 
+const influencerNavItems = [
+  { href: "/my-stats", label: "My Stats", icon: BarChart3 },
+];
+
 export function Sidebar() {
   const pathname = usePathname();
   const { user, signOut } = useAuth();
+  const role = getRole();
+  const navItems = role === "influencer" ? influencerNavItems : adminNavItems;
+  const panelLabel = role === "influencer" ? "Influencer Panel" : "Admin Panel";
 
   return (
     <aside className="fixed left-0 top-0 flex h-screen w-64 flex-col border-r border-border bg-surface">
@@ -33,7 +44,7 @@ export function Sidebar() {
           </div>
           <div>
             <p className="text-sm font-bold text-text-primary">GojoCalories</p>
-            <p className="text-xs text-text-secondary">Admin Panel</p>
+            <p className="text-xs text-text-secondary">{panelLabel}</p>
           </div>
         </div>
       </div>
@@ -60,7 +71,7 @@ export function Sidebar() {
 
       <div className="border-t border-border px-4 py-4">
         <p className="truncate text-sm font-semibold text-text-primary">
-          {user?.name || "Admin"}
+          {user?.name || "User"}
         </p>
         <p className="truncate text-xs text-text-secondary">{user?.email}</p>
         <button

@@ -17,15 +17,19 @@ from models import (
     Friendship,
     Group,
     GroupMember,
+    Influencer,
     Memory,
     Post,
     PostLike,
+    PromoCode,
+    PromoRedemption,
     Referral,
     User,
     Withdrawal,
 )
 from security import (
     create_access_token,
+    get_current_user,
     get_password_hash,
     require_admin_user,
     verify_password,
@@ -149,22 +153,38 @@ def admin_login(body: AdminLoginRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     if not verify_password(body.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    if not user.is_admin:
-        raise HTTPException(status_code=403, detail="Admin access required")
     if user.is_banned:
         raise HTTPException(status_code=403, detail="Account suspended")
 
-    token = create_access_token({"sub": user.id, "admin": True})
+    role = "admin"
+    if user.is_admin:
+        pass
+    elif user.is_influencer:
+        influencer = (
+            db.query(Influencer)
+            .filter(Influencer.user_id == user.id, Influencer.is_active == True)
+            .first()
+        )
+        if not influencer or not influencer.panel_access:
+            raise HTTPException(status_code=403, detail="Panel access required")
+        role = "influencer"
+    else:
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    token = create_access_token({"sub": user.id, "admin": True, "role": role})
     return {
         "access_token": token,
         "token_type": "bearer",
+        "role": role,
         "user": _user_summary(user),
     }
 
 
 @router.get("/auth/me")
-def admin_me(admin: User = Depends(require_admin_user)):
-    return _user_summary(admin)
+def admin_me(user: User = Depends(get_current_user)):
+    if not user.is_admin and not user.is_influencer:
+        raise HTTPException(status_code=403, detail="Access denied")
+    return _user_summary(user)
 
 
 # ── Dashboard ─────────────────────────────────────────────────────────────────
@@ -214,6 +234,22 @@ def dashboard_stats(
         "pending_withdrawals": (
             db.query(func.count(Withdrawal.id))
             .filter(Withdrawal.status == "pending")
+            .scalar()
+            or 0
+        ),
+        "total_influencers": db.query(func.count(Influencer.id)).scalar() or 0,
+        "active_influencers": (
+            db.query(func.count(Influencer.id))
+            .filter(Influencer.is_active == True)
+            .scalar()
+            or 0
+        ),
+        "total_promo_redemptions": (
+            db.query(func.count(PromoRedemption.id)).scalar() or 0
+        ),
+        "active_promo_codes": (
+            db.query(func.count(PromoCode.id))
+            .filter(PromoCode.is_active == True)
             .scalar()
             or 0
         ),
@@ -817,3 +853,8 @@ def list_exercises(
             for e in result["items"]
         ],
     }
+
+
+from routes.admin.influencers import router as influencers_router
+
+router.include_router(influencers_router)
