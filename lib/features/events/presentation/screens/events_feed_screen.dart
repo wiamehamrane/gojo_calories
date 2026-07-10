@@ -95,7 +95,7 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
             await ref.read(eventsProvider.notifier).fetchEvents();
           },
           child: CustomScrollView(
-            physics: const ClampingScrollPhysics(),
+            physics: const BouncingScrollPhysics(),
             slivers: [
               SliverToBoxAdapter(
                 child: SafeArea(bottom: false, child: _buildDarkHeader()),

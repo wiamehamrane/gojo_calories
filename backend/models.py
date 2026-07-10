@@ -234,6 +234,7 @@ class Event(Base):
     start_time = Column(DateTime, nullable=False)
     whatsapp_link = Column(String, nullable=True)
     image_url = Column(String, nullable=True)
+    image_urls = Column(JSON, nullable=True)
     max_participants = Column(Integer, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     

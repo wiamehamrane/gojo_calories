@@ -131,7 +131,9 @@ class EventCard extends StatelessWidget {
 
   Widget _buildBackground(Color typeColor) {
     final imageUrl = resolveImageUrl(event);
-    if (imageUrl != null) {
+    final hasUploaded = event.imageUrls.isNotEmpty ||
+        (event.imageUrl != null && event.imageUrl!.isNotEmpty);
+    if (imageUrl != null && hasUploaded) {
       return Image.network(
         imageUrl,
         fit: BoxFit.cover,
@@ -145,14 +147,30 @@ class EventCard extends StatelessWidget {
     return _buildGradientFallback(typeColor);
   }
 
-  /// Image to show for [event]: uploaded cover when set, otherwise a stock
-  /// photo per event type. Relative API paths are resolved to full URLs.
+  /// First image for [event]: uploaded photo when set, otherwise stock placeholder.
   static String? resolveImageUrl(Event event) {
-    if (event.imageUrl != null && event.imageUrl!.isNotEmpty) {
-      return EnvConfig.resolveMediaUrl(event.imageUrl);
-    }
-    return _placeholderForType(event.eventType);
+    final urls = resolveImageUrls(event);
+    return urls.isNotEmpty ? urls.first : null;
   }
+
+  /// All displayable images for [event], including stock placeholder when none uploaded.
+  static List<String> resolveImageUrls(Event event) {
+    if (event.imageUrls.isNotEmpty) {
+      return event.imageUrls
+          .map(EnvConfig.resolveMediaUrl)
+          .where((url) => url.isNotEmpty)
+          .toList();
+    }
+    if (event.imageUrl != null && event.imageUrl!.isNotEmpty) {
+      return [EnvConfig.resolveMediaUrl(event.imageUrl)];
+    }
+    final placeholder = _placeholderForType(event.eventType);
+    return placeholder != null ? [placeholder] : [];
+  }
+
+  static bool hasUploadedImages(Event event) =>
+      event.imageUrls.isNotEmpty ||
+      (event.imageUrl != null && event.imageUrl!.isNotEmpty);
 
   Widget _buildGradientFallback(Color typeColor) {
     return Container(

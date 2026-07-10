@@ -17,6 +17,7 @@ import '../../domain/models/event.dart';
 import '../../theme/events_theme.dart';
 import '../providers/events_provider.dart';
 import '../widgets/event_card.dart';
+import '../widgets/event_image_carousel.dart';
 
 class EventDetailScreen extends ConsumerStatefulWidget {
   final String eventId;
@@ -435,26 +436,13 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen>
   // ── Hero image ───────────────────────────────────────────────
 
   Widget _buildHeroImage(Event event, Color typeColor) {
-    final imageUrl = EventCard.resolveImageUrl(event);
-
     return Hero(
       tag: 'event-hero-${event.id}',
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(AppRadius.card),
-          boxShadow: AppShadows.cardShadow,
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: AspectRatio(
-          aspectRatio: 4 / 3,
-          child: imageUrl != null
-              ? Image.network(
-                  imageUrl,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => _imageFallback(typeColor),
-                )
-              : _imageFallback(typeColor),
-        ),
+      child: EventImageCarousel(
+        event: event,
+        aspectRatio: 4 / 3,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        placeholder: _imageFallback(typeColor),
       ),
     );
   }

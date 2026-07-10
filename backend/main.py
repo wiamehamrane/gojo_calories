@@ -166,6 +166,7 @@ try:
             );
         """))
         conn.execute(text("ALTER TABLE events ADD COLUMN IF NOT EXISTS image_url VARCHAR;"))
+        conn.execute(text("ALTER TABLE events ADD COLUMN IF NOT EXISTS image_urls JSON;"))
         conn.execute(text("ALTER TABLE events ADD COLUMN IF NOT EXISTS max_participants INTEGER;"))
         conn.execute(text("ALTER TABLE events ADD COLUMN IF NOT EXISTS audience VARCHAR DEFAULT 'mixed';"))
         conn.execute(text("UPDATE events SET audience = 'mixed' WHERE audience IS NULL;"))
