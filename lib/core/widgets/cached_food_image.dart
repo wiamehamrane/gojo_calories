@@ -40,6 +40,16 @@ class CachedFoodImage extends StatelessWidget {
     return EnvConfig.resolveMediaUrl(url);
   }
 
+  /// Stable cache key for presigned S3 URLs: the signature query params
+  /// change on every fetch, so cache by the object path instead. This keeps
+  /// images cached across URL re-signing.
+  static String stableCacheKey(String url) {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return url;
+    if (!uri.host.contains('amazonaws.com')) return url;
+    return uri.replace(queryParameters: const {}).toString();
+  }
+
   @override
   Widget build(BuildContext context) {
     final url = imageUrl;
@@ -64,6 +74,7 @@ class CachedFoodImage extends StatelessWidget {
 
     return CachedNetworkImage(
       imageUrl: resolved,
+      cacheKey: stableCacheKey(resolved),
       fit: fit,
       width: width,
       height: height,
@@ -78,7 +89,7 @@ class CachedFoodImage extends StatelessWidget {
   static Widget _defaultPlaceholder() {
     return Container(
       color: AppColors.surfaceMuted,
-      child: const Center(
+      child: Center(
         child: Icon(LucideIcons.utensils, size: 24, color: AppColors.inactive),
       ),
     );
@@ -87,7 +98,7 @@ class CachedFoodImage extends StatelessWidget {
   static Widget _loadingPlaceholder() {
     return Container(
       color: AppColors.surfaceMuted,
-      child: const Center(
+      child: Center(
         child: SizedBox(
           width: 16,
           height: 16,

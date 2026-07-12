@@ -19,16 +19,22 @@ export interface Influencer {
   created_at: string | null;
 }
 
+export type PromoPlatform = "internal" | "apple" | "google";
+
 export interface PromoCode {
   id: string;
   code: string;
+  platform: PromoPlatform;
   plan_type: string;
+  store_product_id: string | null;
+  notes: string | null;
   max_redemptions: number | null;
   redemption_count: number;
   is_active: boolean;
   expires_at: string | null;
   created_at: string | null;
   remaining: number | null;
+  redeem_url: string | null;
 }
 
 export interface PromoRedemption {

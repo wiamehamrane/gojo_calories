@@ -113,7 +113,7 @@ class _CalorieRingInnerState extends State<CalorieRingInner>
                       children: [
                         TextSpan(
                           text: '${Translations.t(lang, 'calories_label')} ',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w400,
                             color: AppColors.textSecondary,
@@ -142,7 +142,7 @@ class _CalorieRingInnerState extends State<CalorieRingInner>
                         child: FractionallySizedBox(
                           widthFactor: progress,
                           child: Container(
-                            decoration: const BoxDecoration(
+                            decoration: BoxDecoration(
                               gradient: LinearGradient(
                                 colors: [
                                   AppColors.primaryMid,

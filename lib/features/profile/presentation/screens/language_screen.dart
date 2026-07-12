@@ -15,7 +15,7 @@ class LanguageScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(
           Translations.t(lang, 'language'),
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w700,
             color: AppColors.textPrimary,
@@ -23,7 +23,7 @@ class LanguageScreen extends ConsumerWidget {
         ),
         backgroundColor: AppColors.background,
         elevation: 0,
-        iconTheme: const IconThemeData(color: AppColors.textPrimary),
+        iconTheme: IconThemeData(color: AppColors.textPrimary),
       ),
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
@@ -122,7 +122,7 @@ class _LangOption extends StatelessWidget {
                 children: [
                   Text(
                     label,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
                       color: AppColors.textPrimary,
@@ -130,7 +130,7 @@ class _LangOption extends StatelessWidget {
                   ),
                   Text(
                     native,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       color: AppColors.textSecondary,
                     ),
@@ -142,7 +142,7 @@ class _LangOption extends StatelessWidget {
               Container(
                 width: 22,
                 height: 22,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   color: AppColors.primary,
                   shape: BoxShape.circle,
                 ),

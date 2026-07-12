@@ -12,6 +12,7 @@ from database import get_db
 from models import Influencer, PromoCode, PromoRedemption, User
 from security import get_password_hash, get_current_user, require_admin_user
 from services.subscription_service import grant_subscription, revoke_subscription
+from services.promo_redemption_service import PLAN_TO_STORE_PRODUCT
 
 router = APIRouter()
 
@@ -48,9 +49,18 @@ class GrantSubscriptionRequest(BaseModel):
 
 class PromoCodeCreate(BaseModel):
     code: Optional[str] = None
+    platform: str = "internal"  # internal | apple | google
     plan_type: str
     max_redemptions: Optional[int] = None
     expires_at: Optional[datetime.datetime] = None
+    notes: Optional[str] = None
+
+
+class AppleBatchPromoCreate(BaseModel):
+    plan_type: str
+    number_of_codes: int = 10
+    expiration_date: str  # YYYY-MM-DD
+    environment: str = "production"
 
 
 class PromoCodeUpdate(BaseModel):
@@ -120,10 +130,14 @@ def _influencer_summary(influencer: Influencer, db: Session) -> dict:
 
 
 def _promo_summary(promo: PromoCode, db: Session) -> dict:
+    platform = promo.platform or "internal"
     return {
         "id": promo.id,
         "code": promo.code,
+        "platform": platform,
         "plan_type": promo.plan_type,
+        "store_product_id": promo.store_product_id,
+        "notes": promo.notes,
         "max_redemptions": promo.max_redemptions,
         "redemption_count": promo.redemption_count,
         "is_active": promo.is_active,
@@ -132,6 +146,11 @@ def _promo_summary(promo: PromoCode, db: Session) -> dict:
         "remaining": (
             promo.max_redemptions - promo.redemption_count
             if promo.max_redemptions is not None
+            else None
+        ),
+        "redeem_url": (
+            f"https://play.google.com/redeem?code={promo.code}"
+            if platform == "google"
             else None
         ),
     }
@@ -336,19 +355,40 @@ def create_promo_code(
     if not influencer:
         raise HTTPException(status_code=404, detail="Influencer not found")
 
-    valid_plans = ("monthly", "yearly", "lifetime", "trial_7d")
+    valid_plans = ("monthly", "six_month", "yearly", "lifetime", "trial_7d")
     if body.plan_type not in valid_plans:
         raise HTTPException(status_code=400, detail=f"Plan must be one of: {valid_plans}")
+
+    platform = (body.platform or "internal").lower()
+    if platform not in ("internal", "apple", "google"):
+        raise HTTPException(status_code=400, detail="Platform must be internal, apple, or google")
 
     code = (body.code or _generate_code()).strip().upper()
     existing = db.query(PromoCode).filter(PromoCode.code == code).first()
     if existing:
         raise HTTPException(status_code=400, detail="Promo code already exists")
 
+    store_product_id = None
+    if platform in ("apple", "google"):
+        store_product_id = PLAN_TO_STORE_PRODUCT.get(body.plan_type)
+        if not store_product_id:
+            raise HTTPException(
+                status_code=400,
+                detail=f"No store product mapped for plan {body.plan_type}",
+            )
+        if not body.code:
+            raise HTTPException(
+                status_code=400,
+                detail="Store promo codes must be registered with the exact code from App Store Connect or Google Play Console",
+            )
+
     promo = PromoCode(
         influencer_id=influencer_id,
         code=code,
+        platform=platform,
         plan_type=body.plan_type,
+        store_product_id=store_product_id,
+        notes=body.notes,
         max_redemptions=body.max_redemptions,
         expires_at=body.expires_at,
     )
@@ -356,6 +396,67 @@ def create_promo_code(
     db.commit()
     db.refresh(promo)
     return _promo_summary(promo, db)
+
+
+@router.post("/influencers/{influencer_id}/promo-codes/apple-batch")
+def create_apple_batch_promo_codes(
+    influencer_id: str,
+    body: AppleBatchPromoCreate,
+    admin: User = Depends(require_admin_user),
+    db: Session = Depends(get_db),
+):
+    """Generate one-time offer codes via App Store Connect API and register each in our DB."""
+    from services import apple_asc_service
+
+    influencer = db.query(Influencer).filter(Influencer.id == influencer_id).first()
+    if not influencer:
+        raise HTTPException(status_code=404, detail="Influencer not found")
+
+    valid_plans = ("monthly", "six_month", "yearly")
+    if body.plan_type not in valid_plans:
+        raise HTTPException(status_code=400, detail=f"Plan must be one of: {valid_plans}")
+
+    if body.number_of_codes < 1 or body.number_of_codes > 500:
+        raise HTTPException(status_code=400, detail="number_of_codes must be between 1 and 500")
+
+    try:
+        codes = apple_asc_service.generate_one_time_codes(
+            plan_type=body.plan_type,
+            number_of_codes=body.number_of_codes,
+            expiration_date=body.expiration_date,
+            environment=body.environment,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=str(e))
+
+    store_product_id = PLAN_TO_STORE_PRODUCT.get(body.plan_type)
+    created = []
+    for raw_code in codes:
+        code = raw_code.strip().upper()
+        if db.query(PromoCode).filter(PromoCode.code == code).first():
+            continue
+        promo = PromoCode(
+            influencer_id=influencer_id,
+            code=code,
+            platform="apple",
+            plan_type=body.plan_type,
+            store_product_id=store_product_id,
+            notes=f"ASC batch {body.expiration_date}",
+            max_redemptions=1,
+        )
+        db.add(promo)
+        created.append(code)
+
+    db.commit()
+    promos = (
+        db.query(PromoCode)
+        .filter(PromoCode.influencer_id == influencer_id, PromoCode.code.in_(created))
+        .all()
+    )
+    return {
+        "generated_count": len(created),
+        "codes": [_promo_summary(p, db) for p in promos],
+    }
 
 
 @router.patch("/influencers/{influencer_id}/promo-codes/{promo_id}")

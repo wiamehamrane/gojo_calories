@@ -29,7 +29,6 @@ abstract final class RoutePaths {
   static const describeExercise = '/describe_exercise';
   static const manualExercise = '/manual_exercise';
 
-  static const savedFoods = '/saved_foods';
   static const foodDatabase = '/food_database';
   static const foodDetail = '/food-detail';
   static const fixResults = '/fix-results';

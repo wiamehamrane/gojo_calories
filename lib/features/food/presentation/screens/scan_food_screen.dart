@@ -397,7 +397,7 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
   Widget build(BuildContext context) {
     if (_isInitializing) {
       return _wrapWithBackHandler(
-        const Scaffold(
+        Scaffold(
           backgroundColor: Colors.black,
           body: Center(
             child: CircularProgressIndicator(color: AppColors.primary),
@@ -464,7 +464,7 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
                 : _currentMode == 'Scan Food'
                     ? (_controller != null && _controller!.value.isInitialized
                           ? _buildCameraPreview()
-                          : const Center(
+                          : Center(
                               child: CircularProgressIndicator(
                                 color: AppColors.primaryDark,
                               ),
@@ -505,7 +505,7 @@ class _ScanFoodScreenState extends ConsumerState<ScanFoodScreen>
             Positioned.fill(
               child: Container(
                 color: Colors.black54,
-                child: const Center(
+                child: Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [

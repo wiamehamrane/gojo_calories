@@ -18,6 +18,7 @@ import '../../theme/events_theme.dart';
 import '../providers/events_provider.dart';
 import '../widgets/event_card.dart';
 import '../widgets/event_image_carousel.dart';
+import '../../../../core/widgets/cached_food_image.dart';
 
 class EventDetailScreen extends ConsumerStatefulWidget {
   final String eventId;
@@ -149,7 +150,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen>
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(
+                    Icon(
                       LucideIcons.calendarX,
                       size: 36,
                       color: AppColors.inactive,
@@ -269,10 +270,11 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen>
         width: 56,
         height: 56,
         child: imageUrl != null
-            ? Image.network(
-                imageUrl,
+            ? CachedFoodImage(
+                imageUrl: imageUrl,
                 fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => _thumbFallback(typeColor),
+                memCacheWidth: 168,
+                errorWidget: _thumbFallback(typeColor),
               )
             : _thumbFallback(typeColor),
       ),
@@ -475,7 +477,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen>
           ),
           decoration: BoxDecoration(
             color: AppColors.surface.withValues(alpha: 0.92),
-            border: const Border(
+            border: Border(
               top: BorderSide(color: AppColors.border, width: 0.5),
             ),
           ),
@@ -564,7 +566,7 @@ class _BackButton extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppRadius.sm),
               boxShadow: AppShadows.cardShadow,
             ),
-            child: const Icon(
+            child: Icon(
               LucideIcons.chevronLeft,
               size: 22,
               color: AppColors.textPrimary,
@@ -633,7 +635,7 @@ class _InfoCard extends StatelessWidget {
           for (var i = 0; i < rows.length; i++) ...[
             _buildRow(rows[i]),
             if (i != rows.length - 1)
-              const Padding(
+              Padding(
                 padding: EdgeInsets.only(left: 66),
                 child: Divider(
                   height: 1,

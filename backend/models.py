@@ -32,6 +32,7 @@ class User(Base):
     activity_level = Column(String, default="sedentary")  # "sedentary" | "light" | "moderate" | "active" | "very_active"
     phone = Column(String, nullable=True)
     share_phone = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
     
     # Manual overrides for nutrition goals
     manual_calories = Column(Integer, nullable=True)
@@ -60,6 +61,8 @@ class User(Base):
     referral_balance = Column(Float, default=0.0, nullable=False)
     referred_by = Column(String(36), ForeignKey("users.id"), nullable=True)
     
+    pending_promo_code_id = Column(String(36), ForeignKey("promo_codes.id"), nullable=True, index=True)
+
     daily_stats = relationship("DailyStats", back_populates="user")
     weigh_ins = relationship("WeighIn", back_populates="user", cascade="all, delete-orphan")
     food_logs = relationship("FoodLog", back_populates="user")
@@ -330,7 +333,10 @@ class PromoCode(Base):
     id = Column(String(36), primary_key=True, default=generate_uuid, index=True)
     influencer_id = Column(String(36), ForeignKey("influencers.id"), nullable=False, index=True)
     code = Column(String, unique=True, nullable=False, index=True)
-    plan_type = Column(String, nullable=False)  # monthly | yearly | lifetime | trial_7d
+    platform = Column(String, default="internal", nullable=False)  # internal | apple | google
+    plan_type = Column(String, nullable=False)  # monthly | yearly | lifetime | trial_7d | six_month
+    store_product_id = Column(String, nullable=True)  # IAP product id for apple/google codes
+    notes = Column(Text, nullable=True)
     max_redemptions = Column(Integer, nullable=True)
     redemption_count = Column(Integer, default=0, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)

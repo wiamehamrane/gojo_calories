@@ -99,12 +99,12 @@ class _LogExerciseScreenState extends ConsumerState<LogExerciseScreen> {
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(LucideIcons.arrowLeft, color: AppColors.textPrimary),
+          icon: Icon(LucideIcons.arrowLeft, color: AppColors.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           t('log_exercise'),
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w600,
             color: AppColors.textPrimary,
@@ -175,7 +175,7 @@ class _LogExerciseScreenState extends ConsumerState<LogExerciseScreen> {
               const SizedBox(height: 28),
               Row(
                 children: [
-                  const Icon(
+                  Icon(
                     LucideIcons.history,
                     size: 18,
                     color: AppColors.textPrimary,
@@ -208,7 +208,7 @@ class _LogExerciseScreenState extends ConsumerState<LogExerciseScreen> {
                         .toList(),
                   );
                 },
-                loading: () => const Padding(
+                loading: () => Padding(
                   padding: EdgeInsets.symmetric(vertical: 32),
                   child: Center(
                     child: CircularProgressIndicator(color: AppColors.primary),
@@ -244,7 +244,7 @@ class _EmptyExerciseHistory extends StatelessWidget {
       ),
       child: Column(
         children: [
-          const Icon(
+          Icon(
             LucideIcons.activity,
             size: 40,
             color: AppColors.inactive,
@@ -253,7 +253,7 @@ class _EmptyExerciseHistory extends StatelessWidget {
           Text(
             message,
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 15,
               color: AppColors.inactive,
             ),
@@ -310,7 +310,7 @@ class _ExerciseOptionCard extends StatelessWidget {
                     children: [
                       Text(
                         name,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                           color: AppColors.textPrimary,
@@ -319,7 +319,7 @@ class _ExerciseOptionCard extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         desc,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
                           color: AppColors.textSecondary,
                         ),

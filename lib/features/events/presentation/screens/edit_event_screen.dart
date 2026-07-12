@@ -293,7 +293,7 @@ class _EditEventScreenState extends ConsumerState<EditEventScreen> {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(
+          icon: Icon(
             LucideIcons.x,
             size: 22,
             color: AppColors.textPrimary,
@@ -303,7 +303,7 @@ class _EditEventScreenState extends ConsumerState<EditEventScreen> {
             context.pop();
           },
         ),
-        title: const Text(
+        title: Text(
           'Edit Event',
           style: TextStyle(
             fontSize: 17,
@@ -345,7 +345,7 @@ class _EditEventScreenState extends ConsumerState<EditEventScreen> {
                             ),
                             decoration: _inputDecoration('Event title'),
                           ),
-                          const Divider(
+                          Divider(
                             height: 1,
                             thickness: 1,
                             color: AppColors.border,
@@ -406,7 +406,7 @@ class _EditEventScreenState extends ConsumerState<EditEventScreen> {
                                 .format(_selectedDate),
                             onTap: _pickDate,
                           ),
-                          const Divider(
+                          Divider(
                             height: 1,
                             thickness: 1,
                             color: AppColors.border,
@@ -418,7 +418,7 @@ class _EditEventScreenState extends ConsumerState<EditEventScreen> {
                             value: _selectedTime.format(context),
                             onTap: _pickTime,
                           ),
-                          const Divider(
+                          Divider(
                             height: 1,
                             thickness: 1,
                             color: AppColors.border,
@@ -456,7 +456,7 @@ class _EditEventScreenState extends ConsumerState<EditEventScreen> {
                               LucideIcons.messageCircle,
                             ),
                           ),
-                          const Divider(
+                          Divider(
                             height: 1,
                             thickness: 1,
                             color: AppColors.border,
@@ -667,7 +667,7 @@ class _ErrorLabel extends StatelessWidget {
       padding: const EdgeInsets.only(top: 8, left: 4),
       child: Text(
         error!,
-        style: const TextStyle(
+        style: TextStyle(
           color: AppColors.danger,
           fontSize: 12,
           fontWeight: FontWeight.w500,
@@ -747,7 +747,7 @@ class _PickerRow extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(
+            Icon(
               LucideIcons.chevronRight,
               size: 18,
               color: AppColors.inactive,
@@ -774,7 +774,7 @@ class _CupertinoPickerSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: 320,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -818,7 +818,7 @@ class _CupertinoPickerSheet extends StatelessWidget {
             child: CupertinoTheme(
               data: CupertinoTheme.of(context).copyWith(
                 primaryColor: AppColors.primaryDark,
-                textTheme: const CupertinoTextThemeData(
+                textTheme: CupertinoTextThemeData(
                   dateTimePickerTextStyle: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w600,

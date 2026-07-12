@@ -191,12 +191,12 @@ class _WeightLiftingScreenState extends ConsumerState<WeightLiftingScreen> {
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(LucideIcons.arrowLeft, color: AppColors.textPrimary),
+          icon: Icon(LucideIcons.arrowLeft, color: AppColors.textPrimary),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
           t('weight_lifting'),
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w700,
             color: AppColors.textPrimary,
@@ -313,7 +313,7 @@ class _WeightLiftingScreenState extends ConsumerState<WeightLiftingScreen> {
                 color: AppColors.primaryLight,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 LucideIcons.dumbbell,
                 size: 44,
                 color: AppColors.primary,
@@ -328,7 +328,7 @@ class _WeightLiftingScreenState extends ConsumerState<WeightLiftingScreen> {
             Text(
               'Tap "Add Exercise" to build your session.\nTrack sets, reps, and weight — then log calories.',
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
                 color: AppColors.textSecondary,
                 height: 1.6,
@@ -461,7 +461,7 @@ class _ExerciseCardState extends State<_ExerciseCard>
                     child: Center(
                       child: Text(
                         '${widget.index + 1}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppColors.primary,
                           fontWeight: FontWeight.w800,
                           fontSize: 16,
@@ -476,7 +476,7 @@ class _ExerciseCardState extends State<_ExerciseCard>
                       children: [
                         Text(
                           entry.name,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
                             color: AppColors.textPrimary,
@@ -484,7 +484,7 @@ class _ExerciseCardState extends State<_ExerciseCard>
                         ),
                         Text(
                           '${entry.sets.length} set${entry.sets.length != 1 ? 's' : ''}',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
                             color: AppColors.textSecondary,
                           ),
@@ -493,7 +493,7 @@ class _ExerciseCardState extends State<_ExerciseCard>
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(
+                    icon: Icon(
                       LucideIcons.trash2,
                       size: 18,
                       color: AppColors.inactive,
@@ -503,7 +503,7 @@ class _ExerciseCardState extends State<_ExerciseCard>
                   AnimatedRotation(
                     turns: entry.expanded ? 0 : -0.25,
                     duration: const Duration(milliseconds: 220),
-                    child: const Icon(
+                    child: Icon(
                       LucideIcons.chevronDown,
                       size: 20,
                       color: AppColors.inactive,
@@ -520,7 +520,7 @@ class _ExerciseCardState extends State<_ExerciseCard>
             child: Column(
               children: [
                 // Header row
-                const Padding(
+                Padding(
                   padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
                   child: Row(
                     children: [
@@ -607,13 +607,13 @@ class _ExerciseCardState extends State<_ExerciseCard>
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(
+                          Icon(
                             LucideIcons.plus,
                             size: 16,
                             color: AppColors.primary,
                           ),
                           const SizedBox(width: 6),
-                          const Text(
+                          Text(
                             'Add Set',
                             style: TextStyle(
                               fontSize: 14,
@@ -767,7 +767,7 @@ class _SetRowState extends State<_SetRow> {
                   const SizedBox(width: 4),
                   GestureDetector(
                     onTap: widget.onRemove,
-                    child: const Icon(
+                    child: Icon(
                       LucideIcons.x,
                       size: 14,
                       color: AppColors.inactive,
@@ -855,7 +855,7 @@ class _ExercisePickerSheetState extends State<_ExercisePickerSheet> {
     final safeBottom = MediaQuery.of(context).viewInsets.bottom;
 
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
@@ -880,7 +880,7 @@ class _ExercisePickerSheetState extends State<_ExercisePickerSheet> {
           const SizedBox(height: 16),
 
           // Title
-          const Text(
+          Text(
             'Choose Exercise',
             style: TextStyle(
               fontSize: 17,
@@ -899,7 +899,7 @@ class _ExercisePickerSheetState extends State<_ExercisePickerSheet> {
             padding: const EdgeInsets.symmetric(horizontal: 14),
             child: TextField(
               autofocus: true,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 border: InputBorder.none,
                 hintText: 'Search or type custom…',
                 hintStyle: TextStyle(color: AppColors.textPlaceholder),
@@ -930,21 +930,21 @@ class _ExercisePickerSheetState extends State<_ExercisePickerSheet> {
               shrinkWrap: true,
               itemCount: filtered.length,
               separatorBuilder: (context, index) =>
-                  const Divider(height: 1, color: AppColors.border),
+                  Divider(height: 1, color: AppColors.border),
               itemBuilder: (ctx, i) {
                 return ListTile(
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 4,
                     vertical: 2,
                   ),
-                  leading: const Icon(
+                  leading: Icon(
                     LucideIcons.dumbbell,
                     size: 18,
                     color: AppColors.primary,
                   ),
                   title: Text(
                     filtered[i],
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w500,
                       color: AppColors.textPrimary,

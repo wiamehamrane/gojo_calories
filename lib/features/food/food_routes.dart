@@ -4,7 +4,6 @@ import 'presentation/screens/scan_food_screen.dart';
 import 'presentation/screens/food_log_screen.dart';
 import 'presentation/screens/food_detail_screen.dart';
 import 'presentation/screens/fix_results_screen.dart';
-import 'presentation/screens/saved_foods_screen.dart';
 import 'presentation/screens/food_database_screen.dart';
 
 List<RouteBase> get foodShellRoutes => [
@@ -19,10 +18,6 @@ List<RouteBase> get foodShellRoutes => [
     ];
 
 List<RouteBase> get foodRoutes => [
-      GoRoute(
-        path: RoutePaths.savedFoods,
-        builder: (context, state) => const SavedFoodsScreen(),
-      ),
       GoRoute(
         path: RoutePaths.foodDatabase,
         builder: (context, state) => const FoodDatabaseScreen(),

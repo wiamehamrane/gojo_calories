@@ -26,7 +26,7 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
         title: Text(t('preferences'), style: AppTextStyles.sectionHeader),
         backgroundColor: AppColors.surface,
         elevation: 0,
-        iconTheme: const IconThemeData(color: AppColors.textPrimary),
+        iconTheme: IconThemeData(color: AppColors.textPrimary),
       ),
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),

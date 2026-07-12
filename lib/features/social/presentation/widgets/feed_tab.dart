@@ -16,7 +16,7 @@ class FeedTab extends ConsumerWidget {
     final feedAsync = ref.watch(feedProvider);
 
     return feedAsync.when(
-      loading: () => const Center(
+      loading: () => Center(
         child: CircularProgressIndicator(color: AppColors.primary),
       ),
       error: (error, stackTrace) => _FeedMessage(
@@ -89,7 +89,7 @@ class _CreatePostHeader extends StatelessWidget {
           CircleAvatar(
             radius: 20,
             backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-            child: const Icon(
+            child: Icon(
               LucideIcons.user,
               color: AppColors.primary,
               size: 20,
@@ -103,14 +103,14 @@ class _CreatePostHeader extends StatelessWidget {
                 color: AppColors.background,
                 borderRadius: BorderRadius.circular(AppRadius.chip),
               ),
-              child: const Text(
+              child: Text(
                 "What's on your mind?",
                 style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
               ),
             ),
           ),
           const SizedBox(width: 12),
-          const Icon(LucideIcons.image, color: AppColors.primary, size: 22),
+          Icon(LucideIcons.image, color: AppColors.primary, size: 22),
         ],
       ),
     );
@@ -144,7 +144,7 @@ class _FeedMessage extends StatelessWidget {
           Text(
             message,
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               color: AppColors.textSecondary,
               fontSize: 15,
               height: 1.4,

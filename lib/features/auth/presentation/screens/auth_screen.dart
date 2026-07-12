@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart' show DioException;
 import 'dart:io';
+import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
@@ -254,17 +255,26 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      backgroundColor:
-          _showEmailSheet ? const Color(0xFFB5B5B5) : const Color(0xFFF7F7F7),
+      backgroundColor: const Color(0xFFF7F7F7),
       body: Stack(
         children: [
+          // Background that gently dims while the email sheet is open.
+          Positioned.fill(
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 380),
+              curve: Curves.easeOutCubic,
+              color: _showEmailSheet
+                  ? const Color(0xFFB5B5B5)
+                  : const Color(0xFFF7F7F7),
+            ),
+          ),
           SafeArea(
             child: GestureDetector(
               onTap: () => FocusScope.of(context).unfocus(),
               child: Column(
                 children: [
                   const Spacer(flex: 3),
-                  const Text(
+                  Text(
                     'GojoCalories',
                     style: TextStyle(
                       fontSize: 28,
@@ -282,7 +292,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                         if (Platform.isIOS) ...[
                           _SocialCircleButton(
                             onTap: _isLoading ? null : _signInWithApple,
-                            child: const Icon(
+                            child: Icon(
                               Icons.apple,
                               size: 28,
                               color: AppColors.textPrimary,
@@ -301,7 +311,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                         const SizedBox(width: 20),
                         _SocialCircleButton(
                           onTap: _isLoading ? null : _openEmailSheet,
-                          child: const Icon(
+                          child: Icon(
                             Icons.mail_outline,
                             size: 24,
                             color: AppColors.textPrimary,
@@ -328,47 +338,78 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
             ),
           ),
 
-          if (_showEmailSheet)
-            GestureDetector(
-              onTap: _closeEmailSheet,
-              child: Container(color: Colors.black.withValues(alpha: 0.08)),
-            ),
-
-          if (_showEmailSheet)
-            Align(
-              alignment: Alignment.bottomCenter,
+          // Frosted-glass barrier that blurs the page behind the sheet.
+          Positioned.fill(
+            child: IgnorePointer(
+              ignoring: !_showEmailSheet,
               child: GestureDetector(
-                onTap: () {},
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxHeight: MediaQuery.of(context).size.height * 0.92,
-                  ),
-                  child: _EmailAuthSheet(
-                    tabController: _tab,
-                    emailCtrl: _emailCtrl,
-                    passwordCtrl: _passwordCtrl,
-                    emailFocus: _emailFocus,
-                    passFocus: _passFocus,
-                    obscurePass: _obscurePass,
-                    agreedToPrivacy: _agreedToPrivacy,
-                    isLoading: _isLoading,
-                    onToggleObscure: () =>
-                        setState(() => _obscurePass = !_obscurePass),
-                    onAgreedChanged: (v) =>
-                        setState(() => _agreedToPrivacy = v),
-                    onSubmit: _submitEmail,
-                    onPrivacyTap: () => launchUrl(
-                      Uri.parse('https://gojocalories.com/privacy-policy'),
+                onTap: _closeEmailSheet,
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0, end: _showEmailSheet ? 1 : 0),
+                  duration: const Duration(milliseconds: 380),
+                  curve: Curves.easeOutCubic,
+                  builder: (context, t, _) {
+                    if (t == 0) return const SizedBox.expand();
+                    return BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 10 * t, sigmaY: 10 * t),
+                      child: Container(
+                        color: Colors.black.withValues(alpha: 0.10 * t),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+
+          // Email sheet slides and fades in graciously.
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: AnimatedSlide(
+              offset: _showEmailSheet ? Offset.zero : const Offset(0, 1),
+              duration: const Duration(milliseconds: 420),
+              curve: Curves.easeOutCubic,
+              child: AnimatedOpacity(
+                opacity: _showEmailSheet ? 1 : 0,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOut,
+                child: IgnorePointer(
+                  ignoring: !_showEmailSheet,
+                  child: GestureDetector(
+                    onTap: () {},
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxHeight: MediaQuery.of(context).size.height * 0.92,
+                      ),
+                      child: _EmailAuthSheet(
+                        tabController: _tab,
+                        emailCtrl: _emailCtrl,
+                        passwordCtrl: _passwordCtrl,
+                        emailFocus: _emailFocus,
+                        passFocus: _passFocus,
+                        obscurePass: _obscurePass,
+                        agreedToPrivacy: _agreedToPrivacy,
+                        isLoading: _isLoading,
+                        onToggleObscure: () =>
+                            setState(() => _obscurePass = !_obscurePass),
+                        onAgreedChanged: (v) =>
+                            setState(() => _agreedToPrivacy = v),
+                        onSubmit: _submitEmail,
+                        onPrivacyTap: () => launchUrl(
+                          Uri.parse('https://gojocalories.com/privacy-policy'),
+                        ),
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
+          ),
 
           if (_isLoading)
             Container(
               color: Colors.black.withValues(alpha: 0.12),
-              child: const Center(
+              child: Center(
                 child: CircularProgressIndicator(color: AppColors.primaryDark),
               ),
             ),
@@ -422,7 +463,7 @@ class _LegalFooter extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        const Text(
+        Text(
           'By continuing, you agree to our',
           textAlign: TextAlign.center,
           style: TextStyle(
@@ -438,7 +479,7 @@ class _LegalFooter extends StatelessWidget {
           children: [
             GestureDetector(
               onTap: onTermsTap,
-              child: const Text(
+              child: Text(
                 'Terms of Service',
                 style: TextStyle(
                   fontSize: 12,
@@ -448,13 +489,13 @@ class _LegalFooter extends StatelessWidget {
                 ),
               ),
             ),
-            const Text(
+            Text(
               ' and ',
               style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
             ),
             GestureDetector(
               onTap: onPrivacyTap,
-              child: const Text(
+              child: Text(
                 'Privacy Policy',
                 style: TextStyle(
                   fontSize: 12,
@@ -505,13 +546,22 @@ class _EmailAuthSheet extends StatelessWidget {
     final isCreate = tabController.index == 0;
     final keyboardInset = MediaQuery.of(context).viewInsets.bottom;
 
-    return Container(
-      width: double.infinity,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: SafeArea(
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+        child: Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.72),
+            border: Border(
+              top: BorderSide(
+                color: Colors.white.withValues(alpha: 0.65),
+                width: 1,
+              ),
+            ),
+          ),
+          child: SafeArea(
         top: false,
         child: AnimatedPadding(
           duration: const Duration(milliseconds: 200),
@@ -569,8 +619,21 @@ class _EmailAuthSheet extends StatelessWidget {
                   ),
                 ),
               ),
-              if (isCreate) ...[
-                const SizedBox(height: 14),
+              // Privacy checkbox gracefully grows/shrinks when switching
+              // between Create Account and Log In.
+              AnimatedSize(
+                duration: const Duration(milliseconds: 320),
+                curve: Curves.easeInOutCubic,
+                alignment: Alignment.topCenter,
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 220),
+                  child: !isCreate
+                      ? const SizedBox(width: double.infinity)
+                      : Column(
+                          key: const ValueKey('privacy_row'),
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const SizedBox(height: 14),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -581,7 +644,7 @@ class _EmailAuthSheet extends StatelessWidget {
                         value: agreedToPrivacy,
                         onChanged: (val) => onAgreedChanged(val ?? false),
                         activeColor: AppColors.primary,
-                        side: const BorderSide(
+                        side: BorderSide(
                           color: AppColors.textPlaceholder,
                           width: 1.5,
                         ),
@@ -597,7 +660,7 @@ class _EmailAuthSheet extends StatelessWidget {
                         child: Text.rich(
                           TextSpan(
                             text: 'I agree to the Terms of Use & ',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
                               color: AppColors.textSecondary,
                               height: 1.4,
@@ -618,7 +681,10 @@ class _EmailAuthSheet extends StatelessWidget {
                     ),
                   ],
                 ),
-              ],
+                          ],
+                        ),
+                ),
+              ),
               const SizedBox(height: 20),
               _PrimaryButton(
                 label: isCreate ? 'Create Account' : 'Log In',
@@ -628,6 +694,8 @@ class _EmailAuthSheet extends StatelessWidget {
             ],
           ),
         ),
+        ),
+      ),
         ),
       ),
     );
@@ -773,7 +841,7 @@ class _AuthField extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w700,
             color: AppColors.textPrimary,
@@ -798,13 +866,13 @@ class _AuthField extends StatelessWidget {
                   textInputAction: textInputAction,
                   obscureText: obscure,
                   onSubmitted: onSubmitted,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 15,
                     color: AppColors.textPrimary,
                   ),
                   decoration: InputDecoration(
                     hintText: hint,
-                    hintStyle: const TextStyle(
+                    hintStyle: TextStyle(
                       color: AppColors.textPlaceholder,
                       fontSize: 15,
                     ),
@@ -859,12 +927,28 @@ class _PrimaryButton extends StatelessWidget {
                     strokeWidth: 2.5,
                   ),
                 )
-              : Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
+              : AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 260),
+                  switchInCurve: Curves.easeOutCubic,
+                  switchOutCurve: Curves.easeInCubic,
+                  transitionBuilder: (child, animation) => FadeTransition(
+                    opacity: animation,
+                    child: SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0, 0.35),
+                        end: Offset.zero,
+                      ).animate(animation),
+                      child: child,
+                    ),
+                  ),
+                  child: Text(
+                    label,
+                    key: ValueKey(label),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
         ),

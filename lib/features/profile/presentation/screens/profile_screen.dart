@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:onesignal_flutter/onesignal_flutter.dart';
 import '../../../../core/storage/token_storage.dart';
 import '../../../../core/routing/route_paths.dart';
 import '../../../auth/data/services/iap_service.dart';
@@ -19,6 +20,7 @@ import '../../../../core/localization/translations.dart';
 import '../../../../core/di/repository_providers.dart';
 import '../../../../core/utils/error_handler.dart';
 import '../providers/profile_providers.dart';
+import '../widgets/redeem_promo_sheet.dart';
 
 
 class ProfileScreen extends ConsumerWidget {
@@ -54,7 +56,7 @@ class ProfileScreen extends ConsumerWidget {
                     ],
                   ],
                 ),
-                loading: () => const Center(
+                loading: () => Center(
                   child: CircularProgressIndicator(color: AppColors.primary),
                 ),
                 error: (e, st) => _ProfileLoadError(
@@ -96,7 +98,7 @@ class ProfileScreen extends ConsumerWidget {
                           color: AppColors.primaryLight,
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           LucideIcons.userPlus,
                           size: 20,
                           color: AppColors.primary,
@@ -109,7 +111,7 @@ class ProfileScreen extends ConsumerWidget {
                           children: [
                             Text(
                               t('referral_tagline'),
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w600,
                                 color: AppColors.textPrimary,
@@ -118,7 +120,7 @@ class ProfileScreen extends ConsumerWidget {
                             const SizedBox(height: 2),
                             Text(
                               t('referral_subtitle'),
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 13,
                                 color: AppColors.textSecondary,
                               ),
@@ -126,7 +128,7 @@ class ProfileScreen extends ConsumerWidget {
                           ],
                         ),
                       ),
-                      const Icon(
+                      Icon(
                         LucideIcons.chevronRight,
                         size: 18,
                         color: AppColors.inactive,
@@ -168,6 +170,11 @@ class ProfileScreen extends ConsumerWidget {
                     icon: LucideIcons.languages,
                     label: t('language'),
                     onTap: () => context.push('/profile/language'),
+                  ),
+                  _SettingsRow(
+                    icon: LucideIcons.ticket,
+                    label: t('redeem_promo_title'),
+                    onTap: () => showRedeemPromoSheet(context),
                   ),
                   _SettingsRow(
                     icon: LucideIcons.users,
@@ -325,7 +332,7 @@ class ProfileScreen extends ConsumerWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
-          const Icon(LucideIcons.mailWarning, color: AppColors.fire, size: 24),
+          Icon(LucideIcons.mailWarning, color: AppColors.fire, size: 24),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -333,7 +340,7 @@ class ProfileScreen extends ConsumerWidget {
               children: [
                 Text(
                   t('email_not_verified'),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w600,
                     color: AppColors.fire,
                     fontSize: 14,
@@ -435,7 +442,7 @@ class ProfileScreen extends ConsumerWidget {
       padding: const EdgeInsets.all(16),
       child: Row(
         children: [
-          const CircleAvatar(
+          CircleAvatar(
             radius: 26,
             backgroundColor: AppColors.surfaceMuted,
             child: Icon(LucideIcons.user, size: 28, color: AppColors.inactive),
@@ -449,7 +456,7 @@ class ProfileScreen extends ConsumerWidget {
                   children: [
                     Text(
                       data['name'] ?? 'User',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w600,
                         color: AppColors.textPrimary,
@@ -457,12 +464,12 @@ class ProfileScreen extends ConsumerWidget {
                     ),
                     const SizedBox(width: 6),
                     if (data['phone'] != null)
-                      const Icon(LucideIcons.phone, size: 12, color: AppColors.textSecondary),
+                      Icon(LucideIcons.phone, size: 12, color: AppColors.textSecondary),
                     const SizedBox(width: 4),
                     GestureDetector(
                       onTap: () =>
                           _showUpdateProfileBottomSheet(context, ref, data),
-                      child: const Icon(
+                      child: Icon(
                         LucideIcons.pencil,
                         size: 16,
                         color: AppColors.primary,
@@ -472,7 +479,7 @@ class ProfileScreen extends ConsumerWidget {
                 ),
                 Text(
                   "${data['age'] ?? 30} ${t('profile_years_old')}",
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     color: AppColors.textSecondary,
                   ),
@@ -483,7 +490,7 @@ class ProfileScreen extends ConsumerWidget {
                     children: [
                       Text(
                         '${t('bmi')}: ${bmi.toStringAsFixed(1)}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
                           color: AppColors.textSecondary,
                         ),
@@ -537,7 +544,7 @@ class ProfileScreen extends ConsumerWidget {
             return _buildMemoryCard(memory);
           },
         ),
-        loading: () => const Center(
+        loading: () => Center(
           child: CircularProgressIndicator(color: AppColors.primary),
         ),
         error: (e, st) => Center(
@@ -569,10 +576,10 @@ class ProfileScreen extends ConsumerWidget {
                 color: AppColors.primary.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(LucideIcons.imagePlus, color: AppColors.primary, size: 20),
+              child: Icon(LucideIcons.imagePlus, color: AppColors.primary, size: 20),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Add Photo',
               style: TextStyle(
                 fontSize: 12,
@@ -662,7 +669,7 @@ class ProfileScreen extends ConsumerWidget {
                     backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                     child: Text(
                       f.name != null && f.name!.isNotEmpty ? f.name![0].toUpperCase() : '👤',
-                      style: const TextStyle(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.bold),
+                      style: TextStyle(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.bold),
                     ),
                   ),
                 )),
@@ -679,7 +686,7 @@ class ProfileScreen extends ConsumerWidget {
                       shape: BoxShape.circle,
                       border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
                     ),
-                    child: const Icon(LucideIcons.plus, size: 16, color: AppColors.primary),
+                    child: Icon(LucideIcons.plus, size: 16, color: AppColors.primary),
                   ),
                 ),
                 if (friends.length > 5)
@@ -687,7 +694,7 @@ class ProfileScreen extends ConsumerWidget {
                     padding: const EdgeInsets.only(left: 8),
                     child: Text(
                       '+${friends.length - 5}',
-                      style: const TextStyle(fontSize: 12, color: AppColors.inactive, fontWeight: FontWeight.bold),
+                      style: TextStyle(fontSize: 12, color: AppColors.inactive, fontWeight: FontWeight.bold),
                     ),
                   ),
               ],
@@ -695,10 +702,10 @@ class ProfileScreen extends ConsumerWidget {
             loading: () => const SizedBox(height: 36, child: Center(child: CircularProgressIndicator(strokeWidth: 2))),
             error: (e, st) => Text(
               'Failed to load circle', 
-              style: const TextStyle(fontSize: 12, color: AppColors.danger)),
+              style: TextStyle(fontSize: 12, color: AppColors.danger)),
           ),
           const SizedBox(height: 12),
-          const Text(
+          Text(
             'Keep it tight. Share your progress only with people you trust.',
             style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
           ),
@@ -727,6 +734,9 @@ class ProfileScreen extends ConsumerWidget {
   }
 
   Future<void> _signOut(BuildContext context) async {
+    try {
+      await OneSignal.logout();
+    } catch (_) {}
     await TokenStorage.clearSession();
     if (context.mounted) context.go(RoutePaths.auth);
   }
@@ -748,7 +758,7 @@ class ProfileScreen extends ConsumerWidget {
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(
               t('delete_permanently'),
-              style: const TextStyle(color: AppColors.danger),
+              style: TextStyle(color: AppColors.danger),
             ),
           ),
         ],
@@ -757,6 +767,9 @@ class ProfileScreen extends ConsumerWidget {
     if (confirm == true && context.mounted) {
       try {
         await ref.read(profileRepositoryProvider).deleteAccount();
+        try {
+          await OneSignal.logout();
+        } catch (_) {}
         await TokenStorage.clearSession();
         if (context.mounted) context.go(RoutePaths.auth);
       } catch (e) {
@@ -829,7 +842,7 @@ class _ProfileUpdateSheetState extends ConsumerState<_ProfileUpdateSheet> {
         right: 24,
         top: 24,
       ),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.background,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -841,7 +854,7 @@ class _ProfileUpdateSheetState extends ConsumerState<_ProfileUpdateSheet> {
           children: [
             Text(
               t('update_profile'),
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: AppColors.textPrimary,
@@ -917,7 +930,7 @@ class _SectionLabel extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8, left: 4),
       child: Text(
         label,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w500,
           color: AppColors.inactive,
@@ -938,7 +951,7 @@ class _GroupedListCard extends StatelessWidget {
       children.add(rows[i]);
       if (i < rows.length - 1) {
         children.add(
-          const Divider(color: AppColors.border, height: 1, indent: 52),
+          Divider(color: AppColors.border, height: 1, indent: 52),
         );
       }
     }
@@ -978,7 +991,7 @@ class _SettingsRow extends StatelessWidget {
         ),
       ),
       trailing: color == null
-          ? const Icon(
+          ? Icon(
               LucideIcons.chevronRight,
               size: 18,
               color: AppColors.inactive,
@@ -1018,7 +1031,7 @@ class _ProfileLoadError extends StatelessWidget {
         children: [
           Text(
             t('failed_load_profile'),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w600,
               color: AppColors.textPrimary,
@@ -1027,7 +1040,7 @@ class _ProfileLoadError extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             message,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
               color: AppColors.danger,
             ),

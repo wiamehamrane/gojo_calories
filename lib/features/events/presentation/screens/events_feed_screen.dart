@@ -88,7 +88,7 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
         backgroundColor: _kDarkBackground,
         body: RefreshIndicator(
           color: AppColors.primary,
-          backgroundColor: Colors.white,
+          backgroundColor: AppColors.surface,
           onRefresh: () async {
             setState(() => _activeQuery = null);
             _searchController.clear();
@@ -190,7 +190,7 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
                 color: Colors.white.withValues(alpha: 0.9),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 LucideIcons.plus,
                 size: 18,
                 color: AppColors.textPrimary,
@@ -204,7 +204,7 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
               textInputAction: TextInputAction.search,
               textAlign: TextAlign.center,
               onSubmitted: (_) => _runSearch(),
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppColors.textPrimary,
                 fontSize: 14.5,
                 fontWeight: FontWeight.w500,
@@ -234,7 +234,7 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
               child: Container(
                 width: 38,
                 height: 38,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   color: AppColors.textPrimary,
                   shape: BoxShape.circle,
                 ),
@@ -246,7 +246,7 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
               ),
             )
           else
-            const Padding(
+            Padding(
               padding: EdgeInsets.only(right: 10),
               child: Icon(
                 LucideIcons.sparkles,
@@ -303,7 +303,7 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
     }
     return Row(
       children: [
-        const Icon(
+        Icon(
           LucideIcons.sparkles,
           size: 16,
           color: AppColors.primaryDark,

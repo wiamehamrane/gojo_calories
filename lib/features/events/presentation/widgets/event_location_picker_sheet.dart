@@ -263,7 +263,7 @@ class _EventLocationPickerSheetState extends State<EventLocationPickerSheet> {
 
     return Container(
       height: height,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.background,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -293,7 +293,7 @@ class _EventLocationPickerSheetState extends State<EventLocationPickerSheet> {
                 ),
                 IconButton(
                   onPressed: () => Navigator.pop(context),
-                  icon: const Icon(
+                  icon: Icon(
                     LucideIcons.x,
                     size: 22,
                     color: AppColors.textPrimary,
@@ -331,7 +331,7 @@ class _EventLocationPickerSheetState extends State<EventLocationPickerSheet> {
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
               child: Text(
                 _error!,
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppColors.danger,
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
@@ -409,7 +409,7 @@ class _EventLocationPickerSheetState extends State<EventLocationPickerSheet> {
               border: InputBorder.none,
               contentPadding: const EdgeInsets.all(16),
               suffixIcon: _isSearching
-                  ? const Padding(
+                  ? Padding(
                       padding: EdgeInsets.all(14),
                       child: SizedBox(
                         width: 18,
@@ -422,7 +422,7 @@ class _EventLocationPickerSheetState extends State<EventLocationPickerSheet> {
                     )
                   : IconButton(
                       onPressed: _searchAddress,
-                      icon: const Icon(
+                      icon: Icon(
                         LucideIcons.search,
                         size: 20,
                         color: AppColors.primaryDark,
@@ -448,7 +448,7 @@ class _EventLocationPickerSheetState extends State<EventLocationPickerSheet> {
                       color: AppColors.primaryLight,
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       LucideIcons.locateFixed,
                       size: 18,
                       color: AppColors.primaryDark,
@@ -461,7 +461,7 @@ class _EventLocationPickerSheetState extends State<EventLocationPickerSheet> {
                       style: AppTextStyles.bodyBold.copyWith(fontSize: 15),
                     ),
                   ),
-                  const Icon(
+                  Icon(
                     LucideIcons.chevronRight,
                     size: 18,
                     color: AppColors.inactive,
@@ -486,7 +486,7 @@ class _EventLocationPickerSheetState extends State<EventLocationPickerSheet> {
               children: [
                 for (var i = 0; i < _searchResults.length; i++) ...[
                   if (i > 0)
-                    const Divider(
+                    Divider(
                       height: 1,
                       thickness: 1,
                       color: AppColors.border,
@@ -505,7 +505,7 @@ class _EventLocationPickerSheetState extends State<EventLocationPickerSheet> {
                               color: AppColors.primaryLight,
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: const Icon(
+                            child: Icon(
                               LucideIcons.mapPin,
                               size: 18,
                               color: AppColors.primaryDark,
@@ -535,7 +535,7 @@ class _EventLocationPickerSheetState extends State<EventLocationPickerSheet> {
 
   Widget _buildMapTab() {
     if (_isLoadingMap) {
-      return const Center(
+      return Center(
         child: CircularProgressIndicator(color: AppColors.primaryDark),
       );
     }
@@ -591,7 +591,7 @@ class _EventLocationPickerSheetState extends State<EventLocationPickerSheet> {
                               boxShadow: AppShadows.cardElevated,
                             ),
                             padding: const EdgeInsets.all(8),
-                            child: const Icon(
+                            child: Icon(
                               LucideIcons.mapPin,
                               color: AppColors.primaryDark,
                               size: 24,
@@ -745,14 +745,14 @@ class _SelectedLocationCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
             ),
             child: isLoading
-                ? const Padding(
+                ? Padding(
                     padding: EdgeInsets.all(10),
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
                       color: AppColors.primaryDark,
                     ),
                   )
-                : const Icon(
+                : Icon(
                     LucideIcons.mapPin,
                     size: 20,
                     color: AppColors.primaryDark,

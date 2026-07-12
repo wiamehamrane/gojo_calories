@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/di/repository_providers.dart';
 import '../../../../core/localization/locale_provider.dart';
 import '../../../../core/localization/translations.dart';
+import '../../../../core/theme/app_colors.dart';
 
 class ReferralsScreen extends ConsumerStatefulWidget {
   const ReferralsScreen({super.key});
@@ -73,36 +74,36 @@ class _ReferralsScreenState extends ConsumerState<ReferralsScreen> {
       builder: (context, ref, _) {
         final lang = ref.watch(localeProvider);
         return Scaffold(
-          backgroundColor: Colors.white,
+          backgroundColor: AppColors.surface,
           appBar: AppBar(
-            backgroundColor: Colors.white,
+            backgroundColor: AppColors.surface,
             elevation: 0,
-            surfaceTintColor: Colors.white,
+            surfaceTintColor: AppColors.surface,
             leading: IconButton(
-              icon: const Icon(LucideIcons.chevronLeft, color: Colors.black),
+              icon: Icon(LucideIcons.chevronLeft, color: AppColors.textPrimary),
               onPressed: () => Navigator.of(context).pop(),
             ),
             title: Text(
               Translations.t(lang, 'referrals'),
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.w700,
-                color: Colors.black,
+                color: AppColors.textPrimary,
               ),
             ),
             centerTitle: true,
           ),
           body: _loading
-              ? const Center(
+              ? Center(
                   child: CircularProgressIndicator(
-                    color: Colors.black,
+                    color: AppColors.textPrimary,
                     strokeWidth: 2,
                   ),
                 )
               : _error != null
                   ? _buildError(lang)
                   : RefreshIndicator(
-                      color: Colors.black,
+                      color: AppColors.textPrimary,
                       onRefresh: _fetchData,
                       child: _buildContent(context, lang),
                     ),
@@ -122,7 +123,7 @@ class _ReferralsScreenState extends ConsumerState<ReferralsScreen> {
             const SizedBox(height: 16),
             Text(
               Translations.t(lang, 'could_not_load_referrals'),
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
@@ -131,7 +132,7 @@ class _ReferralsScreenState extends ConsumerState<ReferralsScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
                 decoration: BoxDecoration(
-                  color: Colors.black,
+                  color: AppColors.textPrimary,
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(Translations.t(lang, 'retry'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
@@ -164,7 +165,7 @@ class _ReferralsScreenState extends ConsumerState<ReferralsScreen> {
           // ── Hero Balance Card ──────────────────────────────────────────
           Container(
             decoration: BoxDecoration(
-              color: Colors.black,
+              color: AppColors.textPrimary,
               borderRadius: BorderRadius.circular(24),
             ),
             padding: const EdgeInsets.all(24),
@@ -260,10 +261,10 @@ class _ReferralsScreenState extends ConsumerState<ReferralsScreen> {
                     Expanded(
                       child: Text(
                         code,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.w800,
-                          color: Colors.black,
+                          color: AppColors.textPrimary,
                           letterSpacing: 5,
                         ),
                       ),
@@ -274,7 +275,7 @@ class _ReferralsScreenState extends ConsumerState<ReferralsScreen> {
                         width: 42,
                         height: 42,
                         decoration: BoxDecoration(
-                          color: Colors.black,
+                          color: AppColors.textPrimary,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Icon(LucideIcons.copy, size: 18, color: Colors.white),
@@ -368,9 +369,9 @@ class _StatCard extends StatelessWidget {
         ),
         child: Column(
           children: [
-            Icon(icon, size: 18, color: Colors.black),
+            Icon(icon, size: 18, color: AppColors.textPrimary),
             const SizedBox(height: 8),
-            Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Colors.black)),
+            Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
             const SizedBox(height: 2),
             Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF888888))),
           ],
@@ -418,7 +419,7 @@ class _StepRow extends StatelessWidget {
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: Colors.black,
+            color: AppColors.textPrimary,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Center(
@@ -430,7 +431,7 @@ class _StepRow extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.black)),
+              Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
               Text(subtitle, style: const TextStyle(fontSize: 12, color: Color(0xFF888888))),
             ],
           ),
@@ -478,7 +479,7 @@ class _ReferralHistoryCard extends StatelessWidget {
                       child: Center(
                         child: Text(
                           name.isNotEmpty ? name[0].toUpperCase() : 'F',
-                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.black),
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
                         ),
                       ),
                     ),
@@ -487,20 +488,20 @@ class _ReferralHistoryCard extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black)),
+                          Text(name, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
                           Text(_fmt(item['created_at'] as String?), style: const TextStyle(fontSize: 12, color: Color(0xFF888888))),
                         ],
                       ),
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(20)),
-                      child: const Text('+\$1.00', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white)),
+                      decoration: BoxDecoration(color: AppColors.textPrimary, borderRadius: BorderRadius.circular(20)),
+                      child: Text('+\$1.00', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.surface)),
                     ),
                   ],
                 ),
               ),
-              if (i < items.length - 1) const Divider(height: 1, color: Color(0xFFEEEEEE), indent: 64),
+              if (i < items.length - 1) Divider(height: 1, color: AppColors.border, indent: 64),
             ],
           );
         }).toList(),
@@ -567,7 +568,7 @@ class _WithdrawalHistoryCard extends StatelessWidget {
                             t('withdrawn_via')
                                 .replaceAll('{amount}', '\$${amount.toStringAsFixed(2)}')
                                 .replaceAll('{method}', methodLabel),
-                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black)),
+                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
                           Text(_fmt(w['created_at'] as String?),
                               style: const TextStyle(fontSize: 12, color: Color(0xFF888888))),
                         ],
@@ -675,7 +676,7 @@ class _WithdrawSheetState extends ConsumerState<_WithdrawSheet> {
             ),
           ),
           const SizedBox(height: 24),
-          Text(t('withdraw_earnings_title'), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.black)),
+          Text(t('withdraw_earnings_title'), style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
           const SizedBox(height: 4),
           Text(
             t('balance_amount').replaceAll('{amount}', '\$${widget.maxAmount.toStringAsFixed(2)}'),
@@ -687,14 +688,14 @@ class _WithdrawSheetState extends ConsumerState<_WithdrawSheet> {
           TextField(
             controller: _amountCtrl,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black),
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
             decoration: InputDecoration(
               prefixText: '\$ ',
-              prefixStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black),
+              prefixStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
               filled: true,
               fillColor: const Color(0xFFF5F5F5),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
-              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Colors.black, width: 1.5)),
+              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: AppColors.textPrimary, width: 1.5)),
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             ),
           ),

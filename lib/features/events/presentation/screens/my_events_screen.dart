@@ -17,6 +17,7 @@ import '../../domain/models/event.dart';
 import '../../theme/events_theme.dart';
 import '../providers/events_provider.dart';
 import '../widgets/event_card.dart';
+import '../../../../core/widgets/cached_food_image.dart';
 
 /// Manage events created by the current user: open, edit, or delete them.
 class MyEventsScreen extends ConsumerWidget {
@@ -33,7 +34,7 @@ class MyEventsScreen extends ConsumerWidget {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(
+          icon: Icon(
             LucideIcons.chevronLeft,
             size: 24,
             color: AppColors.textPrimary,
@@ -43,7 +44,7 @@ class MyEventsScreen extends ConsumerWidget {
             context.pop();
           },
         ),
-        title: const Text(
+        title: Text(
           'My Events',
           style: TextStyle(
             fontSize: 17,
@@ -130,11 +131,11 @@ class _MyEventTile extends ConsumerWidget {
                 width: 64,
                 height: 64,
                 child: imageUrl != null
-                    ? Image.network(
-                        imageUrl,
+                    ? CachedFoodImage(
+                        imageUrl: imageUrl,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) =>
-                            _thumbFallback(typeColor),
+                        memCacheWidth: 192,
+                        errorWidget: _thumbFallback(typeColor),
                       )
                     : _thumbFallback(typeColor),
               ),
@@ -187,7 +188,7 @@ class _MyEventTile extends ConsumerWidget {
                   const SizedBox(height: 3),
                   Row(
                     children: [
-                      const Icon(
+                      Icon(
                         LucideIcons.users,
                         size: 11,
                         color: AppColors.textSecondary,
@@ -205,7 +206,7 @@ class _MyEventTile extends ConsumerWidget {
             ),
             IconButton(
               onPressed: () => _showActions(context, ref),
-              icon: const Icon(
+              icon: Icon(
                 LucideIcons.ellipsis,
                 size: 20,
                 color: AppColors.textSecondary,

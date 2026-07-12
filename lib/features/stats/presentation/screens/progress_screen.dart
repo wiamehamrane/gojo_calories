@@ -95,12 +95,12 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                   ? (currentWeight / goalWeight).clamp(0.0, 1.0)
                   : 0,
               backgroundColor: AppColors.ringTrack,
-              valueColor: const AlwaysStoppedAnimation(AppColors.primary),
+              valueColor: AlwaysStoppedAnimation(AppColors.primary),
               minHeight: 3,
             ),
           ),
           const SizedBox(height: 8),
-          const Row(
+          Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
@@ -118,7 +118,7 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
             ],
           ),
           const SizedBox(height: 10),
-          const Text(
+          Text(
             "Next weigh-in: 5d",
             style: TextStyle(fontSize: 12, color: AppColors.textPlaceholder),
           ),
@@ -157,7 +157,7 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                 width: 48,
                 height: 52,
               ),
-              const Padding(
+              Padding(
                 padding: EdgeInsets.only(bottom: 8),
                 child: Text(
                   "12",
@@ -173,7 +173,7 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
           const SizedBox(height: 6),
           Text(
             t('streak'),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
               color: AppColors.fire,
@@ -187,7 +187,7 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                 children: [
                   Text(
                     days[i],
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11,
                       color: AppColors.inactive,
                     ),
@@ -265,7 +265,7 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
           SizedBox(
             height: 220,
             child: asyncData.when(
-              loading: () => const Center(
+              loading: () => Center(
                 child: CircularProgressIndicator(color: AppColors.primary),
               ),
               error: (err, st) =>
@@ -279,7 +279,7 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                   LineChartData(
                     gridData: FlGridData(
                       drawHorizontalLine: true,
-                      getDrawingHorizontalLine: (_) => const FlLine(
+                      getDrawingHorizontalLine: (_) => FlLine(
                         color: AppColors.border,
                         strokeWidth: 1,
                         dashArray: [4, 4],
@@ -294,7 +294,7 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                           reservedSize: 36,
                           getTitlesWidget: (val, _) => Text(
                             val.toStringAsFixed(1),
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
                               color: AppColors.inactive,
                             ),

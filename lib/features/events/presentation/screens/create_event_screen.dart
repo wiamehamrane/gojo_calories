@@ -547,7 +547,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                     contentPadding: const EdgeInsets.all(16),
                   ),
                 ),
-                const Divider(height: 1, thickness: 1, color: AppColors.border),
+                Divider(height: 1, thickness: 1, color: AppColors.border),
                 TextField(
                   controller: _descriptionController,
                   textCapitalization: TextCapitalization.sentences,
@@ -575,7 +575,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
               padding: const EdgeInsets.only(left: 4),
               child: Text(
                 _titleError!,
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppColors.danger,
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
@@ -621,7 +621,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                 padding: const EdgeInsets.only(left: 4),
                 child: Text(
                   _categoryError!,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppColors.danger,
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
@@ -653,7 +653,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                   placeholder: _selectedDate == null,
                   onTap: _pickDate,
                 ),
-                const Divider(
+                Divider(
                   height: 1,
                   thickness: 1,
                   color: AppColors.border,
@@ -668,7 +668,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                   placeholder: _selectedTime == null,
                   onTap: _pickTime,
                 ),
-                const Divider(
+                Divider(
                   height: 1,
                   thickness: 1,
                   color: AppColors.border,
@@ -815,7 +815,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                   },
                   style: AppTextStyles.bodyBold.copyWith(fontSize: 15),
                   decoration: InputDecoration(
-                    prefixIcon: const Padding(
+                    prefixIcon: Padding(
                       padding: EdgeInsets.only(left: 16, right: 12),
                       child: Icon(
                         LucideIcons.messageCircle,
@@ -836,7 +836,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                     ),
                   ),
                 ),
-                const Divider(
+                Divider(
                   height: 1,
                   thickness: 1,
                   color: AppColors.border,
@@ -848,7 +848,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   style: AppTextStyles.bodyBold.copyWith(fontSize: 15),
                   decoration: InputDecoration(
-                    prefixIcon: const Padding(
+                    prefixIcon: Padding(
                       padding: EdgeInsets.only(left: 16, right: 12),
                       child: Icon(
                         LucideIcons.users,
@@ -878,7 +878,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
               padding: const EdgeInsets.only(left: 4),
               child: Text(
                 _whatsappError!,
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppColors.danger,
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
@@ -918,7 +918,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                   color: AppColors.primaryLight,
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: const Icon(
+                child: Icon(
                   LucideIcons.imagePlus,
                   size: 22,
                   color: AppColors.primaryDark,
@@ -1134,7 +1134,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                             ),
                             child: Text(
                               _audience,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 color: AppColors.textSecondary,
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
@@ -1286,7 +1286,7 @@ class _PickerRow extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(
+            Icon(
               LucideIcons.chevronRight,
               size: 18,
               color: AppColors.inactive,
@@ -1313,7 +1313,7 @@ class _CupertinoPickerSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: 320,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -1357,7 +1357,7 @@ class _CupertinoPickerSheet extends StatelessWidget {
             child: CupertinoTheme(
               data: CupertinoTheme.of(context).copyWith(
                 primaryColor: AppColors.primaryDark,
-                textTheme: const CupertinoTextThemeData(
+                textTheme: CupertinoTextThemeData(
                   dateTimePickerTextStyle: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w600,
@@ -1418,7 +1418,7 @@ class _EventPublishedSheet extends StatelessWidget {
     final typeColor = EventsTheme.eventTypeColor(event.eventType);
 
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -1460,7 +1460,7 @@ class _EventPublishedSheet extends StatelessWidget {
             width: double.infinity,
             child: OutlinedButton.icon(
               onPressed: onInviteCircles,
-              icon: const Icon(
+              icon: Icon(
                 LucideIcons.userPlus,
                 size: 18,
                 color: AppColors.textPrimary,
@@ -1470,7 +1470,7 @@ class _EventPublishedSheet extends StatelessWidget {
                 style: AppTextStyles.bodyBold.copyWith(fontSize: 15),
               ),
               style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: AppColors.border, width: 1.5),
+                side: BorderSide(color: AppColors.border, width: 1.5),
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppRadius.button),

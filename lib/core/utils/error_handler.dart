@@ -23,6 +23,9 @@ class AppErrorHandler {
           if (statusCode == 404 && error.requestOptions.path.contains('auth/me')) {
             return 'Your account was not found. Please sign in again.';
           }
+          if (statusCode == 404 && detail != null) {
+            return detail.toString();
+          }
           if (statusCode == 404) {
             return 'The requested information was not found.';
           }

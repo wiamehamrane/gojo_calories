@@ -31,7 +31,7 @@ class DayProgressRing extends StatelessWidget {
         return Container(
           width: size,
           height: size,
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: AppColors.primaryDark,
           ),
@@ -60,7 +60,7 @@ class DayProgressRing extends StatelessWidget {
           child: Center(
             child: Text(
               '$dayOfMonth',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
                 color: AppColors.textPrimary,
@@ -95,7 +95,7 @@ class DayProgressRing extends StatelessWidget {
             Container(
               width: size - stroke * 2 - 4,
               height: size - stroke * 2 - 4,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: AppColors.primaryDark,
               ),

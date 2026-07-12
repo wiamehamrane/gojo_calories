@@ -1,58 +1,61 @@
 import 'package:flutter/material.dart';
 import 'app_colors.dart';
 
+/// Text styles are getters so they always pick up the active theme's colors.
 class AppTextStyles {
-  static const heroNumber = TextStyle(
+  AppTextStyles._();
+
+  static TextStyle get heroNumber => TextStyle(
     fontSize: 48, fontWeight: FontWeight.w800,
     color: AppColors.textPrimary, height: 1.0,
   );
 
-  static const screenTitle = TextStyle(
+  static TextStyle get screenTitle => TextStyle(
     fontSize: 32, fontWeight: FontWeight.w700,
     color: AppColors.textPrimary, height: 1.2,
   );
 
-  static const sectionHeader = TextStyle(
+  static TextStyle get sectionHeader => TextStyle(
     fontSize: 20, fontWeight: FontWeight.w700,
     color: AppColors.textPrimary, height: 1.3,
   );
 
-  static const cardHeading = TextStyle(
+  static TextStyle get cardHeading => TextStyle(
     fontSize: 14, fontWeight: FontWeight.w400,
     color: AppColors.textSecondary, height: 1.4,
   );
 
-  static const cardValue = TextStyle(
+  static TextStyle get cardValue => TextStyle(
     fontSize: 28, fontWeight: FontWeight.w700,
     color: AppColors.textPrimary, height: 1.1,
   );
 
-  static const macroValue = TextStyle(
+  static TextStyle get macroValue => TextStyle(
     fontSize: 20, fontWeight: FontWeight.w700,
     color: AppColors.textPrimary, height: 1.2,
   );
 
-  static const macroLabel = TextStyle(
+  static TextStyle get macroLabel => TextStyle(
     fontSize: 13, fontWeight: FontWeight.w400,
     color: AppColors.textSecondary, height: 1.4,
   );
 
-  static const navLabelActive = TextStyle(
-    fontSize: 11, fontWeight: FontWeight.w600, 
+  static TextStyle get navLabelActive => TextStyle(
+    fontSize: 11, fontWeight: FontWeight.w600,
     color: AppColors.textPrimary, height: 1.0,
   );
-  
-  static const navLabelInactive = TextStyle(
-    fontSize: 11, fontWeight: FontWeight.w400, 
+
+  static TextStyle get navLabelInactive => TextStyle(
+    fontSize: 11, fontWeight: FontWeight.w400,
     color: AppColors.inactive, height: 1.0,
   );
 
-  static const bodyBold = TextStyle(
+  static TextStyle get bodyBold => TextStyle(
     fontSize: 15, fontWeight: FontWeight.w600,
     color: AppColors.textPrimary, height: 1.4,
   );
 
-  static const bodyRegular = TextStyle(
+  static TextStyle get bodyRegular => TextStyle(
     fontSize: 13, fontWeight: FontWeight.w400,
     color: AppColors.textSecondary, height: 1.4,
   );

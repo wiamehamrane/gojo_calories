@@ -118,7 +118,7 @@ class _MacroTileInnerState extends State<MacroTileInner>
                       children: [
                         TextSpan(
                           text: '${widget.macroName} ',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                             color: AppColors.textPrimary,

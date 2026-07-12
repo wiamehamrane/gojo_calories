@@ -15,7 +15,6 @@ import '../../../stats/presentation/providers/selected_date_provider.dart';
 import '../../../stats/presentation/providers/dashboard_provider.dart';
 import '../../../stats/presentation/providers/history_provider.dart';
 import '../../../stats/presentation/providers/weekly_stats_provider.dart';
-import '../providers/saved_foods_provider.dart';
 import '../providers/food_providers.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -32,8 +31,6 @@ class FoodDetailScreen extends ConsumerStatefulWidget {
 
 class _FoodDetailScreenState extends ConsumerState<FoodDetailScreen> {
   int _quantity = 1;
-  bool _saved = false;
-  bool _savingInProgress = false;
 
   // Ingredients — seeded from log data or fetched lazily
   List<_Ingredient> _ingredients = [];
@@ -121,58 +118,6 @@ class _FoodDetailScreenState extends ConsumerState<FoodDetailScreen> {
       // silently fail – user can manually add
     } finally {
       if (mounted) setState(() => _ingredientsLoading = false);
-    }
-  }
-
-  Future<void> _toggleSave() async {
-    if (_savingInProgress) return;
-    final lang = ref.read(localeProvider);
-    setState(() { _savingInProgress = true; });
-    
-    final wasSaved = _saved;
-    setState(() { _saved = !wasSaved; }); // optimistic
-
-    try {
-      if (!wasSaved) {
-        await ref.read(foodDetailProvider.notifier).saveFood({
-            'name': log['name_en'] ?? log['meal_name'] ?? 'Food',
-            'name_en': log['name_en'],
-            'name_fr': log['name_fr'],
-            'name_ar': log['name_ar'],
-            'image_url': log['image_url'],
-            'ingredients': log['ingredients'],
-            'calories': (log['calories'] as num? ?? 0).toInt(),
-            'protein': (log['protein'] as num? ?? 0).toInt(),
-            'carbs': (log['carbs'] as num? ?? 0).toInt(),
-            'fat': (log['fat'] as num? ?? 0).toInt(),
-          });
-        ref.invalidate(savedFoodsProvider);
-      } else {
-        // Remove from backend (optional, if we had the ID here)
-        // For now, saving is the primary request.
-      }
-    } catch (e) {
-      // Revert if failed
-      setState(() { _saved = wasSaved; });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(Translations.t(lang, 'failed_update_saved_foods'))),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _savingInProgress = false);
-    }
-
-    if (mounted && _saved != wasSaved) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_saved ? 'Saved to your food library' : 'Removed from saved foods'),
-          backgroundColor: Colors.black,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          duration: const Duration(seconds: 2),
-        ),
-      );
     }
   }
 
@@ -289,12 +234,6 @@ class _FoodDetailScreenState extends ConsumerState<FoodDetailScreen> {
                       ),
                       const Spacer(),
                       _CircleIconBtn(
-                        icon: _saved ? LucideIcons.bookmark : LucideIcons.bookmark,
-                        filled: _saved,
-                        onTap: _toggleSave,
-                      ),
-                      const SizedBox(width: 8),
-                      _CircleIconBtn(
                         icon: LucideIcons.share,
                         onTap: _share,
                       ),
@@ -314,7 +253,7 @@ class _FoodDetailScreenState extends ConsumerState<FoodDetailScreen> {
                     left: 18,
                     child: Row(
                       children: [
-                        const Icon(LucideIcons.bookmark, size: 14, color: Colors.black54),
+                        const Icon(LucideIcons.clock, size: 14, color: Colors.black54),
                         const SizedBox(width: 5),
                         Text(
                           timeStr,

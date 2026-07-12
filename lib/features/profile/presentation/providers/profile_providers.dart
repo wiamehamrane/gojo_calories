@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:onesignal_flutter/onesignal_flutter.dart';
 import '../../../../core/di/repository_providers.dart';
 
 class ProfileNotifier extends Notifier<AsyncValue<Map<String, dynamic>>> {
@@ -12,8 +13,25 @@ class ProfileNotifier extends Notifier<AsyncValue<Map<String, dynamic>>> {
     try {
       final data = await ref.read(profileRepositoryProvider).getMe();
       state = AsyncValue.data(data);
+      _syncPushIdentity(data);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
+    }
+  }
+
+  /// Links this device to the user in OneSignal and tags their gender so
+  /// the backend can send gender-aware smart notifications.
+  Future<void> _syncPushIdentity(Map<String, dynamic> data) async {
+    try {
+      final userId = data['user_id']?.toString();
+      if (userId == null || userId.isEmpty) return;
+      await OneSignal.login(userId);
+      final gender = data['gender']?.toString().toLowerCase();
+      if (gender == 'male' || gender == 'female') {
+        await OneSignal.User.addTagWithKey('gender', gender);
+      }
+    } catch (_) {
+      // Push identity sync is best-effort; never block profile loading.
     }
   }
 

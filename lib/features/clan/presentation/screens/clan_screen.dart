@@ -134,7 +134,7 @@ class _ClanScreenState extends ConsumerState<ClanScreen> {
         surfaceTintColor: Colors.transparent,
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+          ? Center(child: CircularProgressIndicator(color: AppColors.primary))
           : _error != null
               ? Center(child: Text(_error!))
               : RefreshIndicator(
@@ -144,7 +144,7 @@ class _ClanScreenState extends ConsumerState<ClanScreen> {
                     children: [
                       Text(
                         t('clan_subtitle'),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 15,
                           color: AppColors.textSecondary,
                           height: 1.4,

@@ -68,6 +68,8 @@ try:
         # Social & Privacy
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR;"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS share_phone BOOLEAN DEFAULT FALSE;"))
+        # Join date (used by the app to limit calendar history)
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE;"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_banned BOOLEAN DEFAULT FALSE;"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_influencer BOOLEAN DEFAULT FALSE;"))
@@ -145,7 +147,10 @@ try:
             );
         """))
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_clan_members_clan ON clan_members (clan_id);"))
-        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_clan_invites_clan ON clan_invites (clan_id);"))
+        conn.execute(text("ALTER TABLE promo_codes ADD COLUMN IF NOT EXISTS platform VARCHAR DEFAULT 'internal';"))
+        conn.execute(text("ALTER TABLE promo_codes ADD COLUMN IF NOT EXISTS store_product_id VARCHAR;"))
+        conn.execute(text("ALTER TABLE promo_codes ADD COLUMN IF NOT EXISTS notes TEXT;"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS pending_promo_code_id VARCHAR(36);"))
         # Multilingual food names
         conn.execute(text("ALTER TABLE food_logs ADD COLUMN IF NOT EXISTS name_en VARCHAR;"))
         conn.execute(text("ALTER TABLE food_logs ADD COLUMN IF NOT EXISTS name_fr VARCHAR;"))

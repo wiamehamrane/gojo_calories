@@ -33,10 +33,10 @@ class _AddFriendScreenState extends ConsumerState<AddFriendScreen> {
     final lang = ref.watch(localeProvider);
     String t(String k) => Translations.t(lang, k);
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.surface,
       appBar: AppBar(
         title: Text(t('add_to_circle'), style: const TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.surface,
         elevation: 0,
         foregroundColor: AppColors.textPrimary,
       ),
@@ -62,7 +62,7 @@ class _AddFriendScreenState extends ConsumerState<AddFriendScreen> {
             ),
           ),
           if (_searching)
-            const Expanded(child: Center(child: CircularProgressIndicator(color: AppColors.primary))),
+            Expanded(child: Center(child: CircularProgressIndicator(color: AppColors.primary))),
           if (!_searching && _results.isEmpty && _searchController.text.length >= 2)
             Expanded(child: Center(child: Text(t('no_users_found')))),
           if (!_searching && _results.isNotEmpty)
@@ -70,7 +70,7 @@ class _AddFriendScreenState extends ConsumerState<AddFriendScreen> {
               child: ListView.separated(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 itemCount: _results.length,
-                separatorBuilder: (context, index) => const Divider(color: AppColors.border),
+                separatorBuilder: (context, index) => Divider(color: AppColors.border),
                 itemBuilder: (context, index) {
                   final user = _results[index];
                   return ListTile(
@@ -79,11 +79,11 @@ class _AddFriendScreenState extends ConsumerState<AddFriendScreen> {
                       backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                       child: Text(
                         user.name != null && user.name!.isNotEmpty ? user.name![0].toUpperCase() : '👤',
-                        style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
+                        style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
                       ),
                     ),
                     title: Text(user.name ?? t('no_name'), style: const TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: Text(user.email, style: const TextStyle(fontSize: 12, color: AppColors.inactive)),
+                    subtitle: Text(user.email, style: TextStyle(fontSize: 12, color: AppColors.inactive)),
                     trailing: user.isFriend 
                       ? const Icon(LucideIcons.circleCheck, color: Colors.green, size: 22)
                       : ElevatedButton(

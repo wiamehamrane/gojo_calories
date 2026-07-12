@@ -178,7 +178,7 @@ class TaskGridCard extends StatelessWidget {
                 child: InkWell(
                   borderRadius: BorderRadius.circular(999),
                   onTap: onDelete,
-                  child: const Padding(
+                  child: Padding(
                     padding: EdgeInsets.all(6),
                     child: Icon(
                       LucideIcons.x,

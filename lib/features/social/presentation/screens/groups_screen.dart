@@ -48,7 +48,7 @@ class _GroupsScreenState extends ConsumerState<GroupsScreen> {
                   Text(t('groups'), style: AppTextStyles.screenTitle),
                   IconButton(
                     onPressed: _showCreateGroupSheet,
-                    icon: const Icon(
+                    icon: Icon(
                       LucideIcons.plus,
                       color: AppColors.textPrimary,
                     ),
@@ -150,7 +150,7 @@ class _GroupsScreenState extends ConsumerState<GroupsScreen> {
                 decoration: InputDecoration(
                   border: InputBorder.none,
                   hintText: t('group_name_hint'),
-                  hintStyle: const TextStyle(color: AppColors.textPlaceholder),
+                  hintStyle: TextStyle(color: AppColors.textPlaceholder),
                 ),
               ),
             ),
@@ -184,7 +184,7 @@ class _FeedTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final feedAsync = ref.watch(communityFeedProvider);
     return feedAsync.when(
-      loading: () => const Center(
+      loading: () => Center(
         child: CircularProgressIndicator(color: AppColors.primary),
       ),
       error: (e, _) => _EmptyFeedPlaceholder(),
@@ -218,7 +218,7 @@ class _MyGroupsTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final groupsAsync = ref.watch(myGroupsProvider);
     return groupsAsync.when(
-      loading: () => const Center(
+      loading: () => Center(
         child: CircularProgressIndicator(color: AppColors.primary),
       ),
       error: (e, _) => _EmptyGroupsPlaceholder(
@@ -258,7 +258,7 @@ class _DiscoverTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final groupsAsync = ref.watch(discoverGroupsProvider);
     return groupsAsync.when(
-      loading: () => const Center(
+      loading: () => Center(
         child: CircularProgressIndicator(color: AppColors.primary),
       ),
       error: (e, _) =>
@@ -328,7 +328,7 @@ class _FeedCard extends StatelessWidget {
             backgroundColor: AppColors.surfaceMuted,
             child: Text(
               userName.isNotEmpty ? userName[0].toUpperCase() : '?',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
                 color: AppColors.textPrimary,
@@ -344,7 +344,7 @@ class _FeedCard extends StatelessWidget {
                   children: [
                     Text(
                       userName,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
                         color: AppColors.textPrimary,
@@ -353,7 +353,7 @@ class _FeedCard extends StatelessWidget {
                     const SizedBox(width: 4),
                     Text(
                       "in $groupName",
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
                         color: AppColors.textSecondary,
                       ),
@@ -363,7 +363,7 @@ class _FeedCard extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   "logged $mealName",
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     color: AppColors.textPrimary,
                   ),
@@ -373,16 +373,16 @@ class _FeedCard extends StatelessWidget {
           ),
           Column(
             children: [
-              const Icon(LucideIcons.flame, size: 16, color: AppColors.fire),
+              Icon(LucideIcons.flame, size: 16, color: AppColors.fire),
               Text(
                 "$calories",
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
                   color: AppColors.textPrimary,
                 ),
               ),
-              const Text(
+              Text(
                 "kcal",
                 style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
               ),
@@ -427,7 +427,7 @@ class _GroupCard extends StatelessWidget {
               color: AppColors.surfaceMuted,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(
+            child: Icon(
               LucideIcons.users,
               size: 22,
               color: AppColors.textPrimary,
@@ -440,7 +440,7 @@ class _GroupCard extends StatelessWidget {
               children: [
                 Text(
                   name,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
                     color: AppColors.textPrimary,
@@ -449,7 +449,7 @@ class _GroupCard extends StatelessWidget {
                 if (description.isNotEmpty)
                   Text(
                     description,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       color: AppColors.textSecondary,
                     ),
@@ -459,7 +459,7 @@ class _GroupCard extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   "$memberCount members",
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     color: AppColors.inactive,
                   ),
@@ -490,7 +490,7 @@ class _GroupCard extends StatelessWidget {
               ),
             )
           else if (joined)
-            const Text(
+            Text(
               "Joined ✓",
               style: TextStyle(
                 fontSize: 13,
@@ -517,11 +517,11 @@ class _EmptyFeedPlaceholder extends StatelessWidget {
             color: AppColors.inactive.withValues(alpha: 0.5),
           ),
           const SizedBox(height: 12),
-          const Text(
+          Text(
             "Your community feed is empty",
             style: TextStyle(fontSize: 15, color: AppColors.textSecondary),
           ),
-          const Text(
+          Text(
             "Join a group to see activity here.",
             style: TextStyle(fontSize: 13, color: AppColors.inactive),
           ),
@@ -549,7 +549,7 @@ class _EmptyGroupsPlaceholder extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             message,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 15,
               color: AppColors.textSecondary,
             ),

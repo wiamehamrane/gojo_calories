@@ -54,7 +54,7 @@ class BmiWidget extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final bmiAsync = ref.watch(bmiProvider);
     return bmiAsync.when(
-      loading: () => const Center(
+      loading: () => Center(
         child: CircularProgressIndicator(
           color: AppColors.primary,
           strokeWidth: 2,
@@ -113,7 +113,7 @@ class _BmiContent extends StatelessWidget {
                       height: 1.0,
                     ),
                   ),
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.only(bottom: 5, left: 4),
                     child: Text(
                       'BMI',
@@ -144,7 +144,7 @@ class _BmiContent extends StatelessWidget {
                   ),
                 )
               else
-                const Text(
+                Text(
                   'Update profile weight & height',
                   style: TextStyle(fontSize: 10, color: AppColors.inactive),
                 ),
@@ -157,7 +157,7 @@ class _BmiContent extends StatelessWidget {
                     // Full gradient
                     Container(
                       height: 6,
-                      decoration: const BoxDecoration(
+                      decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
                             Color(0xFF3B82F6),
@@ -194,7 +194,7 @@ class _BmiContent extends StatelessWidget {
         Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.end,
-          children: const [
+          children: [
             _RangeLabel('< 18.5', 'Under', Color(0xFF3B82F6)),
             _RangeLabel('18.5–25', 'Normal', AppColors.primary),
             _RangeLabel('25–30', 'Over', AppColors.fire),
@@ -221,7 +221,7 @@ class _RangeLabel extends StatelessWidget {
         children: [
           Container(width: 6, height: 6, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
           const SizedBox(width: 4),
-          Text(label, style: const TextStyle(fontSize: 9, color: AppColors.textSecondary)),
+          Text(label, style: TextStyle(fontSize: 9, color: AppColors.textSecondary)),
         ],
       ),
     );

@@ -123,7 +123,7 @@ class _SwipableStatCardState extends State<SwipableStatCard> {
             Expanded(
               child: Text(
                 "${widget.title} Trend",
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                   color: AppColors.textPrimary,

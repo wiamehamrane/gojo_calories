@@ -109,20 +109,20 @@ class _RunIntensityScreenState extends ConsumerState<RunIntensityScreen> {
         backgroundColor: AppColors.background,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(LucideIcons.arrowLeft, color: AppColors.textPrimary),
+          icon: Icon(LucideIcons.arrowLeft, color: AppColors.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
+            Icon(
               LucideIcons.footprints,
               size: 18,
               color: AppColors.textPrimary,
             ),
             Text(
               ' ${t('run')}',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.w600,
                 color: AppColors.textPrimary,
@@ -145,7 +145,7 @@ class _RunIntensityScreenState extends ConsumerState<RunIntensityScreen> {
                   // Section header
                   Row(
                     children: [
-                      const Icon(
+                      Icon(
                         LucideIcons.sparkles,
                         size: 18,
                         color: AppColors.inactive,
@@ -173,7 +173,7 @@ class _RunIntensityScreenState extends ConsumerState<RunIntensityScreen> {
                             "Sprinting – 14 mph (4 minute miles)",
                             RunIntensity.high,
                           ),
-                          const Divider(
+                          Divider(
                             color: AppColors.border,
                             height: 1,
                             indent: 16,
@@ -184,7 +184,7 @@ class _RunIntensityScreenState extends ConsumerState<RunIntensityScreen> {
                             "Jogging – 6 mph (10 minute miles)",
                             RunIntensity.medium,
                           ),
-                          const Divider(
+                          Divider(
                             color: AppColors.border,
                             height: 1,
                             indent: 16,
@@ -205,7 +205,7 @@ class _RunIntensityScreenState extends ConsumerState<RunIntensityScreen> {
                   // Duration header
                   Row(
                     children: [
-                      const Icon(
+                      Icon(
                         LucideIcons.timer,
                         size: 18,
                         color: AppColors.inactive,
@@ -283,7 +283,7 @@ class _RunIntensityScreenState extends ConsumerState<RunIntensityScreen> {
                         fontSize: 17,
                         fontWeight: FontWeight.w500,
                       ),
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         border: InputBorder.none,
                         hintText: "Or enter manual time...",
                         hintStyle: TextStyle(
@@ -341,12 +341,12 @@ class _RunIntensityScreenState extends ConsumerState<RunIntensityScreen> {
       title: Text(
         label,
         style: selected
-            ? const TextStyle(
+            ? TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
                 color: AppColors.textPrimary,
               )
-            : const TextStyle(
+            : TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
                 color: AppColors.textPrimary,
@@ -354,7 +354,7 @@ class _RunIntensityScreenState extends ConsumerState<RunIntensityScreen> {
       ),
       subtitle: Text(
         desc,
-        style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+        style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
       ),
       trailing: Radio<RunIntensity>(
         value: option,

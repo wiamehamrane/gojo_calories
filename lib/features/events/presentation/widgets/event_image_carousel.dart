@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../domain/models/event.dart';
 import '../widgets/event_card.dart';
+import '../../../../core/widgets/cached_food_image.dart';
 
 /// Swipeable image carousel for event photos.
 class EventImageCarousel extends StatefulWidget {
@@ -118,11 +119,12 @@ class _NetworkImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final image = Image.network(
-      url,
+    final image = CachedFoodImage(
+      imageUrl: url,
       fit: BoxFit.cover,
       width: double.infinity,
-      errorBuilder: (_, _, _) => const ColoredBox(color: Color(0xFFF2F2F7)),
+      placeholder: const ColoredBox(color: Color(0xFFF2F2F7)),
+      errorWidget: const ColoredBox(color: Color(0xFFF2F2F7)),
     );
 
     if (height != null) {

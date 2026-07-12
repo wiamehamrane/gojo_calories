@@ -4,6 +4,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/config/env_config.dart';
 import '../../domain/models/event.dart';
 import '../../theme/events_theme.dart';
+import '../../../../core/widgets/cached_food_image.dart';
 
 class EventCard extends StatelessWidget {
   final Event event;
@@ -134,14 +135,11 @@ class EventCard extends StatelessWidget {
     final hasUploaded = event.imageUrls.isNotEmpty ||
         (event.imageUrl != null && event.imageUrl!.isNotEmpty);
     if (imageUrl != null && hasUploaded) {
-      return Image.network(
-        imageUrl,
+      return CachedFoodImage(
+        imageUrl: imageUrl,
         fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => _buildGradientFallback(typeColor),
-        loadingBuilder: (context, child, progress) {
-          if (progress == null) return child;
-          return _buildGradientFallback(typeColor);
-        },
+        placeholder: _buildGradientFallback(typeColor),
+        errorWidget: _buildGradientFallback(typeColor),
       );
     }
     return _buildGradientFallback(typeColor);

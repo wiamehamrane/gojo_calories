@@ -42,6 +42,7 @@ from services.clan_service import (
     get_or_create_clan_for_owner,
     sync_clan_member_access,
 )
+from services.promo_redemption_service import finalize_pending_promo
 from services.subscription_service import apply_referral_iap_credit
 
 VALID_PRODUCT_IDS = ALL_PRODUCT_IDS
@@ -247,6 +248,9 @@ def _unlock_subscription_for_user(
     if is_active and plan_id:
         clan = get_or_create_clan_for_owner(db, current_user, plan_id)
         sync_clan_member_access(db, clan, active=True, expires_at=current_user.subscription_expires_at)
+
+    if is_active and plan_id:
+        finalize_pending_promo(db, current_user, source="google")
 
     db.commit()
 

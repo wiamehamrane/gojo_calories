@@ -402,6 +402,7 @@ def get_me(db: Session = Depends(get_db), current_user_id: str = Depends(get_cur
         "is_email_verified": getattr(user, 'is_email_verified', False),
         "phone": user.phone,
         "share_phone": user.share_phone,
+        "created_at": user.created_at.isoformat() if getattr(user, "created_at", None) else None,
     }
 
 @router.put("/me/profile")

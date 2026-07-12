@@ -91,7 +91,7 @@ class _NutritionGoalsScreenState extends ConsumerState<NutritionGoalsScreen> {
         ),
         backgroundColor: AppColors.surface,
         elevation: 0,
-        iconTheme: const IconThemeData(color: AppColors.textPrimary),
+        iconTheme: IconThemeData(color: AppColors.textPrimary),
       ),
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
@@ -136,7 +136,7 @@ class _NutritionGoalsScreenState extends ConsumerState<NutritionGoalsScreen> {
           labelText: label,
           suffixText: unit,
           border: InputBorder.none,
-          labelStyle: const TextStyle(color: AppColors.textSecondary),
+          labelStyle: TextStyle(color: AppColors.textSecondary),
         ),
       ),
     );
