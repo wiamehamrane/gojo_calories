@@ -1,120 +1,81 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/localization/locale_provider.dart';
-import '../../../../core/theme/app_colors.dart';
 import '../../../../core/localization/translations.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../providers/tasks_provider.dart';
 
-/// A foldable, Dynamic Island–style "Day" widget. The header (Day · % · arrow)
-/// is always visible; tapping it smoothly reveals two rows of dots that fill
-/// up as today's tasks get completed.
-class DayProgressDots extends ConsumerStatefulWidget {
+/// "Today's Tasks" card: two rows of dots that fill up as today's tasks get
+/// completed, with the completion percentage on the right. Always expanded.
+class DayProgressDots extends ConsumerWidget {
+  static const int _dotsPerRow = 12;
+  static const int _totalDots = _dotsPerRow * 2;
+
   const DayProgressDots({super.key});
 
   @override
-  ConsumerState<DayProgressDots> createState() => _DayProgressDotsState();
-}
-
-class _DayProgressDotsState extends ConsumerState<DayProgressDots> {
-  static const int _dotsPerRow = 12;
-  static const int _totalDots = _dotsPerRow * 2;
-  static const _duration = Duration(milliseconds: 320);
-  static const _curve = Curves.easeInOutCubic;
-
-  bool _expanded = false;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final lang = ref.watch(localeProvider);
     final progress = ref.watch(todayProgressProvider);
     final ratio = progress.ratio.clamp(0.0, 1.0);
     final percent = (ratio * 100).round();
     final filledDots = (ratio * _totalDots).round().clamp(0, _totalDots);
 
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () => setState(() => _expanded = !_expanded),
-      child: AnimatedContainer(
-        duration: _duration,
-        curve: _curve,
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(_expanded ? 24 : 20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(
-                  Translations.t(lang, 'tasks_day'),
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.textPrimary,
-                  ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                Translations.t(lang, 'tasks_day'),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textPrimary,
                 ),
-                const Spacer(),
-                Text(
-                  '$percent%',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.primaryDark,
-                  ),
+              ),
+              Text(
+                '$percent%',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.primaryDark,
                 ),
-                const SizedBox(width: 10),
-                AnimatedRotation(
-                  turns: _expanded ? 0.5 : 0,
-                  duration: _duration,
-                  curve: _curve,
-                  child: Icon(
-                    LucideIcons.chevronDown,
-                    size: 20,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-            // Dots reveal/hide smoothly when the header is tapped.
-            AnimatedSize(
-              duration: _duration,
-              curve: _curve,
-              alignment: Alignment.topCenter,
-              child: _expanded
-                  ? Padding(
-                      padding: const EdgeInsets.only(top: 14),
-                      child: LayoutBuilder(
-                        builder: (context, constraints) {
-                          final dotSize =
-                              ((constraints.maxWidth -
-                                          (_dotsPerRow - 1) * 8) /
-                                      _dotsPerRow)
-                                  .clamp(8.0, 18.0);
-                          return Column(
-                            children: [
-                              _dotRow(0, filledDots, dotSize),
-                              const SizedBox(height: 10),
-                              _dotRow(1, filledDots, dotSize),
-                            ],
-                          );
-                        },
-                      ),
-                    )
-                  : const SizedBox(width: double.infinity),
-            ),
-          ],
-        ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final dotSize =
+                  ((constraints.maxWidth - (_dotsPerRow - 1) * 8) /
+                          _dotsPerRow)
+                      .clamp(8.0, 18.0);
+              return Column(
+                children: [
+                  _dotRow(0, filledDots, dotSize),
+                  const SizedBox(height: 10),
+                  _dotRow(1, filledDots, dotSize),
+                ],
+              );
+            },
+          ),
+        ],
       ),
     );
   }

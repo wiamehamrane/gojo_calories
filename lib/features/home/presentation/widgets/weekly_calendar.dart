@@ -3,13 +3,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../../features/stats/presentation/providers/selected_date_provider.dart';
 import '../../../stats/presentation/providers/calendar_progress_provider.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/localization/locale_provider.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../profile/presentation/providers/profile_providers.dart';
 import 'calendar_day_colors.dart';
 import 'day_progress_ring.dart';
+import 'month_calendar_dialog.dart';
 
 /// Fixed Monday–Sunday week strip (no infinite scrolling). Future days are
-/// disabled.
+/// disabled. The arrow below opens the full history calendar, going back to
+/// the day the user joined the app.
 class WeeklyCalendar extends ConsumerWidget {
   const WeeklyCalendar({super.key});
 
@@ -22,6 +26,21 @@ class WeeklyCalendar extends ConsumerWidget {
   DateTime _mondayOf(DateTime date) {
     final d = _normalize(date);
     return d.subtract(Duration(days: d.weekday - DateTime.monday));
+  }
+
+  /// The day the user joined the app (limits how far back history goes).
+  DateTime _joinDate(WidgetRef ref, DateTime today) {
+    final profile = ref.watch(profileProvider);
+    final raw = profile.maybeWhen(
+      data: (data) => data['created_at']?.toString(),
+      orElse: () => null,
+    );
+    if (raw != null) {
+      final parsed = DateTime.tryParse(raw);
+      if (parsed != null) return _normalize(parsed);
+    }
+    // Fallback for accounts created before join date tracking existed.
+    return today.subtract(const Duration(days: 365));
   }
 
   @override
@@ -37,26 +56,48 @@ class WeeklyCalendar extends ConsumerWidget {
     // Show the Mon–Sun week that contains the selected date.
     final monday = _mondayOf(selectedDate);
 
-    return SizedBox(
-      height: 72,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        child: Row(
-          children: [
-            for (int i = 0; i < 7; i++)
-              Expanded(
-                child: _buildDayCell(
-                  ref,
-                  date: monday.add(Duration(days: i)),
-                  selectedDate: selectedDate,
-                  today: today,
-                  progressMap: progressMap,
-                  locale: locale,
-                ),
-              ),
-          ],
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          height: 72,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(
+              children: [
+                for (int i = 0; i < 7; i++)
+                  Expanded(
+                    child: _buildDayCell(
+                      ref,
+                      date: monday.add(Duration(days: i)),
+                      selectedDate: selectedDate,
+                      today: today,
+                      progressMap: progressMap,
+                      locale: locale,
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ),
-      ),
+        // Arrow to open the full history calendar (back to join date).
+        GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => showMonthCalendarDialog(
+            context,
+            joinDate: _joinDate(ref, today),
+            today: today,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.only(top: 2, bottom: 2),
+            child: Icon(
+              LucideIcons.chevronDown,
+              size: 20,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ),
+      ],
     );
   }
 

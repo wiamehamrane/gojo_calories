@@ -15,6 +15,7 @@ const Map<String, String> nl = {
   'nav_groups': 'Groepen',
   'nav_profile': 'Profiel',
   'nav_events': 'Evenementen',
+  'event_aesthetic_hint': 'Deel altijd esthetische foto\'s in je evenementen - ze laten de community stralen! \u2728',
   'action_log_exercise': 'Oefening registreren',
   'action_add_food_manually': 'Voeding handmatig toevoegen',
   'action_scan_food': 'Voedsel scannen',

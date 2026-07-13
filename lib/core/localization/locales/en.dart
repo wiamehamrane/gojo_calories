@@ -15,6 +15,7 @@ const Map<String, String> en = {
   'nav_groups': 'Groups',
   'nav_profile': 'Profile',
   'nav_events': 'Events',
+  'event_aesthetic_hint': 'Please always share aesthetic photos in your events - they make the community shine! \u2728',
   'action_log_exercise': 'Log Exercise',
   'action_add_food_manually': 'Add Food Manually',
   'action_scan_food': 'Scan Food',

@@ -15,6 +15,7 @@ const Map<String, String> ar = {
   'nav_groups': 'المجموعات',
   'nav_profile': 'الملف',
   'nav_events': 'الفعاليات',
+  'event_aesthetic_hint': '\u0634\u0627\u0631\u0643 \u062f\u0627\u0626\u0645\u064b\u0627 \u0635\u0648\u0631\u064b\u0627 \u062c\u0645\u0627\u0644\u064a\u0629 \u0641\u064a \u0641\u0639\u0627\u0644\u064a\u0627\u062a\u0643 \u2728',
   'action_log_exercise': 'تسجيل تمرين',
   'action_add_food_manually': 'إضافة طعام يدويًا',
   'action_scan_food': 'مسح الطعام',

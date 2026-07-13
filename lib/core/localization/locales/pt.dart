@@ -15,6 +15,7 @@ const Map<String, String> pt = {
   'nav_groups': 'Grupos',
   'nav_profile': 'Perfil',
   'nav_events': 'Eventos',
+  'event_aesthetic_hint': 'Compartilhe sempre fotos esteticas nos seus eventos - elas fazem a comunidade brilhar! \u2728',
   'action_log_exercise': 'Registrar exercício',
   'action_add_food_manually': 'Adicionar comida manualmente',
   'action_scan_food': 'Digitalizar alimentos',

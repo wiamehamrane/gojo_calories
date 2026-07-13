@@ -70,6 +70,15 @@ try:
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS share_phone BOOLEAN DEFAULT FALSE;"))
         # Join date (used by the app to limit calendar history)
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;"))
+        # Backfill: accounts that predate the created_at column got stamped
+        # with the migration date. Use their earliest food log as the real
+        # join date so history goes back to when they actually subscribed.
+        conn.execute(text("""
+            UPDATE users SET created_at = LEAST(
+                users.created_at,
+                COALESCE((SELECT MIN(f.created_at) FROM food_logs f WHERE f.user_id = users.id), users.created_at)
+            );
+        """))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE;"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_banned BOOLEAN DEFAULT FALSE;"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_influencer BOOLEAN DEFAULT FALSE;"))

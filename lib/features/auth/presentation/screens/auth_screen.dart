@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gojocalories/core/config/env_config.dart';
 import 'package:gojocalories/core/theme/app_colors.dart';
+import 'package:gojocalories/core/utils/image.dart';
 import 'package:gojocalories/core/di/repository_providers.dart';
 import 'package:gojocalories/features/auth/data/repositories/auth_repository.dart';
 import 'package:gojocalories/core/routing/route_paths.dart';
@@ -274,6 +275,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
               child: Column(
                 children: [
                   const Spacer(flex: 3),
+                  Image.asset(
+                    ImageAsset.logoHeader,
+                    width: 88,
+                    height: 88,
+                  ),
+                  const SizedBox(height: 12),
                   Text(
                     'GojoCalories',
                     style: TextStyle(

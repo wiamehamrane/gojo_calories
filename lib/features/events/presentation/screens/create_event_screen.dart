@@ -22,6 +22,8 @@ import '../widgets/event_location_picker_sheet.dart';
 import '../../domain/models/event_location_selection.dart';
 import '../providers/events_provider.dart';
 import '../../../../core/utils/error_handler.dart';
+import '../../../../core/localization/locale_provider.dart';
+import '../../../../core/localization/translations.dart';
 
 const _kEventTypes = [
   'Running',
@@ -776,6 +778,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
 
   // ── Step 2 ─────────────────────────────────────────────────────────────
   Widget _buildStep2() {
+    final lang = ref.watch(localeProvider);
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(
@@ -798,6 +801,24 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
           Text(
             'Add up to $_kMaxEventImages photos. Swipe to preview.',
             style: AppTextStyles.bodyRegular.copyWith(fontSize: 12),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: AppColors.primaryLight,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              Translations.t(lang, 'event_aesthetic_hint'),
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                height: 1.4,
+                color: AppColors.primaryDark,
+              ),
+            ),
           ),
           const SizedBox(height: 10),
           _buildImagePicker(),
