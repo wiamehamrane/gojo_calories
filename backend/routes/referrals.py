@@ -84,6 +84,7 @@ def get_my_referrals(
 
     return {
         "referral_code": code,
+        "share_link": f"https://gojocalories.com/join?ref={code}",
         "balance": round(user.referral_balance, 2),
         "total_earned": round(total_earned, 2),
         "total_referrals": len(referrals),

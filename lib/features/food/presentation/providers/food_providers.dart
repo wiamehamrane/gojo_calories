@@ -97,9 +97,6 @@ class FoodDetailNotifier extends Notifier<AsyncValue<List<dynamic>>> {
     }
   }
 
-  Future<void> saveFood(Map<String, dynamic> data) async {
-    await ref.read(foodRepositoryProvider).saveFood(data);
-  }
 }
 
 final foodDetailProvider =
@@ -151,9 +148,6 @@ class FoodDatabaseNotifier extends Notifier<AsyncValue<List<dynamic>>> {
     }
   }
 
-  Future<void> saveFood(Map<String, dynamic> data) async {
-    await ref.read(foodRepositoryProvider).saveFood(data);
-  }
 }
 
 final foodDatabaseProvider =

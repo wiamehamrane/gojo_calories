@@ -57,6 +57,7 @@ class EventResponse(BaseModel):
     start_time: datetime
     whatsapp_link: Optional[str]
     image_url: Optional[str]
+    image_urls: List[str] = []
     max_participants: Optional[int]
     created_at: datetime
     participants_count: int
@@ -84,14 +85,59 @@ def _user_can_join(event_audience: str, user_gender: Optional[str]) -> bool:
     return gender == audience
 
 
+_WHATSAPP_GROUP_LINK_RE = re.compile(
+    r'^https?://chat\.whatsapp\.com/[A-Za-z0-9_-]+(\?[^\s#]*)?$',
+    re.IGNORECASE,
+)
+_MAX_EVENT_IMAGES = 10
+_BIDI_AND_ZERO_WIDTH_RE = re.compile(r'[\u200e\u200f\u202a-\u202e\u2066-\u2069\ufeff]')
+
+
+def normalize_whatsapp_link(link: str) -> str:
+    value = _BIDI_AND_ZERO_WIDTH_RE.sub('', (link or '').strip())
+    if not value:
+        return value
+    if not value.lower().startswith(('http://', 'https://')):
+        value = f'https://{value}'
+    return value
+
+
 def is_valid_whatsapp_link(link: str) -> bool:
-    if not link:
-        return True
-    patterns = (
-        r'^https?://chat\.whatsapp\.com/[a-zA-Z0-9]+$',
-        r'^https?://wa\.me/\d+(\?.*)?$',
-    )
-    return any(re.match(pattern, link) is not None for pattern in patterns)
+    normalized = normalize_whatsapp_link(link)
+    if not normalized:
+        return False
+    return _WHATSAPP_GROUP_LINK_RE.match(normalized) is not None
+
+
+def _event_image_keys(event: Event) -> list[str]:
+    """Raw stored entries: S3 keys for new uploads, full URLs for legacy events."""
+    if event.image_urls and isinstance(event.image_urls, list):
+        return [url for url in event.image_urls if isinstance(url, str) and url.strip()]
+    if event.image_url:
+        return [event.image_url]
+    return []
+
+
+def _resolve_event_image_url(entry: str) -> str:
+    """Turn a stored entry into a URL that is valid right now.
+
+    New entries are S3 keys that get a fresh presigned URL on every read, so
+    event images never expire. Legacy entries are old presigned URLs whose
+    signatures have expired: re-extract the key and re-sign them too.
+    """
+    from s3_utils import presign_s3_key, extract_s3_key_from_url
+    if entry.startswith('http'):
+        key = extract_s3_key_from_url(entry)
+        if key:
+            return presign_s3_key(key)
+        return entry
+    if entry.startswith('/'):
+        return entry  # local /uploads path
+    return presign_s3_key(entry)
+
+
+def _event_image_display_urls(event: Event) -> list[str]:
+    return [_resolve_event_image_url(entry) for entry in _event_image_keys(event)]
 
 def _optional_str(value: Optional[str]) -> Optional[str]:
     if value is None:
@@ -120,7 +166,8 @@ def _event_to_response(
         "longitude": event.longitude,
         "start_time": event.start_time,
         "whatsapp_link": event.whatsapp_link if include_whatsapp else None,
-        "image_url": event.image_url,
+        "image_url": _event_image_display_urls(event)[0] if _event_image_keys(event) else None,
+        "image_urls": _event_image_display_urls(event),
         "max_participants": event.max_participants,
         "created_at": event.created_at,
         "participants_count": participants_count,
@@ -132,10 +179,11 @@ def _event_to_response(
 def create_event(event: EventCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     if not event.whatsapp_link or not event.whatsapp_link.strip():
         raise HTTPException(status_code=400, detail="WhatsApp link is required.")
-    if not is_valid_whatsapp_link(event.whatsapp_link.strip()):
+    whatsapp_link = normalize_whatsapp_link(event.whatsapp_link)
+    if not is_valid_whatsapp_link(whatsapp_link):
         raise HTTPException(
             status_code=400,
-            detail="Invalid WhatsApp link. Use a chat.whatsapp.com group link or a wa.me link.",
+            detail="Invalid WhatsApp link. Use a chat.whatsapp.com group invite link.",
         )
     if not event.event_type or not event.event_type.strip():
         raise HTTPException(status_code=400, detail="Event category is required.")
@@ -153,7 +201,7 @@ def create_event(event: EventCreate, db: Session = Depends(get_db), current_user
             latitude=event.latitude,
             longitude=event.longitude,
             start_time=event.start_time,
-            whatsapp_link=event.whatsapp_link.strip(),
+            whatsapp_link=whatsapp_link,
             max_participants=event.max_participants,
         )
         db.add(new_event)
@@ -303,13 +351,13 @@ def update_event(
     if "audience" in data:
         data["audience"] = _normalize_audience(data["audience"])
     if "whatsapp_link" in data:
-        link = (data["whatsapp_link"] or "").strip()
+        link = normalize_whatsapp_link(data["whatsapp_link"] or "")
         if not link:
             raise HTTPException(status_code=400, detail="WhatsApp link is required.")
         if not is_valid_whatsapp_link(link):
             raise HTTPException(
                 status_code=400,
-                detail="Invalid WhatsApp link. Use a chat.whatsapp.com group link or a wa.me link.",
+                detail="Invalid WhatsApp link. Use a chat.whatsapp.com group invite link.",
             )
         data["whatsapp_link"] = link
 
@@ -515,7 +563,7 @@ def leave_event(event_id: str, db: Session = Depends(get_db), current_user: User
     return {"status": "success", "message": "Left event"}
 
 from fastapi import File, UploadFile
-from s3_utils import upload_image_to_s3
+from s3_utils import upload_image_to_s3_key
 
 @router.post("/{event_id}/image")
 async def upload_event_image(
@@ -535,9 +583,24 @@ async def upload_event_image(
     if not contents:
         raise HTTPException(status_code=400, detail="Image file is empty")
 
-    image_url = upload_image_to_s3(contents, file.content_type or "image/jpeg")
-    
-    event.image_url = image_url
+    # Store the stable S3 key; presigned URLs are generated fresh on every
+    # read so event images never expire.
+    image_key = upload_image_to_s3_key(contents, file.content_type or "image/jpeg", prefix="events/")
+
+    existing_keys = _event_image_keys(event)
+    if len(existing_keys) >= _MAX_EVENT_IMAGES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Maximum of {_MAX_EVENT_IMAGES} images per event.",
+        )
+
+    updated_keys = [*existing_keys, image_key]
+    event.image_urls = updated_keys
+    event.image_url = updated_keys[0]
     db.commit()
-    
-    return {"status": "success", "image_url": image_url}
+
+    return {
+        "status": "success",
+        "image_url": _resolve_event_image_url(image_key),
+        "image_urls": [_resolve_event_image_url(k) for k in updated_keys],
+    }

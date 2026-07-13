@@ -4,6 +4,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/config/env_config.dart';
 import '../../domain/models/event.dart';
 import '../../theme/events_theme.dart';
+import '../../../../core/widgets/cached_food_image.dart';
 
 class EventCard extends StatelessWidget {
   final Event event;
@@ -131,28 +132,43 @@ class EventCard extends StatelessWidget {
 
   Widget _buildBackground(Color typeColor) {
     final imageUrl = resolveImageUrl(event);
-    if (imageUrl != null) {
-      return Image.network(
-        imageUrl,
+    final hasUploaded = event.imageUrls.isNotEmpty ||
+        (event.imageUrl != null && event.imageUrl!.isNotEmpty);
+    if (imageUrl != null && hasUploaded) {
+      return CachedFoodImage(
+        imageUrl: imageUrl,
         fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => _buildGradientFallback(typeColor),
-        loadingBuilder: (context, child, progress) {
-          if (progress == null) return child;
-          return _buildGradientFallback(typeColor);
-        },
+        placeholder: _buildGradientFallback(typeColor),
+        errorWidget: _buildGradientFallback(typeColor),
       );
     }
     return _buildGradientFallback(typeColor);
   }
 
-  /// Image to show for [event]: uploaded cover when set, otherwise a stock
-  /// photo per event type. Relative API paths are resolved to full URLs.
+  /// First image for [event]: uploaded photo when set, otherwise stock placeholder.
   static String? resolveImageUrl(Event event) {
-    if (event.imageUrl != null && event.imageUrl!.isNotEmpty) {
-      return EnvConfig.resolveMediaUrl(event.imageUrl);
-    }
-    return _placeholderForType(event.eventType);
+    final urls = resolveImageUrls(event);
+    return urls.isNotEmpty ? urls.first : null;
   }
+
+  /// All displayable images for [event], including stock placeholder when none uploaded.
+  static List<String> resolveImageUrls(Event event) {
+    if (event.imageUrls.isNotEmpty) {
+      return event.imageUrls
+          .map(EnvConfig.resolveMediaUrl)
+          .where((url) => url.isNotEmpty)
+          .toList();
+    }
+    if (event.imageUrl != null && event.imageUrl!.isNotEmpty) {
+      return [EnvConfig.resolveMediaUrl(event.imageUrl)];
+    }
+    final placeholder = _placeholderForType(event.eventType);
+    return placeholder != null ? [placeholder] : [];
+  }
+
+  static bool hasUploadedImages(Event event) =>
+      event.imageUrls.isNotEmpty ||
+      (event.imageUrl != null && event.imageUrl!.isNotEmpty);
 
   Widget _buildGradientFallback(Color typeColor) {
     return Container(

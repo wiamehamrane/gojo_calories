@@ -111,7 +111,7 @@ class _VerifyOTPScreenState extends ConsumerState<VerifyOTPScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(LucideIcons.arrowLeft, color: AppColors.textPrimary),
+          icon: Icon(LucideIcons.arrowLeft, color: AppColors.textPrimary),
           onPressed: () => context.go(RoutePaths.auth),
         ),
       ),
@@ -123,7 +123,7 @@ class _VerifyOTPScreenState extends ConsumerState<VerifyOTPScreen> {
             children: [
               Text(
                 Translations.t(lang, 'verify_email_title'),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.w800,
                   color: AppColors.textPrimary,
@@ -134,7 +134,7 @@ class _VerifyOTPScreenState extends ConsumerState<VerifyOTPScreen> {
               Text(
                 Translations.t(lang, 'verify_email_subtitle')
                     .replaceAll('{email}', widget.email),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 15,
                   color: AppColors.textSecondary,
                   height: 1.5,
@@ -146,7 +146,7 @@ class _VerifyOTPScreenState extends ConsumerState<VerifyOTPScreen> {
                 keyboardType: TextInputType.number,
                 maxLength: 6,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 24,
                   letterSpacing: 8,
                   fontWeight: FontWeight.w700,
@@ -154,7 +154,7 @@ class _VerifyOTPScreenState extends ConsumerState<VerifyOTPScreen> {
                 ),
                 decoration: InputDecoration(
                   hintText: '000000',
-                  hintStyle: const TextStyle(color: AppColors.textPlaceholder),
+                  hintStyle: TextStyle(color: AppColors.textPlaceholder),
                   counterText: "",
                   filled: true,
                   fillColor: AppColors.surface,
@@ -173,7 +173,7 @@ class _VerifyOTPScreenState extends ConsumerState<VerifyOTPScreen> {
                 Center(
                   child: Text(
                     _error!,
-                    style: const TextStyle(color: AppColors.danger, fontSize: 14),
+                    style: TextStyle(color: AppColors.danger, fontSize: 14),
                   ),
                 ),
               ],
@@ -215,7 +215,7 @@ class _VerifyOTPScreenState extends ConsumerState<VerifyOTPScreen> {
                   onTap: _resend,
                   child: Text(
                     Translations.t(lang, 'didnt_receive_resend'),
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: AppColors.primary,
                       fontSize: 14,
                       fontWeight: FontWeight.w600,

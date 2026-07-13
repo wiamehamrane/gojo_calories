@@ -15,6 +15,9 @@ class User(Base):
     name = Column(String)
     hashed_password = Column(String)
     is_email_verified = Column(Boolean, default=False, nullable=False)
+    is_admin = Column(Boolean, default=False, nullable=False)
+    is_influencer = Column(Boolean, default=False, nullable=False)
+    is_banned = Column(Boolean, default=False, nullable=False)
     verification_code = Column(String(6), nullable=True)
     verification_code_expires_at = Column(DateTime, nullable=True)
 
@@ -29,6 +32,7 @@ class User(Base):
     activity_level = Column(String, default="sedentary")  # "sedentary" | "light" | "moderate" | "active" | "very_active"
     phone = Column(String, nullable=True)
     share_phone = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
     
     # Manual overrides for nutrition goals
     manual_calories = Column(Integer, nullable=True)
@@ -40,17 +44,25 @@ class User(Base):
     stripe_customer_id = Column(String, unique=True, nullable=True, index=True)
     has_paid = Column(Boolean, default=False, nullable=False)
 
-    # Subscription source tracking ("apple" | "stripe" | None)
+    # Subscription source tracking ("apple" | "google" | "stripe" | None)
     subscription_source = Column(String, nullable=True)
     # Apple In-App Purchase
     apple_original_transaction_id = Column(String, nullable=True, index=True)
+    # Google Play In-App Purchase
+    google_order_id = Column(String, nullable=True, index=True)
+    google_purchase_token = Column(String, nullable=True, index=True)
     subscription_expires_at = Column(DateTime, nullable=True)
+    subscription_plan = Column(String, nullable=True)  # monthly | six_month | yearly | lifetime
+    referral_discount_used = Column(Boolean, default=False, nullable=False)
+    clan_id = Column(String(36), ForeignKey("clans.id"), nullable=True, index=True)
 
     # Referral system
     referral_code = Column(String, unique=True, nullable=True, index=True)
     referral_balance = Column(Float, default=0.0, nullable=False)
     referred_by = Column(String(36), ForeignKey("users.id"), nullable=True)
     
+    pending_promo_code_id = Column(String(36), ForeignKey("promo_codes.id"), nullable=True, index=True)
+
     daily_stats = relationship("DailyStats", back_populates="user")
     weigh_ins = relationship("WeighIn", back_populates="user", cascade="all, delete-orphan")
     food_logs = relationship("FoodLog", back_populates="user")
@@ -231,6 +243,7 @@ class Event(Base):
     start_time = Column(DateTime, nullable=False)
     whatsapp_link = Column(String, nullable=True)
     image_url = Column(String, nullable=True)
+    image_urls = Column(JSON, nullable=True)
     max_participants = Column(Integer, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     
@@ -294,3 +307,98 @@ class Friendship(Base):
     
     user = relationship("User", foreign_keys=[user_id])
     friend = relationship("User", foreign_keys=[friend_id])
+
+
+class Influencer(Base):
+    __tablename__ = "influencers"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid, index=True)
+    user_id = Column(String(36), ForeignKey("users.id"), unique=True, nullable=False, index=True)
+    display_name = Column(String, nullable=False)
+    handle = Column(String, nullable=True, index=True)
+    platform = Column(String, nullable=True)  # instagram, tiktok, youtube, etc.
+    notes = Column(Text, nullable=True)
+    commission_rate = Column(Float, nullable=True)
+    panel_access = Column(Boolean, default=True, nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    user = relationship("User")
+    promo_codes = relationship("PromoCode", back_populates="influencer", cascade="all, delete-orphan")
+
+
+class PromoCode(Base):
+    __tablename__ = "promo_codes"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid, index=True)
+    influencer_id = Column(String(36), ForeignKey("influencers.id"), nullable=False, index=True)
+    code = Column(String, unique=True, nullable=False, index=True)
+    platform = Column(String, default="internal", nullable=False)  # internal | apple | google
+    plan_type = Column(String, nullable=False)  # monthly | yearly | lifetime | trial_7d | six_month
+    store_product_id = Column(String, nullable=True)  # IAP product id for apple/google codes
+    notes = Column(Text, nullable=True)
+    max_redemptions = Column(Integer, nullable=True)
+    redemption_count = Column(Integer, default=0, nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
+    expires_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    influencer = relationship("Influencer", back_populates="promo_codes")
+    redemptions = relationship("PromoRedemption", back_populates="promo_code", cascade="all, delete-orphan")
+
+
+class PromoRedemption(Base):
+    __tablename__ = "promo_redemptions"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid, index=True)
+    promo_code_id = Column(String(36), ForeignKey("promo_codes.id"), nullable=False, index=True)
+    user_id = Column(String(36), ForeignKey("users.id"), unique=True, nullable=False, index=True)
+    plan_granted = Column(String, nullable=False)
+    redeemed_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    promo_code = relationship("PromoCode", back_populates="redemptions")
+    user = relationship("User")
+
+
+class Clan(Base):
+    __tablename__ = "clans"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid, index=True)
+    owner_user_id = Column(String(36), ForeignKey("users.id"), nullable=False, unique=True, index=True)
+    plan_id = Column(String, nullable=False, default="monthly")  # monthly | six_month | yearly
+    stripe_subscription_id = Column(String, nullable=True, index=True)
+    status = Column(String, default="active", nullable=False)  # active | canceled
+    max_members = Column(Integer, default=5, nullable=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    owner = relationship("User", foreign_keys=[owner_user_id])
+    members = relationship("ClanMember", back_populates="clan", cascade="all, delete-orphan")
+    invites = relationship("ClanInvite", back_populates="clan", cascade="all, delete-orphan")
+
+
+class ClanMember(Base):
+    __tablename__ = "clan_members"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid, index=True)
+    clan_id = Column(String(36), ForeignKey("clans.id"), nullable=False, index=True)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, unique=True, index=True)
+    role = Column(String, default="member", nullable=False)  # owner | member
+    addon_active = Column(Boolean, default=False, nullable=False)
+    joined_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    clan = relationship("Clan", back_populates="members")
+    user = relationship("User", foreign_keys=[user_id])
+
+
+class ClanInvite(Base):
+    __tablename__ = "clan_invites"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid, index=True)
+    clan_id = Column(String(36), ForeignKey("clans.id"), nullable=False, index=True)
+    email = Column(String, nullable=False, index=True)
+    token = Column(String, unique=True, nullable=False, index=True)
+    status = Column(String, default="pending", nullable=False)  # pending | accepted | expired | canceled
+    expires_at = Column(DateTime, nullable=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    clan = relationship("Clan", back_populates="invites")

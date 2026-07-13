@@ -13,7 +13,10 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/error_handler.dart';
 import '../../domain/models/event.dart';
+import '../../domain/whatsapp_link.dart';
+import '../../domain/models/event_location_selection.dart';
 import '../providers/events_provider.dart';
+import '../widgets/event_location_picker_sheet.dart';
 
 const _kEventTypes = [
   'Running',
@@ -25,14 +28,6 @@ const _kEventTypes = [
 ];
 
 const _kAudiences = ['female', 'male', 'mixed'];
-
-bool _isValidWhatsAppLink(String link) {
-  final trimmed = link.trim();
-  if (trimmed.isEmpty) return false;
-  return RegExp(r'^https?://chat\.whatsapp\.com/[a-zA-Z0-9]+$')
-          .hasMatch(trimmed) ||
-      RegExp(r'^https?://wa\.me/\d+').hasMatch(trimmed);
-}
 
 class EditEventScreen extends ConsumerStatefulWidget {
   final Event event;
@@ -55,6 +50,8 @@ class _EditEventScreenState extends ConsumerState<EditEventScreen> {
   late String _audience;
   late DateTime _selectedDate;
   late TimeOfDay _selectedTime;
+  double? _selectedLatitude;
+  double? _selectedLongitude;
 
   bool _isSaving = false;
   String? _titleError;
@@ -99,6 +96,8 @@ class _EditEventScreenState extends ConsumerState<EditEventScreen> {
       event.startTime.day,
     );
     _selectedTime = TimeOfDay.fromDateTime(event.startTime);
+    _selectedLatitude = event.latitude;
+    _selectedLongitude = event.longitude;
   }
 
   @override
@@ -119,6 +118,28 @@ class _EditEventScreenState extends ConsumerState<EditEventScreen> {
         _selectedTime.hour,
         _selectedTime.minute,
       );
+
+  Future<void> _pickLocation() async {
+    final initial = _locationController.text.trim().isEmpty
+        ? null
+        : EventLocationSelection(
+            name: _locationController.text.trim(),
+            latitude: _selectedLatitude,
+            longitude: _selectedLongitude,
+          );
+
+    final result = await EventLocationPickerSheet.show(
+      context,
+      initial: initial,
+    );
+    if (result == null || !mounted) return;
+
+    setState(() {
+      _locationController.text = result.name;
+      _selectedLatitude = result.latitude;
+      _selectedLongitude = result.longitude;
+    });
+  }
 
   Future<void> _pickDate() async {
     var temp = _selectedDate;
@@ -194,12 +215,12 @@ class _EditEventScreenState extends ConsumerState<EditEventScreen> {
         _categoryError = 'Please write your category';
         valid = false;
       }
-      final link = _whatsappController.text.trim();
+      final link = EventWhatsAppLink.normalize(_whatsappController.text);
       if (link.isEmpty) {
         _whatsappError = 'WhatsApp link is required';
         valid = false;
-      } else if (!_isValidWhatsAppLink(link)) {
-        _whatsappError = 'Use a chat.whatsapp.com or wa.me WhatsApp link';
+      } else if (!EventWhatsAppLink.isValid(link)) {
+        _whatsappError = EventWhatsAppLink.errorMessage;
         valid = false;
       }
     });
@@ -216,9 +237,13 @@ class _EditEventScreenState extends ConsumerState<EditEventScreen> {
       'description': _descriptionController.text.trim(),
       'event_type': _resolvedEventType,
       'audience': _audience,
-      'location_name': _locationController.text.trim(),
+      'location_name': _locationController.text.trim().isEmpty
+          ? null
+          : _locationController.text.trim(),
+      if (_selectedLatitude != null) 'latitude': _selectedLatitude,
+      if (_selectedLongitude != null) 'longitude': _selectedLongitude,
       'start_time': _startDateTime.toIso8601String(),
-      'whatsapp_link': _whatsappController.text.trim(),
+      'whatsapp_link': EventWhatsAppLink.normalize(_whatsappController.text),
       'max_participants': _maxParticipantsController.text.isNotEmpty
           ? int.tryParse(_maxParticipantsController.text)
           : null,
@@ -268,7 +293,7 @@ class _EditEventScreenState extends ConsumerState<EditEventScreen> {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(
+          icon: Icon(
             LucideIcons.x,
             size: 22,
             color: AppColors.textPrimary,
@@ -278,7 +303,7 @@ class _EditEventScreenState extends ConsumerState<EditEventScreen> {
             context.pop();
           },
         ),
-        title: const Text(
+        title: Text(
           'Edit Event',
           style: TextStyle(
             fontSize: 17,
@@ -320,7 +345,7 @@ class _EditEventScreenState extends ConsumerState<EditEventScreen> {
                             ),
                             decoration: _inputDecoration('Event title'),
                           ),
-                          const Divider(
+                          Divider(
                             height: 1,
                             thickness: 1,
                             color: AppColors.border,
@@ -381,7 +406,7 @@ class _EditEventScreenState extends ConsumerState<EditEventScreen> {
                                 .format(_selectedDate),
                             onTap: _pickDate,
                           ),
-                          const Divider(
+                          Divider(
                             height: 1,
                             thickness: 1,
                             color: AppColors.border,
@@ -393,21 +418,19 @@ class _EditEventScreenState extends ConsumerState<EditEventScreen> {
                             value: _selectedTime.format(context),
                             onTap: _pickTime,
                           ),
-                          const Divider(
+                          Divider(
                             height: 1,
                             thickness: 1,
                             color: AppColors.border,
                             indent: 64,
                           ),
-                          TextField(
-                            controller: _locationController,
-                            textCapitalization: TextCapitalization.sentences,
-                            style:
-                                AppTextStyles.bodyBold.copyWith(fontSize: 15),
-                            decoration: _iconInputDecoration(
-                              'Location',
-                              LucideIcons.mapPin,
-                            ),
+                          _PickerRow(
+                            icon: LucideIcons.mapPin,
+                            label: 'Location',
+                            value: _locationController.text.trim().isEmpty
+                                ? 'Add location'
+                                : _locationController.text.trim(),
+                            onTap: _pickLocation,
                           ),
                         ],
                       ),
@@ -429,11 +452,11 @@ class _EditEventScreenState extends ConsumerState<EditEventScreen> {
                             style:
                                 AppTextStyles.bodyBold.copyWith(fontSize: 15),
                             decoration: _iconInputDecoration(
-                              'WhatsApp link',
+                              'WhatsApp group link',
                               LucideIcons.messageCircle,
                             ),
                           ),
-                          const Divider(
+                          Divider(
                             height: 1,
                             thickness: 1,
                             color: AppColors.border,
@@ -644,7 +667,7 @@ class _ErrorLabel extends StatelessWidget {
       padding: const EdgeInsets.only(top: 8, left: 4),
       child: Text(
         error!,
-        style: const TextStyle(
+        style: TextStyle(
           color: AppColors.danger,
           fontSize: 12,
           fontWeight: FontWeight.w500,
@@ -724,7 +747,7 @@ class _PickerRow extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(
+            Icon(
               LucideIcons.chevronRight,
               size: 18,
               color: AppColors.inactive,
@@ -751,7 +774,7 @@ class _CupertinoPickerSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: 320,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -795,7 +818,7 @@ class _CupertinoPickerSheet extends StatelessWidget {
             child: CupertinoTheme(
               data: CupertinoTheme.of(context).copyWith(
                 primaryColor: AppColors.primaryDark,
-                textTheme: const CupertinoTextThemeData(
+                textTheme: CupertinoTextThemeData(
                   dateTimePickerTextStyle: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w600,

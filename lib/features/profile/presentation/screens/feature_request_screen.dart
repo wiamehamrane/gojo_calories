@@ -60,14 +60,14 @@ class _FeatureRequestScreenState extends State<FeatureRequestScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Feature Request',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.w800),
+          style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w800),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(LucideIcons.chevronLeft, color: Colors.black),
+          icon: Icon(LucideIcons.chevronLeft, color: AppColors.textPrimary),
           onPressed: () => context.pop(),
         ),
       ),
@@ -76,17 +76,17 @@ class _FeatureRequestScreenState extends State<FeatureRequestScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
+            Text(
               'What feature would you like to see next?',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.w800,
-                color: Colors.black,
+                color: AppColors.textPrimary,
                 height: 1.2,
               ),
             ),
             const SizedBox(height: 12),
-            const Text(
+            Text(
               'We are constantly improving GojoCalories. Share your ideas and help us build the best nutrition tracker!',
               style: TextStyle(
                 fontSize: 16,
@@ -113,11 +113,11 @@ class _FeatureRequestScreenState extends State<FeatureRequestScreen> {
                 maxLines: 6,
                 decoration: InputDecoration(
                   hintText: 'Describe your idea here...',
-                  hintStyle: const TextStyle(color: AppColors.textPlaceholder),
+                  hintStyle: TextStyle(color: AppColors.textPlaceholder),
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.all(20),
                 ),
-                style: const TextStyle(fontSize: 16, color: Colors.black),
+                style: TextStyle(fontSize: 16, color: AppColors.textPrimary),
               ),
             ),
             const SizedBox(height: 40),

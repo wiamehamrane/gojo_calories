@@ -54,7 +54,7 @@ class HealthConnectCard extends ConsumerWidget {
         children: [
           Row(
             children: [
-              const Icon(
+              Icon(
                 LucideIcons.heartPulse,
                 color: AppColors.protein,
                 size: 20,
@@ -105,45 +105,38 @@ class HealthConnectCard extends ConsumerWidget {
             const SizedBox(height: 16),
             Row(
               children: [
-                Expanded(
-                  child: _HealthButton(
-                    label: t('apple_health'),
-                    labelKey: 'apple_health',
-                    lang: lang,
-                    icon: LucideIcons.apple,
-                    color: Colors.black,
-                    isConnected: false,
-                    enabled: Platform.isIOS,
-                    onTap: Platform.isIOS
-                        ? () => ref
-                            .read(healthSyncProvider.notifier)
-                            .connectAppleHealth()
-                        : null,
+                // Only show the button that matches the platform: Apple
+                // Health on iOS, Health Connect on Android.
+                if (Platform.isIOS)
+                  Expanded(
+                    child: _HealthButton(
+                      label: t('apple_health'),
+                      labelKey: 'apple_health',
+                      lang: lang,
+                      icon: LucideIcons.apple,
+                      color: AppColors.textPrimary,
+                      isConnected: false,
+                      enabled: true,
+                      onTap: () => ref
+                          .read(healthSyncProvider.notifier)
+                          .connectAppleHealth(),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _HealthButton(
-                    label: Platform.isAndroid
-                        ? t('health_connect')
-                        : t('google_fit'),
-                    labelKey: Platform.isAndroid ? 'health_connect' : 'google_fit',
-                    lang: lang,
-                    icon: LucideIcons.activity,
-                    color: const Color(0xFF4285F4),
-                    isConnected: false,
-                    enabled: Platform.isAndroid && health.isAvailable,
-                    onTap: Platform.isAndroid && health.isAvailable
-                        ? () => ref
-                            .read(healthSyncProvider.notifier)
-                            .connectHealthConnect()
-                        : Platform.isAndroid && !health.isAvailable
-                            ? () => ref
-                                .read(healthSyncProvider.notifier)
-                                .connectHealthConnect()
-                            : null,
+                if (Platform.isAndroid)
+                  Expanded(
+                    child: _HealthButton(
+                      label: t('health_connect'),
+                      labelKey: 'health_connect',
+                      lang: lang,
+                      icon: LucideIcons.activity,
+                      color: const Color(0xFF4285F4),
+                      isConnected: false,
+                      enabled: health.isAvailable,
+                      onTap: () => ref
+                          .read(healthSyncProvider.notifier)
+                          .connectHealthConnect(),
+                    ),
                   ),
-                ),
               ],
             ),
             if (!Platform.isIOS && !Platform.isAndroid)

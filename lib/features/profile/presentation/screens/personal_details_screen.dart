@@ -111,7 +111,7 @@ class _PersonalDetailsScreenState extends ConsumerState<PersonalDetailsScreen> {
         ),
         backgroundColor: AppColors.surface,
         elevation: 0,
-        iconTheme: const IconThemeData(color: AppColors.textPrimary),
+        iconTheme: IconThemeData(color: AppColors.textPrimary),
       ),
       body: profileAsync.when(
         data: (data) {
@@ -156,7 +156,7 @@ class _PersonalDetailsScreenState extends ConsumerState<PersonalDetailsScreen> {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, st) => const Center(child: Text("Error", style: TextStyle(color: AppColors.danger))),
+        error: (e, st) => Center(child: Text("Error", style: TextStyle(color: AppColors.danger))),
       ),
     );
   }
@@ -174,7 +174,7 @@ class _PersonalDetailsScreenState extends ConsumerState<PersonalDetailsScreen> {
         decoration: InputDecoration(
           labelText: label,
           border: InputBorder.none,
-          labelStyle: const TextStyle(color: AppColors.textSecondary),
+          labelStyle: TextStyle(color: AppColors.textSecondary),
         ),
       ),
     );
@@ -200,7 +200,7 @@ class _PersonalDetailsScreenState extends ConsumerState<PersonalDetailsScreen> {
             if (newValue != null) onChanged(newValue);
           },
           isExpanded: true,
-          icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.primary),
+          icon: Icon(Icons.keyboard_arrow_down, color: AppColors.primary),
         ),
       ),
     );
@@ -217,7 +217,7 @@ class _SectionHeader extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8, left: 4),
       child: Text(
         label,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.bold,
           color: AppColors.textSecondary,

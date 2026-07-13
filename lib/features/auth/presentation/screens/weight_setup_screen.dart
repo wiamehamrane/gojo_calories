@@ -11,6 +11,10 @@ import 'package:gojocalories/core/di/repository_providers.dart';
 import 'package:gojocalories/core/routing/route_paths.dart';
 import 'package:gojocalories/core/utils/image.dart';
 import 'package:gojocalories/core/routing/app_navigation.dart';
+import 'package:gojocalories/core/utils/error_handler.dart';
+import 'package:gojocalories/features/auth/data/services/promo_redeem_flow.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:dio/dio.dart';
 
 class WeightSetupScreen extends ConsumerStatefulWidget {
   const WeightSetupScreen({super.key});
@@ -27,7 +31,7 @@ class _WeightSetupScreenState extends ConsumerState<WeightSetupScreen> {
   Timer? _planWatchdog;
   late PageController _pageCtrl;
   int _currentIndex = 0;
-  final int _totalPages = 8;
+  final int _totalPages = 9;
 
   String _gender = 'male';
   String _activityLevel = 'sedentary';
@@ -40,8 +44,12 @@ class _WeightSetupScreenState extends ConsumerState<WeightSetupScreen> {
   final _currentWtCtrl = TextEditingController();
   final _goalWtCtrl = TextEditingController();
   final _referralCtrl = TextEditingController();
+  final _promoCtrl = TextEditingController();
 
-  final _focusNodes = List.generate(5, (_) => FocusNode());
+  final _focusNodes = List.generate(6, (_) => FocusNode());
+
+  /// Pages that show a text field and may show the keyboard.
+  static const _keyboardPageIndices = {0, 1, 2, 3, 6, 7};
 
   @override
   void initState() {
@@ -61,47 +69,56 @@ class _WeightSetupScreenState extends ConsumerState<WeightSetupScreen> {
     _currentWtCtrl.dispose();
     _goalWtCtrl.dispose();
     _referralCtrl.dispose();
+    _promoCtrl.dispose();
     for (var f in _focusNodes) {
       f.dispose();
     }
     super.dispose();
   }
 
+  void _syncKeyboardForPage(int pageIndex) {
+    if (!_keyboardPageIndices.contains(pageIndex)) {
+      FocusManager.instance.primaryFocus?.unfocus();
+    } else if (pageIndex == 6) {
+      _focusNodes[4].requestFocus();
+    } else if (pageIndex == 7) {
+      _focusNodes[5].requestFocus();
+    } else if (pageIndex < _focusNodes.length) {
+      _focusNodes[pageIndex].requestFocus();
+    }
+  }
+
   void _nextPage() {
-    if (_currentIndex < _totalPages - 1) {
+    if (_currentIndex < _totalPages - 2) {
       // Validate current
       if (_currentIndex == 0 && _ageCtrl.text.isEmpty) return;
       if (_currentIndex == 1 && _heightCtrl.text.isEmpty) return;
       if (_currentIndex == 2 && _currentWtCtrl.text.isEmpty) return;
       if (_currentIndex == 3 && _goalWtCtrl.text.isEmpty) return;
 
+      final nextIndex = _currentIndex + 1;
       _pageCtrl.nextPage(
         duration: const Duration(milliseconds: 400),
         curve: Curves.fastOutSlowIn,
       );
-      if (_currentIndex + 1 < _focusNodes.length) {
-        _focusNodes[_currentIndex + 1].requestFocus();
-      }
+      _syncKeyboardForPage(nextIndex);
     } else {
       _submitWeights();
     }
   }
 
   void _prevPage() {
-    if (_isLoading && _currentIndex == 7) return;
+    if (_isLoading && _currentIndex == _totalPages - 1) return;
 
     if (_currentIndex > 0) {
+      final prev = _currentIndex - 1;
       _pageCtrl.previousPage(
         duration: const Duration(milliseconds: 400),
         curve: Curves.fastOutSlowIn,
       );
-      final prev = _currentIndex - 1;
-      if (prev >= 0 && prev < _focusNodes.length) {
-        _focusNodes[prev].requestFocus();
-      } else {
-        FocusManager.instance.primaryFocus?.unfocus();
-      }
+      _syncKeyboardForPage(prev);
     } else {
+      FocusManager.instance.primaryFocus?.unfocus();
       AppNavigation.goToAuth(context: context);
     }
   }
@@ -114,6 +131,7 @@ class _WeightSetupScreenState extends ConsumerState<WeightSetupScreen> {
     final ageStr = _ageCtrl.text.trim();
     final heightStr = _heightCtrl.text.trim();
     final referralStr = _referralCtrl.text.trim();
+    final promoStr = _promoCtrl.text.trim();
 
     if (currentStr.isEmpty ||
         goalStr.isEmpty ||
@@ -150,9 +168,11 @@ class _WeightSetupScreenState extends ConsumerState<WeightSetupScreen> {
       _planComplete = false;
     });
 
-    if (_currentIndex != 7) {
-      _pageCtrl.jumpToPage(7);
-      setState(() => _currentIndex = 7);
+    FocusManager.instance.primaryFocus?.unfocus();
+
+    if (_currentIndex != _totalPages - 1) {
+      _pageCtrl.jumpToPage(_totalPages - 1);
+      setState(() => _currentIndex = _totalPages - 1);
     }
 
     _planWatchdog?.cancel();
@@ -173,6 +193,54 @@ class _WeightSetupScreenState extends ConsumerState<WeightSetupScreen> {
 
       _planWatchdog?.cancel();
       if (!mounted) return;
+
+      final codeToRedeem = promoStr.isNotEmpty
+          ? promoStr
+          : (referralStr.isNotEmpty ? referralStr : '');
+
+      if (codeToRedeem.isNotEmpty) {
+        try {
+          final outcome = await PromoRedeemFlow.redeem(codeToRedeem);
+          if (!mounted) return;
+
+          if (outcome.isInstantGrant) {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setBool('is_onboarded', true);
+            _planComplete = true;
+            setState(() => _isLoading = false);
+            if (mounted) context.go(RoutePaths.home);
+            return;
+          }
+
+          if (outcome.needsStoreRedeem) {
+            await PromoRedeemFlow.openStoreRedemption(outcome);
+            if (!mounted) return;
+            _planComplete = true;
+            setState(() => _isLoading = false);
+            AppNavigation.goToPaywall(context: context);
+            return;
+          }
+        } on DioException catch (e) {
+          if (!mounted) return;
+          setState(() {
+            _isLoading = false;
+            _planError =
+                '${AppErrorHandler.message(e)} Tap Continue to skip or go back to fix the code.';
+            _allowContinue = true;
+          });
+          return;
+        } catch (e) {
+          if (!mounted) return;
+          setState(() {
+            _isLoading = false;
+            _planError =
+                '${AppErrorHandler.message(e)} Tap Continue to skip or go back to fix the code.';
+            _allowContinue = true;
+          });
+          return;
+        }
+      }
+
       _planComplete = true;
       if (mounted) {
         setState(() => _isLoading = false);
@@ -215,7 +283,7 @@ class _WeightSetupScreenState extends ConsumerState<WeightSetupScreen> {
   }
 
   void _onPlanWatchdog() {
-    if (!mounted || _planComplete || _currentIndex != 7) return;
+    if (!mounted || _planComplete || _currentIndex != _totalPages - 1) return;
     setState(() {
       _planError ??=
           'Still waiting for the server. Tap Continue or try again.';
@@ -258,7 +326,7 @@ class _WeightSetupScreenState extends ConsumerState<WeightSetupScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(
+          icon: Icon(
             Icons.arrow_back_ios_new_rounded,
             color: AppColors.textPrimary,
             size: 20,
@@ -277,6 +345,7 @@ class _WeightSetupScreenState extends ConsumerState<WeightSetupScreen> {
                 physics: const NeverScrollableScrollPhysics(),
                 onPageChanged: (idx) {
                   setState(() => _currentIndex = idx);
+                  _syncKeyboardForPage(idx);
                 },
                 children: [
                   _buildStep(
@@ -377,13 +446,19 @@ class _WeightSetupScreenState extends ConsumerState<WeightSetupScreen> {
                         _buildSelectionPill(
                           title: 'Male',
                           isSelected: _gender == 'male',
-                          onTap: () => setState(() => _gender = 'male'),
+                          onTap: () {
+                            FocusManager.instance.primaryFocus?.unfocus();
+                            setState(() => _gender = 'male');
+                          },
                         ),
                         const SizedBox(width: 16),
                         _buildSelectionPill(
                           title: 'Female',
                           isSelected: _gender == 'female',
-                          onTap: () => setState(() => _gender = 'female'),
+                          onTap: () {
+                            FocusManager.instance.primaryFocus?.unfocus();
+                            setState(() => _gender = 'female');
+                          },
                         ),
                       ],
                     ),
@@ -398,7 +473,10 @@ class _WeightSetupScreenState extends ConsumerState<WeightSetupScreen> {
                           title: 'Sedentary',
                           subtitle: 'Office job, little exercise',
                           isSelected: _activityLevel == 'sedentary',
-                          onTap: () => setState(() => _activityLevel = 'sedentary'),
+                          onTap: () {
+                            FocusManager.instance.primaryFocus?.unfocus();
+                            setState(() => _activityLevel = 'sedentary');
+                          },
                           isFullWidth: true,
                         ),
                         const SizedBox(height: 12),
@@ -406,7 +484,10 @@ class _WeightSetupScreenState extends ConsumerState<WeightSetupScreen> {
                           title: 'Lightly Active',
                           subtitle: '1-3 days of exercise',
                           isSelected: _activityLevel == 'light',
-                          onTap: () => setState(() => _activityLevel = 'light'),
+                          onTap: () {
+                            FocusManager.instance.primaryFocus?.unfocus();
+                            setState(() => _activityLevel = 'light');
+                          },
                           isFullWidth: true,
                         ),
                         const SizedBox(height: 12),
@@ -414,7 +495,10 @@ class _WeightSetupScreenState extends ConsumerState<WeightSetupScreen> {
                           title: 'Moderately Active',
                           subtitle: '3-5 days of exercise',
                           isSelected: _activityLevel == 'moderate',
-                          onTap: () => setState(() => _activityLevel = 'moderate'),
+                          onTap: () {
+                            FocusManager.instance.primaryFocus?.unfocus();
+                            setState(() => _activityLevel = 'moderate');
+                          },
                           isFullWidth: true,
                         ),
                         const SizedBox(height: 12),
@@ -422,7 +506,10 @@ class _WeightSetupScreenState extends ConsumerState<WeightSetupScreen> {
                           title: 'Very Active',
                           subtitle: '6-7 days of hard exercise',
                           isSelected: _activityLevel == 'active',
-                          onTap: () => setState(() => _activityLevel = 'active'),
+                          onTap: () {
+                            FocusManager.instance.primaryFocus?.unfocus();
+                            setState(() => _activityLevel = 'active');
+                          },
                           isFullWidth: true,
                         ),
                       ],
@@ -430,7 +517,7 @@ class _WeightSetupScreenState extends ConsumerState<WeightSetupScreen> {
                   ),
                   _buildStep(
                     title: 'Got a referral code?',
-                    subtitle: 'Enter it here (optional)',
+                    subtitle: 'A friend\'s invite code — not an influencer promo',
                     icon: Icons.card_giftcard_rounded,
                     inputChild: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -440,9 +527,9 @@ class _WeightSetupScreenState extends ConsumerState<WeightSetupScreen> {
                             controller: _referralCtrl,
                             focusNode: _focusNodes[4],
                             textInputAction: TextInputAction.done,
-                            onSubmitted: (_) => _submitWeights(),
+                            onSubmitted: (_) => _nextPage(),
                             textAlign: TextAlign.center,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 32,
                               fontWeight: FontWeight.w800,
                               color: AppColors.primaryDark,
@@ -461,12 +548,46 @@ class _WeightSetupScreenState extends ConsumerState<WeightSetupScreen> {
                       ],
                     ),
                   ),
+                  _buildStep(
+                    title: 'Got a promo code?',
+                    subtitle: 'Influencer / partner code (e.g. WIAM10) — optional',
+                    icon: Icons.local_offer_rounded,
+                    inputChild: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _promoCtrl,
+                            focusNode: _focusNodes[5],
+                            textCapitalization: TextCapitalization.characters,
+                            textInputAction: TextInputAction.done,
+                            onSubmitted: (_) => _submitWeights(),
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 32,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.primaryDark,
+                              letterSpacing: 2,
+                            ),
+                            decoration: InputDecoration(
+                              hintText: 'PROMO',
+                              hintStyle: TextStyle(
+                                color: AppColors.primary.withValues(alpha: 0.2),
+                              ),
+                              border: InputBorder.none,
+                              isDense: true,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                   _buildLoadingStep(),
                 ],
               ),
             ),
             // Bottom Action Area
-            if (_currentIndex < 7)
+            if (_currentIndex < _totalPages - 1)
             AnimatedPadding(
               duration: const Duration(milliseconds: 200),
               curve: Curves.easeOut,
@@ -505,7 +626,7 @@ class _WeightSetupScreenState extends ConsumerState<WeightSetupScreen> {
                             ),
                           )
                         : Text(
-                            _currentIndex == 6
+                            _currentIndex == _totalPages - 2
                                 ? 'Finish Setup'
                                 : 'Continue',
                             style: const TextStyle(
@@ -541,7 +662,7 @@ class _WeightSetupScreenState extends ConsumerState<WeightSetupScreen> {
                   color: AppColors.primary.withValues(alpha: 0.2),
                   value: 1.0,
                 ),
-                const CircularProgressIndicator(
+                CircularProgressIndicator(
                   strokeWidth: 8,
                   color: AppColors.primaryDark,
                 ),
@@ -575,7 +696,7 @@ class _WeightSetupScreenState extends ConsumerState<WeightSetupScreen> {
         Text(
           _planError == null ? 'Perfecting your plan...' : 'Something went wrong',
           textAlign: TextAlign.center,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.w800,
             color: AppColors.textPrimary,
@@ -585,7 +706,7 @@ class _WeightSetupScreenState extends ConsumerState<WeightSetupScreen> {
         const SizedBox(height: 12),
         Text(
           _planError ??
-              'AI is calculating your custom nutritional needs.',
+              'We\'re calculating your custom nutritional needs.',
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 16,
@@ -674,7 +795,7 @@ class _WeightSetupScreenState extends ConsumerState<WeightSetupScreen> {
           Text(
             title,
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 32,
               fontWeight: FontWeight.w800,
               color: AppColors.textPrimary,
@@ -686,7 +807,7 @@ class _WeightSetupScreenState extends ConsumerState<WeightSetupScreen> {
           Text(
             subtitle,
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
               color: AppColors.textSecondary,
               height: 1.4,
@@ -722,7 +843,7 @@ class _WeightSetupScreenState extends ConsumerState<WeightSetupScreen> {
                 : [FilteringTextInputFormatter.digitsOnly],
             textInputAction: TextInputAction.next,
             onSubmitted: (_) => _nextPage(),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 64,
               fontWeight: FontWeight.w800,
               color: AppColors.primaryDark,
@@ -741,7 +862,7 @@ class _WeightSetupScreenState extends ConsumerState<WeightSetupScreen> {
         const SizedBox(width: 8),
         Text(
           suffix,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.w600,
             color: AppColors.textSecondary,

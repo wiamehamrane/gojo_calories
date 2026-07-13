@@ -1,0 +1,26 @@
+# The manifest for the "admin" service.
+name: admin
+type: Load Balanced Web Service
+
+http:
+  path: '/'
+  alias: admin.gojocalories.com
+  hosted_zone: Z08140152Y3748IHFP8PT
+  healthcheck:
+    path: /login
+    healthy_threshold: 2
+    unhealthy_threshold: 3
+    interval: 15s
+    timeout: 10s
+
+image:
+  location: 640471340191.dkr.ecr.us-east-1.amazonaws.com/gojocalories/admin:latest
+  port: 3000
+
+cpu: 256
+memory: 512
+count: 1
+exec: true
+
+variables:
+  NEXT_PUBLIC_API_URL: https://api.gojocalories.com/api

@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/di/repository_providers.dart';
 import '../../../../core/routing/app_navigation.dart';
 import '../../../../core/routing/route_paths.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/image.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -84,10 +86,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.surface,
       body: Center(
         child: Image.asset(
-          'assets/icons/app_icon.png',
+          ImageAsset.logoHeader,
           width: 120,
           height: 120,
         ),

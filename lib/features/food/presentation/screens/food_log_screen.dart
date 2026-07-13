@@ -112,12 +112,12 @@ class _FoodLogScreenState extends ConsumerState<FoodLogScreen> {
         backgroundColor: AppColors.surface,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(LucideIcons.arrowLeft, color: AppColors.textPrimary),
+          icon: Icon(LucideIcons.arrowLeft, color: AppColors.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           Translations.t(lang, 'log_food'),
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w600,
             color: AppColors.textPrimary,
@@ -191,7 +191,7 @@ class _FoodLogScreenState extends ConsumerState<FoodLogScreen> {
                     onSubmitted: (_) => _submitSearch(),
                     decoration: InputDecoration(
                       hintText: Translations.t(lang, 'describe_what_ate'),
-                      hintStyle: const TextStyle(
+                      hintStyle: TextStyle(
                         fontSize: 15,
                         color: AppColors.textPlaceholder,
                       ),
@@ -205,7 +205,7 @@ class _FoodLogScreenState extends ConsumerState<FoodLogScreen> {
                 ),
 
                 const SizedBox(height: 16),
-                const Padding(
+                Padding(
                   padding: EdgeInsets.symmetric(
                     horizontal: AppSpacing.screenPadding,
                   ),
@@ -218,7 +218,7 @@ class _FoodLogScreenState extends ConsumerState<FoodLogScreen> {
 
                 Expanded(
                   child: _isSearching
-                      ? const Center(
+                      ? Center(
                           child: CircularProgressIndicator(
                             color: AppColors.primary,
                           ),
@@ -230,7 +230,7 @@ class _FoodLogScreenState extends ConsumerState<FoodLogScreen> {
                           itemCount: _searchResults.isEmpty ? 1 : _searchResults.length,
                           itemBuilder: (context, index) {
                             if (_searchResults.isEmpty) {
-                              return const Center(
+                              return Center(
                                 child: Padding(
                                   padding: EdgeInsets.all(20.0),
                                   child: Text(
@@ -382,7 +382,7 @@ class _SuggestionRow extends StatelessWidget {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Icon(
+                      Icon(
                         LucideIcons.flame,
                         size: 14,
                         color: AppColors.fire,
@@ -401,7 +401,7 @@ class _SuggestionRow extends StatelessWidget {
               child: Container(
                 width: 36,
                 height: 36,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   color: AppColors.primary,
                   shape: BoxShape.circle,
                 ),
@@ -422,7 +422,7 @@ class _SuggestionRow extends StatelessWidget {
     if (url == null || url.isEmpty) {
       return Container(
         color: AppColors.inactive.withValues(alpha: 0.1),
-        child: const Icon(LucideIcons.image, size: 20, color: AppColors.inactive),
+        child: Icon(LucideIcons.image, size: 20, color: AppColors.inactive),
       );
     }
     return CachedFoodImage(
@@ -432,7 +432,7 @@ class _SuggestionRow extends StatelessWidget {
       memCacheHeight: 160,
       errorWidget: Container(
         color: AppColors.inactive.withValues(alpha: 0.1),
-        child: const Icon(LucideIcons.image, size: 20, color: AppColors.inactive),
+        child: Icon(LucideIcons.image, size: 20, color: AppColors.inactive),
       ),
     );
   }
@@ -455,7 +455,7 @@ class _PillOutlineButton extends StatelessWidget {
       style: ElevatedButton.styleFrom(
         backgroundColor: AppColors.surface,
         elevation: 0,
-        side: const BorderSide(color: AppColors.textPrimary, width: 1.5),
+        side: BorderSide(color: AppColors.textPrimary, width: 1.5),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         minimumSize: const Size(double.infinity, 54),
         padding: EdgeInsets.zero,
@@ -468,7 +468,7 @@ class _PillOutlineButton extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
               color: AppColors.textPrimary,

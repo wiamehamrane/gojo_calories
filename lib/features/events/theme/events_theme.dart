@@ -3,28 +3,28 @@ import '../../../core/theme/app_colors.dart';
 
 class EventsTheme {
   // ── Brand Teal ─────────────────────────────────────────────
-  static const Color primary = AppColors.primary;
-  static const Color primaryDark = AppColors.primaryDark;
+  static Color get primary => AppColors.primary;
+  static Color get primaryDark => AppColors.primaryDark;
   static const Color onPrimary = Colors.white;
-  static const Color accent = AppColors.primaryMid;
+  static Color get accent => AppColors.primaryMid;
 
-  static const Color destructive = AppColors.danger;
+  static Color get destructive => AppColors.danger;
 
-  // ── Adaptive palette (Light mode) ──────────────────────────
-  static const Color background = AppColors.background;
-  static const Color cardBackground = AppColors.surface;
-  static const Color cardStroke = AppColors.border;
-  static const Color foreground = AppColors.textPrimary;
-  static const Color muted = AppColors.textSecondary;
-  static const Color surfaceMuted = AppColors.surfaceMuted;
+  // ── Adaptive palette (follows app theme) ───────────────────
+  static Color get background => AppColors.background;
+  static Color get cardBackground => AppColors.surface;
+  static Color get cardStroke => AppColors.border;
+  static Color get foreground => AppColors.textPrimary;
+  static Color get muted => AppColors.textSecondary;
+  static Color get surfaceMuted => AppColors.surfaceMuted;
 
   // ── Typography (Standardized to Inter) ─────────────────────
   static const String headingFont = 'Inter';
   static const String bodyFont = 'Inter';
 
   // ── Brand Gradient ─────────────────────────────────────────
-  static const LinearGradient brandGradient = LinearGradient(
-    colors: [AppColors.primary, Color(0xFF00D1ED)],
+  static LinearGradient get brandGradient => LinearGradient(
+    colors: [AppColors.primary, const Color(0xFF00D1ED)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );

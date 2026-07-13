@@ -61,7 +61,7 @@ class AppConfirmDialog extends StatelessWidget {
           children: [
             Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w800,
                 color: AppColors.textPrimary,
@@ -71,7 +71,7 @@ class AppConfirmDialog extends StatelessWidget {
             const SizedBox(height: 10),
             Text(
               message,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
                 color: AppColors.textSecondary,
@@ -87,7 +87,7 @@ class AppConfirmDialog extends StatelessWidget {
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.textPrimary,
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      side: const BorderSide(color: AppColors.border),
+                      side: BorderSide(color: AppColors.border),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(AppRadius.button),
                       ),

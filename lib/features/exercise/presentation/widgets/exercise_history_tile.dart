@@ -106,7 +106,7 @@ class ExerciseHistoryTile extends StatelessWidget {
                     name,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                       color: AppColors.textPrimary,
@@ -117,7 +117,7 @@ class ExerciseHistoryTile extends StatelessWidget {
                     [dateLabel, durationLabel]
                         .where((s) => s.isNotEmpty)
                         .join(' · '),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       color: AppColors.textSecondary,
                     ),
@@ -131,7 +131,7 @@ class ExerciseHistoryTile extends StatelessWidget {
               children: [
                 Text(
                   '-$calories',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
                     color: AppColors.primaryDark,
@@ -139,7 +139,7 @@ class ExerciseHistoryTile extends StatelessWidget {
                 ),
                 Text(
                   'kcal',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11,
                     color: AppColors.textSecondary,
                   ),
@@ -152,7 +152,7 @@ class ExerciseHistoryTile extends StatelessWidget {
                 visualDensity: VisualDensity.compact,
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                icon: const Icon(
+                icon: Icon(
                   LucideIcons.trash2,
                   size: 18,
                   color: AppColors.inactive,

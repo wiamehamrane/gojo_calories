@@ -1,10 +1,13 @@
 import 'package:dio/dio.dart' show DioException;
 import 'dart:io';
+import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gojocalories/core/config/env_config.dart';
 import 'package:gojocalories/core/theme/app_colors.dart';
+import 'package:gojocalories/core/utils/image.dart';
 import 'package:gojocalories/core/di/repository_providers.dart';
 import 'package:gojocalories/features/auth/data/repositories/auth_repository.dart';
 import 'package:gojocalories/core/routing/route_paths.dart';
@@ -152,26 +155,59 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
   Future<void> _signInWithGoogle() async {
     setState(() => _isLoading = true);
     try {
-      await GoogleSignIn.instance.initialize(
-        clientId: Platform.isIOS
-            ? '980076580409-4d78u72lc8o7aqfuoinvd72dk2tr27co.apps.googleusercontent.com'
-            : '980076580409-rgqujk89m5lhvsr3nfg24hhodk08uoeh.apps.googleusercontent.com',
-        serverClientId: const String.fromEnvironment(
-          'GOOGLE_WEB_CLIENT_ID',
-          defaultValue:
-              '980076580409-rgqujk89m5lhvsr3nfg24hhodk08uoeh.apps.googleusercontent.com',
-        ),
-      );
+      if (Platform.isIOS) {
+        await GoogleSignIn.instance.initialize(
+          clientId: EnvConfig.googleIosClientId,
+          serverClientId: EnvConfig.googleWebClientId,
+        );
+      } else if (Platform.isAndroid) {
+        final androidClientId = EnvConfig.googleAndroidClientId;
+        await GoogleSignIn.instance.initialize(
+          clientId: androidClientId,
+          serverClientId: EnvConfig.googleWebClientId,
+        );
+      } else {
+        await GoogleSignIn.instance.initialize(
+          serverClientId: EnvConfig.googleWebClientId,
+        );
+      }
+
       final account = await GoogleSignIn.instance.authenticate();
       final auth = account.authentication;
+      final idToken = auth.idToken;
+      if (idToken == null) {
+        throw Exception(
+          'Google did not return an ID token. Check Android OAuth setup.',
+        );
+      }
       final token =
-          await ref.read(authRepositoryProvider).googleLogin(auth.idToken!);
+          await ref.read(authRepositoryProvider).googleLogin(idToken);
       await _handleLoginSuccess(token);
+    } on GoogleSignInException catch (e) {
+      if (e.code == GoogleSignInExceptionCode.canceled) {
+        final message = e.toString().toLowerCase();
+        if (message.contains('[16]') ||
+            message.contains('account reauth failed')) {
+          _showError(_googleAndroidConfigError());
+        }
+        return;
+      }
+      _showError('Failed to sign in with Google: $e');
     } catch (e) {
       _showError('Failed to sign in with Google: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  String _googleAndroidConfigError() {
+    return 'Google Sign-In is not configured for this Android build.\n\n'
+        'In Google Cloud Console, create an Android OAuth client for '
+        'com.gojocalories.gojocalories and add these SHA-1 fingerprints:\n'
+        '• Release/upload key: 22:53:22:8A:6E:13:93:D6:3E:B2:57:CC:39:B4:66:92:62:06:F3:18\n'
+        '• Debug key: 2A:7F:D1:95:47:F8:0A:4F:9F:BC:6B:7E:97:EA:D1:74:C4:40:0B:BD\n'
+        '• Play App Signing key from Play Console → App integrity\n\n'
+        'Then clear Google Play Services cache and try again.';
   }
 
   Future<void> _signInWithApple() async {
@@ -220,17 +256,32 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      backgroundColor:
-          _showEmailSheet ? const Color(0xFFB5B5B5) : const Color(0xFFF7F7F7),
+      backgroundColor: const Color(0xFFF7F7F7),
       body: Stack(
         children: [
+          // Background that gently dims while the email sheet is open.
+          Positioned.fill(
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 380),
+              curve: Curves.easeOutCubic,
+              color: _showEmailSheet
+                  ? const Color(0xFFB5B5B5)
+                  : const Color(0xFFF7F7F7),
+            ),
+          ),
           SafeArea(
             child: GestureDetector(
               onTap: () => FocusScope.of(context).unfocus(),
               child: Column(
                 children: [
                   const Spacer(flex: 3),
-                  const Text(
+                  Image.asset(
+                    ImageAsset.logoHeader,
+                    width: 88,
+                    height: 88,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
                     'GojoCalories',
                     style: TextStyle(
                       fontSize: 28,
@@ -245,15 +296,17 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        _SocialCircleButton(
-                          onTap: _isLoading ? null : _signInWithApple,
-                          child: const Icon(
-                            Icons.apple,
-                            size: 28,
-                            color: AppColors.textPrimary,
+                        if (Platform.isIOS) ...[
+                          _SocialCircleButton(
+                            onTap: _isLoading ? null : _signInWithApple,
+                            child: Icon(
+                              Icons.apple,
+                              size: 28,
+                              color: AppColors.textPrimary,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 20),
+                          const SizedBox(width: 20),
+                        ],
                         _SocialCircleButton(
                           onTap: _isLoading ? null : _signInWithGoogle,
                           child: SvgPicture.asset(
@@ -265,7 +318,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                         const SizedBox(width: 20),
                         _SocialCircleButton(
                           onTap: _isLoading ? null : _openEmailSheet,
-                          child: const Icon(
+                          child: Icon(
                             Icons.mail_outline,
                             size: 24,
                             color: AppColors.textPrimary,
@@ -292,47 +345,78 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
             ),
           ),
 
-          if (_showEmailSheet)
-            GestureDetector(
-              onTap: _closeEmailSheet,
-              child: Container(color: Colors.black.withValues(alpha: 0.08)),
-            ),
-
-          if (_showEmailSheet)
-            Align(
-              alignment: Alignment.bottomCenter,
+          // Frosted-glass barrier that blurs the page behind the sheet.
+          Positioned.fill(
+            child: IgnorePointer(
+              ignoring: !_showEmailSheet,
               child: GestureDetector(
-                onTap: () {},
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxHeight: MediaQuery.of(context).size.height * 0.92,
-                  ),
-                  child: _EmailAuthSheet(
-                    tabController: _tab,
-                    emailCtrl: _emailCtrl,
-                    passwordCtrl: _passwordCtrl,
-                    emailFocus: _emailFocus,
-                    passFocus: _passFocus,
-                    obscurePass: _obscurePass,
-                    agreedToPrivacy: _agreedToPrivacy,
-                    isLoading: _isLoading,
-                    onToggleObscure: () =>
-                        setState(() => _obscurePass = !_obscurePass),
-                    onAgreedChanged: (v) =>
-                        setState(() => _agreedToPrivacy = v),
-                    onSubmit: _submitEmail,
-                    onPrivacyTap: () => launchUrl(
-                      Uri.parse('https://gojocalories.com/privacy-policy'),
+                onTap: _closeEmailSheet,
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0, end: _showEmailSheet ? 1 : 0),
+                  duration: const Duration(milliseconds: 380),
+                  curve: Curves.easeOutCubic,
+                  builder: (context, t, _) {
+                    if (t == 0) return const SizedBox.expand();
+                    return BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 10 * t, sigmaY: 10 * t),
+                      child: Container(
+                        color: Colors.black.withValues(alpha: 0.10 * t),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+
+          // Email sheet slides and fades in graciously.
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: AnimatedSlide(
+              offset: _showEmailSheet ? Offset.zero : const Offset(0, 1),
+              duration: const Duration(milliseconds: 420),
+              curve: Curves.easeOutCubic,
+              child: AnimatedOpacity(
+                opacity: _showEmailSheet ? 1 : 0,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOut,
+                child: IgnorePointer(
+                  ignoring: !_showEmailSheet,
+                  child: GestureDetector(
+                    onTap: () {},
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxHeight: MediaQuery.of(context).size.height * 0.92,
+                      ),
+                      child: _EmailAuthSheet(
+                        tabController: _tab,
+                        emailCtrl: _emailCtrl,
+                        passwordCtrl: _passwordCtrl,
+                        emailFocus: _emailFocus,
+                        passFocus: _passFocus,
+                        obscurePass: _obscurePass,
+                        agreedToPrivacy: _agreedToPrivacy,
+                        isLoading: _isLoading,
+                        onToggleObscure: () =>
+                            setState(() => _obscurePass = !_obscurePass),
+                        onAgreedChanged: (v) =>
+                            setState(() => _agreedToPrivacy = v),
+                        onSubmit: _submitEmail,
+                        onPrivacyTap: () => launchUrl(
+                          Uri.parse('https://gojocalories.com/privacy-policy'),
+                        ),
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
+          ),
 
           if (_isLoading)
             Container(
               color: Colors.black.withValues(alpha: 0.12),
-              child: const Center(
+              child: Center(
                 child: CircularProgressIndicator(color: AppColors.primaryDark),
               ),
             ),
@@ -386,7 +470,7 @@ class _LegalFooter extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        const Text(
+        Text(
           'By continuing, you agree to our',
           textAlign: TextAlign.center,
           style: TextStyle(
@@ -402,7 +486,7 @@ class _LegalFooter extends StatelessWidget {
           children: [
             GestureDetector(
               onTap: onTermsTap,
-              child: const Text(
+              child: Text(
                 'Terms of Service',
                 style: TextStyle(
                   fontSize: 12,
@@ -412,13 +496,13 @@ class _LegalFooter extends StatelessWidget {
                 ),
               ),
             ),
-            const Text(
+            Text(
               ' and ',
               style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
             ),
             GestureDetector(
               onTap: onPrivacyTap,
-              child: const Text(
+              child: Text(
                 'Privacy Policy',
                 style: TextStyle(
                   fontSize: 12,
@@ -469,13 +553,22 @@ class _EmailAuthSheet extends StatelessWidget {
     final isCreate = tabController.index == 0;
     final keyboardInset = MediaQuery.of(context).viewInsets.bottom;
 
-    return Container(
-      width: double.infinity,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: SafeArea(
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+        child: Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.72),
+            border: Border(
+              top: BorderSide(
+                color: Colors.white.withValues(alpha: 0.65),
+                width: 1,
+              ),
+            ),
+          ),
+          child: SafeArea(
         top: false,
         child: AnimatedPadding(
           duration: const Duration(milliseconds: 200),
@@ -533,8 +626,21 @@ class _EmailAuthSheet extends StatelessWidget {
                   ),
                 ),
               ),
-              if (isCreate) ...[
-                const SizedBox(height: 14),
+              // Privacy checkbox gracefully grows/shrinks when switching
+              // between Create Account and Log In.
+              AnimatedSize(
+                duration: const Duration(milliseconds: 320),
+                curve: Curves.easeInOutCubic,
+                alignment: Alignment.topCenter,
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 220),
+                  child: !isCreate
+                      ? const SizedBox(width: double.infinity)
+                      : Column(
+                          key: const ValueKey('privacy_row'),
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const SizedBox(height: 14),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -545,7 +651,7 @@ class _EmailAuthSheet extends StatelessWidget {
                         value: agreedToPrivacy,
                         onChanged: (val) => onAgreedChanged(val ?? false),
                         activeColor: AppColors.primary,
-                        side: const BorderSide(
+                        side: BorderSide(
                           color: AppColors.textPlaceholder,
                           width: 1.5,
                         ),
@@ -561,7 +667,7 @@ class _EmailAuthSheet extends StatelessWidget {
                         child: Text.rich(
                           TextSpan(
                             text: 'I agree to the Terms of Use & ',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
                               color: AppColors.textSecondary,
                               height: 1.4,
@@ -582,7 +688,10 @@ class _EmailAuthSheet extends StatelessWidget {
                     ),
                   ],
                 ),
-              ],
+                          ],
+                        ),
+                ),
+              ),
               const SizedBox(height: 20),
               _PrimaryButton(
                 label: isCreate ? 'Create Account' : 'Log In',
@@ -592,6 +701,8 @@ class _EmailAuthSheet extends StatelessWidget {
             ],
           ),
         ),
+        ),
+      ),
         ),
       ),
     );
@@ -737,7 +848,7 @@ class _AuthField extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w700,
             color: AppColors.textPrimary,
@@ -762,13 +873,13 @@ class _AuthField extends StatelessWidget {
                   textInputAction: textInputAction,
                   obscureText: obscure,
                   onSubmitted: onSubmitted,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 15,
                     color: AppColors.textPrimary,
                   ),
                   decoration: InputDecoration(
                     hintText: hint,
-                    hintStyle: const TextStyle(
+                    hintStyle: TextStyle(
                       color: AppColors.textPlaceholder,
                       fontSize: 15,
                     ),
@@ -823,12 +934,28 @@ class _PrimaryButton extends StatelessWidget {
                     strokeWidth: 2.5,
                   ),
                 )
-              : Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
+              : AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 260),
+                  switchInCurve: Curves.easeOutCubic,
+                  switchOutCurve: Curves.easeInCubic,
+                  transitionBuilder: (child, animation) => FadeTransition(
+                    opacity: animation,
+                    child: SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0, 0.35),
+                        end: Offset.zero,
+                      ).animate(animation),
+                      child: child,
+                    ),
+                  ),
+                  child: Text(
+                    label,
+                    key: ValueKey(label),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
         ),

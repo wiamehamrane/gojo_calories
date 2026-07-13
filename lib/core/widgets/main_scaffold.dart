@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_shadows.dart';
+import '../theme/app_spacing.dart';
 import '../routing/route_paths.dart';
 import '../localization/locale_provider.dart';
 import '../localization/translations.dart';
@@ -40,7 +41,7 @@ class MainScaffold extends ConsumerWidget {
     }
   }
 
-  void _showActionGrid(BuildContext context, double bottomOffset, double pillHeight) {
+  void _showActionGrid(BuildContext context, double aboveOffset) {
     showGeneralDialog(
       context: context,
       barrierDismissible: true,
@@ -55,7 +56,7 @@ class MainScaffold extends ConsumerWidget {
             body: Stack(
               children: [
                 Positioned(
-                  bottom: bottomOffset + pillHeight + 16,
+                  bottom: aboveOffset,
                   left: 0,
                   right: 0,
                   child: ScaleTransition(
@@ -115,14 +116,27 @@ class MainScaffold extends ConsumerWidget {
               bottom: bottomOffset,
               left: pillHMargin,
               right: pillHMargin,
-              height: pillHeight + (isHome ? fabSize / 2 : 0),
+              height: pillHeight,
               child: _FloatingNavBar(
                 currentIndex: currentIndex,
                 lang: lang,
                 pillHeight: pillHeight,
-                fabSize: fabSize,
                 onTap: (i) => _onItemTapped(i, context),
-                onPlusTap: () => _showActionGrid(context, bottomOffset, pillHeight),
+              ),
+            ),
+
+          // Plus button floats just above the nav bar, flush right with the
+          // home page's screen padding.
+          if (!isScan && isHome)
+            Positioned(
+              bottom: bottomOffset + pillHeight + 4,
+              right: AppSpacing.screenPadding,
+              child: _CenterFab(
+                size: fabSize,
+                onTap: () => _showActionGrid(
+                  context,
+                  bottomOffset + pillHeight + 4 + fabSize + 12,
+                ),
               ),
             ),
         ],
@@ -135,63 +149,22 @@ class _FloatingNavBar extends StatelessWidget {
   final int currentIndex;
   final String lang;
   final double pillHeight;
-  final double fabSize;
   final void Function(int) onTap;
-  final VoidCallback onPlusTap;
 
   const _FloatingNavBar({
     required this.currentIndex,
     required this.lang,
     required this.pillHeight,
-    required this.fabSize,
     required this.onTap,
-    required this.onPlusTap,
   });
-
-  bool get _isHome => currentIndex == 0;
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      clipBehavior: Clip.none,
-      alignment: Alignment.bottomCenter,
-      children: [
-        Container(
-          height: pillHeight,
-          decoration: _pillDecoration,
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: _isHome ? _buildHomeRow() : _buildTabsRow(),
-        ),
-        if (_isHome)
-          Positioned(
-            bottom: pillHeight / 2 - fabSize / 2,
-            child: _CenterFab(size: fabSize, onTap: onPlusTap),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildHomeRow() {
-    return Row(
-      children: [
-        Expanded(
-          child: _NavSlot(
-            icon: LucideIcons.house,
-            label: Translations.t(lang, 'nav_home'),
-            isActive: true,
-            onTap: () => onTap(0),
-          ),
-        ),
-        SizedBox(width: fabSize + 4),
-        Expanded(
-          child: _NavSlot(
-            icon: LucideIcons.user,
-            label: Translations.t(lang, 'nav_profile'),
-            isActive: false,
-            onTap: () => onTap(2),
-          ),
-        ),
-      ],
+    return Container(
+      height: pillHeight,
+      decoration: _pillDecoration,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: _buildTabsRow(),
     );
   }
 
@@ -209,7 +182,7 @@ class _FloatingNavBar extends StatelessWidget {
         Expanded(
           child: _NavSlot(
             icon: LucideIcons.compass,
-            label: 'Events',
+            label: Translations.t(lang, 'nav_events'),
             isActive: currentIndex == 1,
             onTap: () => onTap(1),
           ),
@@ -274,7 +247,7 @@ class _NavSlot extends StatelessWidget {
                   const SizedBox(width: 8),
                   Text(
                     label,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                       color: AppColors.primaryDark,
@@ -304,23 +277,23 @@ class _CenterFab extends StatelessWidget {
         width: size,
         height: size,
         decoration: BoxDecoration(
-          color: Colors.black,
+          color: AppColors.textPrimary,
           shape: BoxShape.circle,
           boxShadow: AppShadows.fabShadow,
-          border: Border.all(color: Colors.white, width: 3),
+          border: Border.all(color: AppColors.surface, width: 3),
         ),
-        child: const Icon(
+        child: Icon(
           LucideIcons.plus,
           size: 28,
-          color: Colors.white,
+          color: AppColors.surface,
         ),
       ),
     );
   }
 }
 
-const _pillDecoration = BoxDecoration(
-  color: Colors.white,
+BoxDecoration get _pillDecoration => BoxDecoration(
+  color: AppColors.surface,
   borderRadius: BorderRadius.all(Radius.circular(999)),
   boxShadow: [
     BoxShadow(
@@ -364,30 +337,21 @@ class _ActionGrid extends ConsumerWidget {
             },
           ),
           _ActionCell(
-            icon: LucideIcons.bookmark,
-            label: Translations.t(lang, 'action_saved_foods'),
-            width: cellWidth,
-            onTap: () {
-              Navigator.pop(context);
-              context.push('/saved_foods');
-            },
-          ),
-          _ActionCell(
-            icon: LucideIcons.search,
-            label: Translations.t(lang, 'action_food_database'),
-            width: cellWidth,
-            onTap: () {
-              Navigator.pop(context);
-              context.push('/food_database');
-            },
-          ),
-          _ActionCell(
             icon: LucideIcons.scanLine,
             label: Translations.t(lang, 'action_scan_food'),
             width: cellWidth,
             onTap: () {
               Navigator.pop(context);
               context.go(RoutePaths.scan);
+            },
+          ),
+          _ActionCell(
+            icon: LucideIcons.squarePen,
+            label: Translations.t(lang, 'action_add_food_manually'),
+            width: cellWidth,
+            onTap: () {
+              Navigator.pop(context);
+              context.push('/food_database');
             },
           ),
           _ActionCell(
@@ -424,7 +388,7 @@ class _ActionCell extends StatelessWidget {
       width: width,
       height: 130,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -454,7 +418,7 @@ class _ActionCell extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                   color: AppColors.textPrimary,

@@ -113,7 +113,7 @@ class _DescribeExerciseScreenState extends ConsumerState<DescribeExerciseScreen>
         title: Text(t('describe_exercise'), style: AppTextStyles.sectionHeader),
         backgroundColor: AppColors.surface,
         elevation: 0,
-        iconTheme: const IconThemeData(color: AppColors.textPrimary),
+        iconTheme: IconThemeData(color: AppColors.textPrimary),
       ),
       body: Padding(
         padding: const EdgeInsets.all(20),
@@ -134,7 +134,7 @@ class _DescribeExerciseScreenState extends ConsumerState<DescribeExerciseScreen>
                 decoration: InputDecoration(
                   border: InputBorder.none,
                   hintText: t('describe_exercise_hint'),
-                  hintStyle: const TextStyle(color: AppColors.textPlaceholder),
+                  hintStyle: TextStyle(color: AppColors.textPlaceholder),
                 ),
               ),
             ),
@@ -183,7 +183,7 @@ class _DescribeExerciseScreenState extends ConsumerState<DescribeExerciseScreen>
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(999),
                   side: _result != null
-                      ? const BorderSide(color: AppColors.border)
+                      ? BorderSide(color: AppColors.border)
                       : BorderSide.none,
                 ),
                 padding: const EdgeInsets.symmetric(vertical: 18),
@@ -264,7 +264,7 @@ class _ResultCard extends StatelessWidget {
                   color: AppColors.surfaceMuted,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(
+                child: Icon(
                   LucideIcons.flame,
                   size: 20,
                   color: AppColors.textPrimary,
@@ -274,7 +274,7 @@ class _ResultCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   name,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
                     color: AppColors.textPrimary,
@@ -288,18 +288,18 @@ class _ResultCard extends StatelessWidget {
             children: [
               Text(
                 durationLabel,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   color: AppColors.textSecondary,
                 ),
               ),
-              const Text(
+              Text(
                 ' · ',
                 style: TextStyle(color: AppColors.textSecondary),
               ),
               Text(
                 '-$calories kcal',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                   color: AppColors.primaryDark,

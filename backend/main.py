@@ -19,7 +19,8 @@ load_dotenv()
 
 os.makedirs("uploads", exist_ok=True)
 
-from routes import vision, auth, stats, groups, referrals, payments, notifications, exercises, recipes, events, apple_iap, memories, feed, friends
+from routes import vision, auth, stats, groups, referrals, payments, notifications, exercises, recipes, events, apple_iap, google_iap, memories, feed, friends, promo, clan
+from routes.admin import router as admin_router
 
 if os.getenv("WIPE_DB") == "true":
     logger.warning("WIPE_DB is true. Dropping all tables via SCHEMA wipe...")
@@ -61,10 +62,104 @@ try:
         # Apple IAP columns
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_source VARCHAR;"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS apple_original_transaction_id VARCHAR;"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS google_order_id VARCHAR;"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS google_purchase_token VARCHAR;"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_expires_at TIMESTAMP;"))
         # Social & Privacy
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR;"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS share_phone BOOLEAN DEFAULT FALSE;"))
+        # Join date (used by the app to limit calendar history)
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;"))
+        # Backfill: accounts that predate the created_at column got stamped
+        # with the migration date. Use their earliest food log as the real
+        # join date so history goes back to when they actually subscribed.
+        conn.execute(text("""
+            UPDATE users SET created_at = LEAST(
+                users.created_at,
+                COALESCE((SELECT MIN(f.created_at) FROM food_logs f WHERE f.user_id = users.id), users.created_at)
+            );
+        """))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE;"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_banned BOOLEAN DEFAULT FALSE;"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_influencer BOOLEAN DEFAULT FALSE;"))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS influencers (
+                id VARCHAR(36) PRIMARY KEY,
+                user_id VARCHAR(36) NOT NULL UNIQUE REFERENCES users(id),
+                display_name VARCHAR NOT NULL,
+                handle VARCHAR,
+                platform VARCHAR,
+                notes TEXT,
+                commission_rate FLOAT,
+                panel_access BOOLEAN DEFAULT TRUE,
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS promo_codes (
+                id VARCHAR(36) PRIMARY KEY,
+                influencer_id VARCHAR(36) NOT NULL REFERENCES influencers(id) ON DELETE CASCADE,
+                code VARCHAR NOT NULL UNIQUE,
+                plan_type VARCHAR NOT NULL,
+                max_redemptions INTEGER,
+                redemption_count INTEGER DEFAULT 0,
+                is_active BOOLEAN DEFAULT TRUE,
+                expires_at TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS promo_redemptions (
+                id VARCHAR(36) PRIMARY KEY,
+                promo_code_id VARCHAR(36) NOT NULL REFERENCES promo_codes(id) ON DELETE CASCADE,
+                user_id VARCHAR(36) NOT NULL UNIQUE REFERENCES users(id),
+                plan_granted VARCHAR NOT NULL,
+                redeemed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_promo_codes_influencer ON promo_codes (influencer_id);"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_promo_redemptions_code ON promo_redemptions (promo_code_id);"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_plan VARCHAR;"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_discount_used BOOLEAN DEFAULT FALSE;"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS clan_id VARCHAR(36);"))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS clans (
+                id VARCHAR(36) PRIMARY KEY,
+                owner_user_id VARCHAR(36) NOT NULL UNIQUE REFERENCES users(id),
+                plan_id VARCHAR NOT NULL DEFAULT 'monthly',
+                stripe_subscription_id VARCHAR,
+                status VARCHAR DEFAULT 'active',
+                max_members INTEGER DEFAULT 5,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS clan_members (
+                id VARCHAR(36) PRIMARY KEY,
+                clan_id VARCHAR(36) NOT NULL REFERENCES clans(id) ON DELETE CASCADE,
+                user_id VARCHAR(36) NOT NULL UNIQUE REFERENCES users(id),
+                role VARCHAR DEFAULT 'member',
+                addon_active BOOLEAN DEFAULT FALSE,
+                joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS clan_invites (
+                id VARCHAR(36) PRIMARY KEY,
+                clan_id VARCHAR(36) NOT NULL REFERENCES clans(id) ON DELETE CASCADE,
+                email VARCHAR NOT NULL,
+                token VARCHAR NOT NULL UNIQUE,
+                status VARCHAR DEFAULT 'pending',
+                expires_at TIMESTAMP NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_clan_members_clan ON clan_members (clan_id);"))
+        conn.execute(text("ALTER TABLE promo_codes ADD COLUMN IF NOT EXISTS platform VARCHAR DEFAULT 'internal';"))
+        conn.execute(text("ALTER TABLE promo_codes ADD COLUMN IF NOT EXISTS store_product_id VARCHAR;"))
+        conn.execute(text("ALTER TABLE promo_codes ADD COLUMN IF NOT EXISTS notes TEXT;"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS pending_promo_code_id VARCHAR(36);"))
         # Multilingual food names
         conn.execute(text("ALTER TABLE food_logs ADD COLUMN IF NOT EXISTS name_en VARCHAR;"))
         conn.execute(text("ALTER TABLE food_logs ADD COLUMN IF NOT EXISTS name_fr VARCHAR;"))
@@ -164,6 +259,7 @@ try:
             );
         """))
         conn.execute(text("ALTER TABLE events ADD COLUMN IF NOT EXISTS image_url VARCHAR;"))
+        conn.execute(text("ALTER TABLE events ADD COLUMN IF NOT EXISTS image_urls JSON;"))
         conn.execute(text("ALTER TABLE events ADD COLUMN IF NOT EXISTS max_participants INTEGER;"))
         conn.execute(text("ALTER TABLE events ADD COLUMN IF NOT EXISTS audience VARCHAR DEFAULT 'mixed';"))
         conn.execute(text("UPDATE events SET audience = 'mixed' WHERE audience IS NULL;"))
@@ -259,7 +355,13 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 # ──────────────────────────────────────────────────────────────────────────────
 
-allowed_origins = os.getenv("ALLOWED_ORIGINS", "*").split(",")
+_raw_origins = os.getenv("ALLOWED_ORIGINS", "*")
+allowed_origins = [
+    origin.strip()
+    for part in _raw_origins.replace("\n", ",").split(",")
+    for origin in [part.strip()]
+    if origin
+]
 
 app.add_middleware(
     CORSMiddleware,
@@ -281,7 +383,10 @@ def health_check():
 
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(payments.router, prefix="/api/payments", tags=["Payments"])
+app.include_router(promo.router, prefix="/api/payments", tags=["Promo"])
+app.include_router(clan.router, prefix="/api/clan", tags=["Clan"])
 app.include_router(apple_iap.router, prefix="/api/payments/apple", tags=["Apple IAP"])
+app.include_router(google_iap.router, prefix="/api/payments/google", tags=["Google IAP"])
 
 # Hard Paywall temporarily suspended for AWS testing mode
 app.include_router(vision.router, prefix="/api/food", tags=["Food Vision AI"])
@@ -295,6 +400,7 @@ app.include_router(events.router, prefix="/api/events", tags=["Events"])
 app.include_router(memories.router, prefix="/api/memories", tags=["Memories"])
 app.include_router(feed.router, prefix="/api/feed", tags=["Feed"])
 app.include_router(friends.router, prefix="/api/friends", tags=["Friends"])
+app.include_router(admin_router.router, prefix="/api/admin", tags=["Admin"])
 
 # Apple Sign-In callback — must be at root path to match the redirectUri
 # configured in the Flutter app: https://api.gojocalories.com/callbacks/sign_in_with_apple

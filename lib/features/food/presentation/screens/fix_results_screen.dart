@@ -59,10 +59,10 @@ class _FixResultsScreenState extends ConsumerState<FixResultsScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(LucideIcons.arrowLeft, color: AppColors.textPrimary),
+          icon: Icon(LucideIcons.arrowLeft, color: AppColors.textPrimary),
           onPressed: () => context.pop(),
         ),
-        title: const Text(
+        title: Text(
           'Fix Results',
           style: TextStyle(color: AppColors.textPrimary, fontSize: 18, fontWeight: FontWeight.w600),
         ),
@@ -73,23 +73,23 @@ class _FixResultsScreenState extends ConsumerState<FixResultsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 "What's wrong with this entry?",
                 style: TextStyle(color: AppColors.textPrimary, fontSize: 22, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
-              const Text(
+              Text(
                 "Tell us what needs to be changed (e.g. 'I had 2 eggs instead of 1' or 'Remove the cheese').",
                 style: TextStyle(color: AppColors.textSecondary, fontSize: 15),
               ),
               const SizedBox(height: 24),
               TextField(
                 controller: _promptController,
-                style: const TextStyle(color: AppColors.textPrimary),
+                style: TextStyle(color: AppColors.textPrimary),
                 maxLines: 4,
                 decoration: InputDecoration(
                   hintText: "e.g., 'Change the amount of chicken to 200g'",
-                  hintStyle: const TextStyle(color: AppColors.inactive),
+                  hintStyle: TextStyle(color: AppColors.inactive),
                   filled: true,
                   fillColor: AppColors.surface,
                   border: OutlineInputBorder(
@@ -101,7 +101,7 @@ class _FixResultsScreenState extends ConsumerState<FixResultsScreen> {
               ),
               if (_error != null) ...[
                 const SizedBox(height: 12),
-                Text(_error!, style: const TextStyle(color: AppColors.danger, fontSize: 14)),
+                Text(_error!, style: TextStyle(color: AppColors.danger, fontSize: 14)),
               ],
               const Spacer(),
               SizedBox(

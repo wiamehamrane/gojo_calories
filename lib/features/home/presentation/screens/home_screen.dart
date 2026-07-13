@@ -22,6 +22,7 @@ import '../widgets/calorie_ring_inner.dart';
 import '../widgets/macro_tile_inner.dart';
 import '../widgets/home_day_shimmer.dart';
 import '../widgets/weekly_calendar.dart';
+import '../../../tasks/presentation/widgets/day_progress_dots.dart';
 import '../widgets/bmi_widget.dart';
 import '../widgets/health_connect_card.dart';
 import '../../../tasks/presentation/widgets/active_tasks_carousel.dart';
@@ -32,7 +33,7 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.surface,
       body: SafeArea(
         bottom: false,
         child: Column(
@@ -65,6 +66,13 @@ class HomeScreen extends ConsumerWidget {
         children: [
           const SizedBox(height: 4),
           const WeeklyCalendar(),
+          const SizedBox(height: 12),
+          const Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: AppSpacing.screenPadding,
+            ),
+            child: DayProgressDots(),
+          ),
           const SizedBox(height: 16),
           const HealthConnectCard(),
           const SizedBox(height: 16),
@@ -167,7 +175,7 @@ class HomeScreen extends ConsumerWidget {
               child: Text(
                 Translations.t(lang, 'recently_uploaded'),
                 style:
-                    AppTextStyles.sectionHeader.copyWith(color: Colors.black),
+                    AppTextStyles.sectionHeader.copyWith(color: AppColors.textPrimary),
               ),
             ),
             const SizedBox(height: 12),
@@ -180,7 +188,7 @@ class HomeScreen extends ConsumerWidget {
               child: Text(
                 Translations.t(lang, 'daily_workouts'),
                 style:
-                    AppTextStyles.sectionHeader.copyWith(color: Colors.black),
+                    AppTextStyles.sectionHeader.copyWith(color: AppColors.textPrimary),
               ),
             ),
             const SizedBox(height: 12),
@@ -198,7 +206,7 @@ class HomeScreen extends ConsumerWidget {
       child: Center(
         child: Text(
           Translations.t(lang, 'error_generic'),
-          style: const TextStyle(color: AppColors.danger),
+          style: TextStyle(color: AppColors.danger),
         ),
       ),
     );
@@ -223,12 +231,12 @@ class HomeScreen extends ConsumerWidget {
               //const Text('🥑', style: TextStyle(fontSize: 26)),
               Image.asset(ImageAsset.logoHeader, width: 35, height: 35),
               const SizedBox(width: 6),
-              const Text(
+              Text(
                 'GojoCalories',
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w700,
-                  color: Colors.black,
+                  color: AppColors.textPrimary,
                 ),
               ),
             ],
@@ -256,7 +264,7 @@ class HomeScreen extends ConsumerWidget {
                 const SizedBox(width: 5),
                 Text(
                   streakValue,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
                     color: AppColors.textPrimary,
@@ -290,7 +298,7 @@ class HomeScreen extends ConsumerWidget {
                   lang,
                   isToday ? 'no_exercises_today' : 'no_exercises_logged',
                 ),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 15,
                   color: AppColors.inactive,
                 ),
@@ -321,7 +329,7 @@ class HomeScreen extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(vertical: 20),
           child: Text(
             Translations.t(lang, 'error_generic'),
-            style: const TextStyle(color: AppColors.danger),
+            style: TextStyle(color: AppColors.danger),
           ),
         ),
       ),
@@ -342,7 +350,7 @@ class HomeScreen extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(vertical: 24),
               child: Column(
                 children: [
-                  const Icon(
+                  Icon(
                     LucideIcons.utensilsCrossed,
                     size: 48,
                     color: AppColors.inactive,
@@ -350,7 +358,7 @@ class HomeScreen extends ConsumerWidget {
                   const SizedBox(height: 12),
                   Text(
                     Translations.t(lang, 'no_food_logged'),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
                       color: AppColors.inactive,
                     ),
@@ -377,7 +385,7 @@ class HomeScreen extends ConsumerWidget {
       error: (e, _) => Center(
         child: Text(
           Translations.t(lang, 'failed_load_history'),
-          style: const TextStyle(color: AppColors.danger),
+          style: TextStyle(color: AppColors.danger),
         ),
       ),
     );
@@ -502,7 +510,7 @@ class _AnimatedMealCardState extends State<_AnimatedMealCard>
                       const SizedBox(height: 3),
                       Row(
                         children: [
-                          const Icon(LucideIcons.flame, size: 13, color: AppColors.fire),
+                          Icon(LucideIcons.flame, size: 13, color: AppColors.fire),
                           Text(
                             ' $calories kcal',
                             style: AppTextStyles.bodyRegular,
@@ -534,7 +542,7 @@ class _AnimatedMealCardState extends State<_AnimatedMealCard>
                 padding: const EdgeInsets.only(right: 12),
                 child: Text(
                   _getRelativeDate(log['created_at']?.toString(), widget.lang),
-                  style: const TextStyle(fontSize: 11, color: AppColors.inactive),
+                  style: TextStyle(fontSize: 11, color: AppColors.inactive),
                 ),
               ),
             ],
@@ -567,7 +575,7 @@ class _FoodPlaceholder extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       color: AppColors.surfaceMuted,
-      child: const Center(
+      child: Center(
         child: Icon(LucideIcons.utensils, size: 24, color: AppColors.inactive),
       ),
     );

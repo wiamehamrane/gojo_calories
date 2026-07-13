@@ -16,9 +16,14 @@ import '../../../../core/theme/app_shadows.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../domain/models/event.dart';
+import '../../domain/whatsapp_link.dart';
 import '../../theme/events_theme.dart';
+import '../widgets/event_location_picker_sheet.dart';
+import '../../domain/models/event_location_selection.dart';
 import '../providers/events_provider.dart';
 import '../../../../core/utils/error_handler.dart';
+import '../../../../core/localization/locale_provider.dart';
+import '../../../../core/localization/translations.dart';
 
 const _kEventTypes = [
   'Running',
@@ -33,13 +38,7 @@ const _kAudiences = ['female', 'male', 'mixed'];
 
 const _kStepLabels = ['Event Details', 'Media & Links', 'Preview'];
 
-bool _isValidWhatsAppLink(String link) {
-  final trimmed = link.trim();
-  if (trimmed.isEmpty) return true;
-  return RegExp(r'^https?://chat\.whatsapp\.com/[a-zA-Z0-9]+$')
-          .hasMatch(trimmed) ||
-      RegExp(r'^https?://wa\.me/\d+').hasMatch(trimmed);
-}
+const _kMaxEventImages = 10;
 
 class CreateEventScreen extends ConsumerStatefulWidget {
   const CreateEventScreen({super.key});
@@ -62,7 +61,11 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
   String _audience = 'mixed';
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
-  File? _selectedImage;
+  final List<File> _selectedImages = [];
+  final PageController _imagePreviewController = PageController();
+  int _previewImageIndex = 0;
+  double? _selectedLatitude;
+  double? _selectedLongitude;
 
   int _currentStep = 0;
   bool _isLoading = false;
@@ -88,6 +91,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
     _maxParticipantsController.dispose();
     _customCategoryController.dispose();
     _pageController.dispose();
+    _imagePreviewController.dispose();
     super.dispose();
   }
 
@@ -121,15 +125,14 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
       }
     }
     if (_currentStep == 1) {
-      final link = _whatsappController.text.trim();
+      final link = EventWhatsAppLink.normalize(_whatsappController.text);
       if (link.isEmpty) {
         setState(() => _whatsappError = 'WhatsApp link is required');
         return;
       }
-      if (!_isValidWhatsAppLink(link)) {
+      if (!EventWhatsAppLink.isValid(link)) {
         setState(
-          () => _whatsappError =
-              'Use a chat.whatsapp.com or wa.me WhatsApp link',
+          () => _whatsappError = EventWhatsAppLink.errorMessage,
         );
         return;
       }
@@ -146,16 +149,35 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
     }
   }
 
-  Future<void> _pickImage() async {
+  Future<void> _pickImages() async {
+    if (_selectedImages.length >= _kMaxEventImages) {
+      _showError('You can add up to $_kMaxEventImages photos.');
+      return;
+    }
+
     final picker = ImagePicker();
-    final picked = await picker.pickImage(
-      source: ImageSource.gallery,
+    final picked = await picker.pickMultiImage(
       imageQuality: 85,
       maxWidth: 1200,
     );
-    if (picked != null && mounted) {
-      setState(() => _selectedImage = File(picked.path));
-    }
+    if (!mounted || picked.isEmpty) return;
+
+    setState(() {
+      final remaining = _kMaxEventImages - _selectedImages.length;
+      _selectedImages.addAll(
+        picked.take(remaining).map((x) => File(x.path)),
+      );
+    });
+  }
+
+  void _removeImage(int index) {
+    setState(() {
+      _selectedImages.removeAt(index);
+      if (_previewImageIndex >= _selectedImages.length &&
+          _previewImageIndex > 0) {
+        _previewImageIndex = _selectedImages.length - 1;
+      }
+    });
   }
 
   DateTime get _startDateTime => DateTime(
@@ -165,6 +187,28 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
         _selectedTime!.hour,
         _selectedTime!.minute,
       );
+
+  Future<void> _pickLocation() async {
+    final initial = _locationController.text.trim().isEmpty
+        ? null
+        : EventLocationSelection(
+            name: _locationController.text.trim(),
+            latitude: _selectedLatitude,
+            longitude: _selectedLongitude,
+          );
+
+    final result = await EventLocationPickerSheet.show(
+      context,
+      initial: initial,
+    );
+    if (result == null || !mounted) return;
+
+    setState(() {
+      _locationController.text = result.name;
+      _selectedLatitude = result.latitude;
+      _selectedLongitude = result.longitude;
+    });
+  }
 
   Future<void> _pickDate() async {
     var temp = _selectedDate ?? DateTime.now().add(const Duration(days: 1));
@@ -234,9 +278,13 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
       'description': _descriptionController.text.trim(),
       'event_type': _resolvedEventType,
       'audience': _audience,
-      'location_name': _locationController.text.trim(),
+      'location_name': _locationController.text.trim().isEmpty
+          ? null
+          : _locationController.text.trim(),
+      if (_selectedLatitude != null) 'latitude': _selectedLatitude,
+      if (_selectedLongitude != null) 'longitude': _selectedLongitude,
       'start_time': _startDateTime.toIso8601String(),
-      'whatsapp_link': _whatsappController.text.trim(),
+      'whatsapp_link': EventWhatsAppLink.normalize(_whatsappController.text),
       'max_participants': _maxParticipantsController.text.isNotEmpty
           ? int.tryParse(_maxParticipantsController.text)
           : null,
@@ -246,15 +294,17 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
       final createdEvent =
           await ref.read(eventsProvider.notifier).createEvent(eventData);
 
-      if (createdEvent != null && _selectedImage != null) {
+      if (createdEvent != null && _selectedImages.isNotEmpty) {
         try {
-          await ref
-              .read(eventsProvider.notifier)
-              .uploadEventImage(createdEvent.id, _selectedImage!);
+          for (final image in _selectedImages) {
+            await ref
+                .read(eventsProvider.notifier)
+                .uploadEventImage(createdEvent.id, image);
+          }
         } catch (e) {
           if (!mounted) return;
           _showError(
-            'Event created, but the cover photo failed to upload. '
+            'Event created, but some photos failed to upload. '
             '${AppErrorHandler.message(e)}',
           );
         }
@@ -499,7 +549,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                     contentPadding: const EdgeInsets.all(16),
                   ),
                 ),
-                const Divider(height: 1, thickness: 1, color: AppColors.border),
+                Divider(height: 1, thickness: 1, color: AppColors.border),
                 TextField(
                   controller: _descriptionController,
                   textCapitalization: TextCapitalization.sentences,
@@ -527,7 +577,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
               padding: const EdgeInsets.only(left: 4),
               child: Text(
                 _titleError!,
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppColors.danger,
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
@@ -573,7 +623,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                 padding: const EdgeInsets.only(left: 4),
                 child: Text(
                   _categoryError!,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppColors.danger,
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
@@ -605,7 +655,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                   placeholder: _selectedDate == null,
                   onTap: _pickDate,
                 ),
-                const Divider(
+                Divider(
                   height: 1,
                   thickness: 1,
                   color: AppColors.border,
@@ -620,37 +670,20 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                   placeholder: _selectedTime == null,
                   onTap: _pickTime,
                 ),
-                const Divider(
+                Divider(
                   height: 1,
                   thickness: 1,
                   color: AppColors.border,
                   indent: 64,
                 ),
-                TextField(
-                  controller: _locationController,
-                  textCapitalization: TextCapitalization.sentences,
-                  style: AppTextStyles.bodyBold.copyWith(fontSize: 15),
-                  decoration: InputDecoration(
-                    prefixIcon: const Padding(
-                      padding: EdgeInsets.only(left: 16, right: 12),
-                      child: Icon(
-                        LucideIcons.mapPin,
-                        size: 18,
-                        color: AppColors.primaryDark,
-                      ),
-                    ),
-                    prefixIconConstraints:
-                        const BoxConstraints(minWidth: 0, minHeight: 0),
-                    hintText: 'Location',
-                    hintStyle: AppTextStyles.bodyRegular.copyWith(
-                      color: AppColors.textPlaceholder,
-                    ),
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 18,
-                    ),
-                  ),
+                _PickerRow(
+                  icon: LucideIcons.mapPin,
+                  label: 'Location',
+                  value: _locationController.text.trim().isEmpty
+                      ? 'Add location'
+                      : _locationController.text.trim(),
+                  placeholder: _locationController.text.trim().isEmpty,
+                  onTap: _pickLocation,
                 ),
               ],
             ),
@@ -745,6 +778,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
 
   // ── Step 2 ─────────────────────────────────────────────────────────────
   Widget _buildStep2() {
+    final lang = ref.watch(localeProvider);
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(
@@ -757,10 +791,33 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Cover photo',
+            'Photos',
             style: AppTextStyles.cardHeading.copyWith(
               fontWeight: FontWeight.w600,
               color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Add up to $_kMaxEventImages photos. Swipe to preview.',
+            style: AppTextStyles.bodyRegular.copyWith(fontSize: 12),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: AppColors.primaryLight,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              Translations.t(lang, 'event_aesthetic_hint'),
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                height: 1.4,
+                color: AppColors.primaryDark,
+              ),
             ),
           ),
           const SizedBox(height: 10),
@@ -779,7 +836,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                   },
                   style: AppTextStyles.bodyBold.copyWith(fontSize: 15),
                   decoration: InputDecoration(
-                    prefixIcon: const Padding(
+                    prefixIcon: Padding(
                       padding: EdgeInsets.only(left: 16, right: 12),
                       child: Icon(
                         LucideIcons.messageCircle,
@@ -789,7 +846,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                     ),
                     prefixIconConstraints:
                         const BoxConstraints(minWidth: 0, minHeight: 0),
-                    hintText: 'WhatsApp link',
+                    hintText: 'WhatsApp group link',
                     hintStyle: AppTextStyles.bodyRegular.copyWith(
                       color: AppColors.textPlaceholder,
                     ),
@@ -800,7 +857,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                     ),
                   ),
                 ),
-                const Divider(
+                Divider(
                   height: 1,
                   thickness: 1,
                   color: AppColors.border,
@@ -812,7 +869,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   style: AppTextStyles.bodyBold.copyWith(fontSize: 15),
                   decoration: InputDecoration(
-                    prefixIcon: const Padding(
+                    prefixIcon: Padding(
                       padding: EdgeInsets.only(left: 16, right: 12),
                       child: Icon(
                         LucideIcons.users,
@@ -842,7 +899,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
               padding: const EdgeInsets.only(left: 4),
               child: Text(
                 _whatsappError!,
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppColors.danger,
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
@@ -852,7 +909,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
           ],
           const SizedBox(height: 10),
           Text(
-            'Required · chat.whatsapp.com or wa.me',
+            'Required · ${EventWhatsAppLink.hint}',
             style: AppTextStyles.bodyRegular.copyWith(fontSize: 12),
           ),
         ],
@@ -861,82 +918,120 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
   }
 
   Widget _buildImagePicker() {
-    return GestureDetector(
-      onTap: _pickImage,
-      child: Container(
-        height: 180,
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(AppRadius.card),
-          boxShadow: AppShadows.cardShadow,
+    if (_selectedImages.isEmpty) {
+      return GestureDetector(
+        onTap: _pickImages,
+        child: Container(
+          height: 180,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(AppRadius.card),
+            boxShadow: AppShadows.cardShadow,
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: AppColors.primaryLight,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(
+                  LucideIcons.imagePlus,
+                  size: 22,
+                  color: AppColors.primaryDark,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Add photos',
+                style: AppTextStyles.bodyBold.copyWith(fontSize: 15),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Tap to choose from gallery',
+                style: AppTextStyles.bodyRegular,
+              ),
+            ],
+          ),
         ),
-        clipBehavior: Clip.antiAlias,
-        child: _selectedImage != null
-            ? Stack(
+      );
+    }
+
+    return Column(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(AppRadius.card),
+          child: SizedBox(
+            height: 200,
+            child: PageView.builder(
+              controller: _imagePreviewController,
+              itemCount: _selectedImages.length,
+              onPageChanged: (i) => setState(() => _previewImageIndex = i),
+              itemBuilder: (_, index) => Stack(
                 fit: StackFit.expand,
                 children: [
-                  Image.file(_selectedImage!, fit: BoxFit.cover),
+                  Image.file(_selectedImages[index], fit: BoxFit.cover),
                   Positioned(
-                    right: 12,
-                    bottom: 12,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 7,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.55),
-                        borderRadius: BorderRadius.circular(AppRadius.chip),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(LucideIcons.pencil, color: Colors.white, size: 14),
-                          SizedBox(width: 6),
-                          Text(
-                            'Change',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
+                    top: 10,
+                    right: 10,
+                    child: GestureDetector(
+                      onTap: () => _removeImage(index),
+                      child: Container(
+                        width: 30,
+                        height: 30,
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.55),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          LucideIcons.x,
+                          color: Colors.white,
+                          size: 16,
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              )
-            : Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 52,
-                    height: 52,
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryLight,
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: const Icon(
-                      LucideIcons.imagePlus,
-                      size: 22,
-                      color: AppColors.primaryDark,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Add cover photo',
-                    style: AppTextStyles.bodyBold.copyWith(fontSize: 15),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Tap to choose from gallery',
-                    style: AppTextStyles.bodyRegular,
                   ),
                 ],
               ),
-      ),
+            ),
+          ),
+        ),
+        if (_selectedImages.length > 1) ...[
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(_selectedImages.length, (i) {
+              final active = i == _previewImageIndex;
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: active ? 8 : 6,
+                height: active ? 8 : 6,
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                decoration: BoxDecoration(
+                  color: active ? AppColors.primaryDark : AppColors.border,
+                  shape: BoxShape.circle,
+                ),
+              );
+            }),
+          ),
+        ],
+        const SizedBox(height: 12),
+        if (_selectedImages.length < _kMaxEventImages)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: _pickImages,
+              icon: const Icon(LucideIcons.imagePlus, size: 18),
+              label: Text(
+                'Add more (${_selectedImages.length}/$_kMaxEventImages)',
+              ),
+            ),
+          ),
+      ],
     );
   }
 
@@ -989,12 +1084,21 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (_selectedImage != null)
-                  Image.file(
-                    _selectedImage!,
-                    height: 180,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
+                if (_selectedImages.isNotEmpty)
+                  ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(AppRadius.card),
+                    ),
+                    child: SizedBox(
+                      height: 180,
+                      child: PageView.builder(
+                        itemCount: _selectedImages.length,
+                        itemBuilder: (_, index) => Image.file(
+                          _selectedImages[index],
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
                   )
                 else
                   Container(
@@ -1051,7 +1155,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                             ),
                             child: Text(
                               _audience,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 color: AppColors.textSecondary,
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
@@ -1203,7 +1307,7 @@ class _PickerRow extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(
+            Icon(
               LucideIcons.chevronRight,
               size: 18,
               color: AppColors.inactive,
@@ -1230,7 +1334,7 @@ class _CupertinoPickerSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: 320,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -1274,7 +1378,7 @@ class _CupertinoPickerSheet extends StatelessWidget {
             child: CupertinoTheme(
               data: CupertinoTheme.of(context).copyWith(
                 primaryColor: AppColors.primaryDark,
-                textTheme: const CupertinoTextThemeData(
+                textTheme: CupertinoTextThemeData(
                   dateTimePickerTextStyle: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w600,
@@ -1335,7 +1439,7 @@ class _EventPublishedSheet extends StatelessWidget {
     final typeColor = EventsTheme.eventTypeColor(event.eventType);
 
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -1377,7 +1481,7 @@ class _EventPublishedSheet extends StatelessWidget {
             width: double.infinity,
             child: OutlinedButton.icon(
               onPressed: onInviteCircles,
-              icon: const Icon(
+              icon: Icon(
                 LucideIcons.userPlus,
                 size: 18,
                 color: AppColors.textPrimary,
@@ -1387,7 +1491,7 @@ class _EventPublishedSheet extends StatelessWidget {
                 style: AppTextStyles.bodyBold.copyWith(fontSize: 15),
               ),
               style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: AppColors.border, width: 1.5),
+                side: BorderSide(color: AppColors.border, width: 1.5),
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppRadius.button),

@@ -79,17 +79,17 @@ class _TaskTimerScreenState extends ConsumerState<TaskTimerScreen> {
     final ringColor = isTimedOut ? AppColors.danger : AppColors.primary;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.surface,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(LucideIcons.x, color: AppColors.textPrimary),
+          icon: Icon(LucideIcons.x, color: AppColors.textPrimary),
           onPressed: () => context.pop(),
         ),
         title: Text(
           task.title,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w700,
             color: AppColors.textPrimary,

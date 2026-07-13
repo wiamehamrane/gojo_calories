@@ -34,7 +34,7 @@
           "codeOffers" : [
 
           ],
-          "displayPrice" : "4.99",
+          "displayPrice" : "5.99",
           "familyShareable" : false,
           "groupNumber" : 1,
           "internalID" : "gojo_monthly_internal",
@@ -62,9 +62,37 @@
           "codeOffers" : [
 
           ],
-          "displayPrice" : "29.99",
+          "displayPrice" : "14.99",
           "familyShareable" : false,
           "groupNumber" : 2,
+          "internalID" : "gojo_six_month_internal",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "6 months of Gojo Pro access",
+              "displayName" : "Gojo Pro 6-Month",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "gojo_pro_six_month",
+          "recurringSubscriptionPeriod" : "P6M",
+          "referenceName" : "Gojo Pro 6-Month",
+          "subscriptionGroupID" : "gojo_pro_group",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "19.99",
+          "familyShareable" : false,
+          "groupNumber" : 3,
           "internalID" : "gojo_yearly_internal",
           "introductoryOffer" : null,
           "localizations" : [
@@ -82,6 +110,69 @@
           "winbackOffers" : [
 
           ]
+        }
+      ]
+    },
+    {
+      "id" : "gojo_clan_group",
+      "localizations" : [
+
+      ],
+      "name" : "Gojo Clan Add-ons",
+      "subscriptions" : [
+        {
+          "displayPrice" : "1.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "gojo_clan_monthly_internal",
+          "localizations" : [
+            {
+              "description" : "Add one family member to your monthly plan",
+              "displayName" : "Clan Member Monthly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "gojo_clan_addon_monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Clan Add-on Monthly",
+          "subscriptionGroupID" : "gojo_clan_group",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "displayPrice" : "3.99",
+          "familyShareable" : false,
+          "groupNumber" : 2,
+          "internalID" : "gojo_clan_six_month_internal",
+          "localizations" : [
+            {
+              "description" : "Add one family member to your 6-month plan",
+              "displayName" : "Clan Member 6-Month",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "gojo_clan_addon_six_month",
+          "recurringSubscriptionPeriod" : "P6M",
+          "referenceName" : "Clan Add-on 6-Month",
+          "subscriptionGroupID" : "gojo_clan_group",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "displayPrice" : "6.99",
+          "familyShareable" : false,
+          "groupNumber" : 3,
+          "internalID" : "gojo_clan_yearly_internal",
+          "localizations" : [
+            {
+              "description" : "Add one family member to your yearly plan",
+              "displayName" : "Clan Member Yearly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "gojo_clan_addon_yearly",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "Clan Add-on Yearly",
+          "subscriptionGroupID" : "gojo_clan_group",
+          "type" : "RecurringSubscription"
         }
       ]
     }

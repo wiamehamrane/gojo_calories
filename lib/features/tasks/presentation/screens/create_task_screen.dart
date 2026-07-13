@@ -3,18 +3,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/localization/locale_provider.dart';
 import '../../../../core/localization/translations.dart';
 import '../../../../core/routing/route_paths.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_radius.dart';
-import '../../../../core/theme/app_shadows.dart';
-import '../../../../core/theme/app_spacing.dart';
-import '../../../../core/theme/app_text_styles.dart';
-import '../../domain/duration_parser.dart';
 import '../providers/tasks_provider.dart';
+
+const _kBackground = Colors.white;
+const _kCard = Color(0xFFF2F2F7);
+const _kPrimaryText = Color(0xFF000000);
+const _kSecondaryText = Color(0xFF8E8E93);
+const _kCancelButton = Color(0xFFE5E5EA);
+const _kCancelText = Color(0xFF8E8E93);
+const _kStartButton = Color(0xFFDDF8E4);
+const _kStartText = Color(0xFF248A3D);
+const _kPickerHeight = 216.0;
+const _kActionButtonSize = 84.0;
 
 class CreateTaskScreen extends ConsumerStatefulWidget {
   const CreateTaskScreen({super.key});
@@ -24,29 +28,31 @@ class CreateTaskScreen extends ConsumerStatefulWidget {
 }
 
 class _CreateTaskScreenState extends ConsumerState<CreateTaskScreen> {
-  final _titleController = TextEditingController();
-  final _descriptionController = TextEditingController();
+  Duration _duration = const Duration(hours: 1, minutes: 30);
+  late final TextEditingController _nameController;
+  late final TextEditingController _descriptionController;
 
-  Duration _customDuration = const Duration(minutes: 1);
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController();
+    _descriptionController = TextEditingController();
+  }
 
   @override
   void dispose() {
-    _titleController.dispose();
+    _nameController.dispose();
     _descriptionController.dispose();
     super.dispose();
   }
 
-  Future<void> _save() async {
-    final lang = ref.read(localeProvider);
-    final title = _titleController.text.trim();
-    if (title.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(Translations.t(lang, 'tasks_title_required'))),
-      );
-      return;
-    }
+  String _defaultTaskName(String lang) =>
+      Translations.t(lang, 'tasks_default_name');
 
-    final durationSeconds = _customDuration.inSeconds;
+  Future<void> _startTask() async {
+    final lang = ref.read(localeProvider);
+    final durationSeconds = _duration.inSeconds;
+
     if (durationSeconds < 1) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(Translations.t(lang, 'tasks_duration_invalid'))),
@@ -54,10 +60,16 @@ class _CreateTaskScreenState extends ConsumerState<CreateTaskScreen> {
       return;
     }
 
+    final title = _nameController.text.trim().isEmpty
+        ? _defaultTaskName(lang)
+        : _nameController.text.trim();
+
+    final description = _descriptionController.text.trim();
+
     final task = await ref.read(tasksProvider.notifier).addTask(
           title: title,
-          description: _descriptionController.text.trim(),
           durationSeconds: durationSeconds,
+          description: description.isEmpty ? null : description,
         );
 
     if (!mounted || task == null) return;
@@ -68,261 +80,278 @@ class _CreateTaskScreenState extends ConsumerState<CreateTaskScreen> {
   @override
   Widget build(BuildContext context) {
     final lang = ref.watch(localeProvider);
-    final durationLabel = formatTaskDuration(_customDuration.inSeconds);
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 8, 0),
-              child: Row(
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark,
+      child: Scaffold(
+        backgroundColor: _kBackground,
+        resizeToAvoidBottomInset: true,
+        body: SafeArea(
+          bottom: false,
+          child: GestureDetector(
+            onTap: () => FocusScope.of(context).unfocus(),
+            child: LayoutBuilder(
+            builder: (context, constraints) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          Translations.t(lang, 'tasks_create'),
-                          style: AppTextStyles.screenTitle.copyWith(
-                            fontSize: 28,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          Translations.t(lang, 'tasks_subtitle'),
-                          style: AppTextStyles.bodyRegular.copyWith(
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => context.pop(),
-                    icon: const Icon(
-                      LucideIcons.x,
-                      size: 22,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.screenPadding,
-                  24,
-                  AppSpacing.screenPadding,
-                  16,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _FormCard(
-                      child: Column(
-                        children: [
-                          TextField(
-                            controller: _titleController,
-                            autofocus: true,
-                            textCapitalization: TextCapitalization.sentences,
-                            style: AppTextStyles.bodyBold.copyWith(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                            decoration: InputDecoration(
-                              hintText: Translations.t(lang, 'tasks_name_hint'),
-                              hintStyle: AppTextStyles.bodyRegular.copyWith(
-                                color: AppColors.textPlaceholder,
-                              ),
-                              border: InputBorder.none,
-                              contentPadding: const EdgeInsets.all(16),
-                            ),
-                          ),
-                          const Divider(
-                            height: 1,
-                            thickness: 1,
-                            color: AppColors.border,
-                          ),
-                          TextField(
-                            controller: _descriptionController,
-                            textCapitalization: TextCapitalization.sentences,
-                            maxLines: 3,
-                            minLines: 2,
-                            style: AppTextStyles.bodyRegular.copyWith(
-                              fontSize: 15,
-                              color: AppColors.textPrimary,
-                            ),
-                            decoration: InputDecoration(
-                              hintText: Translations.t(
-                                lang,
-                                'tasks_description_hint',
-                              ),
-                              hintStyle: AppTextStyles.bodyRegular.copyWith(
-                                color: AppColors.textPlaceholder,
-                              ),
-                              border: InputBorder.none,
-                              contentPadding: const EdgeInsets.all(16),
-                            ),
-                          ),
-                        ],
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+                    child: Text(
+                      Translations.t(lang, 'tasks_screen_title'),
+                      style: const TextStyle(
+                        color: _kPrimaryText,
+                        fontSize: 34,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.2,
+                        height: 1.1,
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    _FormCard(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 36,
-                                  height: 36,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.primaryLight,
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: const Icon(
-                                    LucideIcons.timer,
-                                    size: 18,
-                                    color: AppColors.primaryDark,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        Translations.t(
-                                          lang,
-                                          'tasks_custom_duration_label',
-                                        ),
-                                        style: AppTextStyles.cardHeading
-                                            .copyWith(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w600,
-                                          color: AppColors.textSecondary,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        durationLabel,
-                                        style: AppTextStyles.cardValue.copyWith(
-                                          fontSize: 24,
-                                          fontWeight: FontWeight.w800,
-                                          height: 1,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          ClipRRect(
-                            borderRadius: const BorderRadius.vertical(
-                              bottom: Radius.circular(AppRadius.card),
-                            ),
-                            child: SizedBox(
-                              height: 168,
+                  ),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: EdgeInsets.only(
+                        bottom: MediaQuery.viewInsetsOf(context).bottom,
+                      ),
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          minHeight: constraints.maxHeight - 60,
+                        ),
+                        child: Column(
+                          children: [
+                            const SizedBox(height: 24),
+                            SizedBox(
+                              height: _kPickerHeight,
+                              width: constraints.maxWidth,
                               child: CupertinoTheme(
-                                data: CupertinoTheme.of(context).copyWith(
-                                  primaryColor: AppColors.primaryDark,
+                                data: const CupertinoThemeData(
+                                  brightness: Brightness.light,
+                                  primaryColor: _kStartText,
                                   textTheme: CupertinoTextThemeData(
                                     pickerTextStyle: TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.w500,
-                                      color: AppColors.textSecondary
-                                          .withValues(alpha: 0.35),
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.w400,
+                                      color: Color(0xFFAEAEB2),
                                     ),
-                                    dateTimePickerTextStyle: const TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppColors.textPrimary,
+                                    dateTimePickerTextStyle: TextStyle(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.w400,
+                                      color: _kPrimaryText,
                                     ),
                                   ),
                                 ),
                                 child: CupertinoTimerPicker(
+                                  key: const ValueKey('task_duration_picker'),
                                   mode: CupertinoTimerPickerMode.hms,
-                                  initialTimerDuration: _customDuration,
-                                  alignment: Alignment.center,
-                                  backgroundColor: AppColors.surface,
+                                  initialTimerDuration: _duration,
+                                  backgroundColor: Colors.transparent,
                                   onTimerDurationChanged: (duration) {
+                                    _duration = duration;
                                     HapticFeedback.selectionClick();
-                                    setState(() => _customDuration = duration);
                                   },
                                 ),
                               ),
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: 20),
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 40),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  _CircleActionButton(
+                                    label: Translations.t(lang, 'cancel'),
+                                    backgroundColor: _kCancelButton,
+                                    foregroundColor: _kCancelText,
+                                    onTap: () => context.pop(),
+                                  ),
+                                  _CircleActionButton(
+                                    label: Translations.t(
+                                      lang,
+                                      'tasks_start_short',
+                                    ),
+                                    backgroundColor: _kStartButton,
+                                    foregroundColor: _kStartText,
+                                    onTap: _startTask,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 28),
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 16),
+                              child: _SettingsGroup(
+                                children: [
+                                  _SettingsInputRow(
+                                    label: Translations.t(
+                                      lang,
+                                      'tasks_row_label',
+                                    ),
+                                    controller: _nameController,
+                                    placeholder: Translations.t(
+                                      lang,
+                                      'tasks_name_hint',
+                                    ),
+                                  ),
+                                  _SettingsInputRow(
+                                    label: Translations.t(
+                                      lang,
+                                      'tasks_description_label',
+                                    ),
+                                    controller: _descriptionController,
+                                    placeholder: Translations.t(
+                                      lang,
+                                      'tasks_description_hint',
+                                    ),
+                                    maxLines: 2,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                          ],
+                        ),
                       ),
                     ),
-                  ],
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.screenPadding,
-                0,
-                AppSpacing.screenPadding,
-                16,
-              ),
-              child: SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: _save,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.primaryDark,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.button),
-                    ),
                   ),
-                  child: Text(
-                    Translations.t(lang, 'tasks_start'),
-                    style: AppTextStyles.buttonLabel.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ),
+                  SizedBox(height: MediaQuery.paddingOf(context).bottom + 8),
+                ],
+              );
+            },
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _FormCard extends StatelessWidget {
-  final Widget child;
+class _CircleActionButton extends StatelessWidget {
+  final String label;
+  final Color backgroundColor;
+  final Color foregroundColor;
+  final VoidCallback onTap;
 
-  const _FormCard({required this.child});
+  const _CircleActionButton({
+    required this.label,
+    required this.backgroundColor,
+    required this.foregroundColor,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.card),
-        boxShadow: AppShadows.cardShadow,
+    return SizedBox(
+      width: _kActionButtonSize,
+      height: _kActionButtonSize,
+      child: Material(
+        color: backgroundColor,
+        shape: const CircleBorder(),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          customBorder: const CircleBorder(),
+          child: Center(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: foregroundColor,
+                fontSize: 17,
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+          ),
+        ),
       ),
-      clipBehavior: Clip.antiAlias,
-      child: child,
+    );
+  }
+}
+
+class _SettingsGroup extends StatelessWidget {
+  final List<Widget> children;
+
+  const _SettingsGroup({required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: _kCard,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          for (var i = 0; i < children.length; i++) ...[
+            if (i > 0)
+              Divider(
+                height: 1,
+                thickness: 0.5,
+                color: Colors.black.withValues(alpha: 0.08),
+                indent: 16,
+              ),
+            children[i],
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _SettingsInputRow extends StatelessWidget {
+  final String label;
+  final TextEditingController controller;
+  final String placeholder;
+  final int maxLines;
+
+  const _SettingsInputRow({
+    required this.label,
+    required this.controller,
+    required this.placeholder,
+    this.maxLines = 1,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Row(
+        crossAxisAlignment:
+            maxLines > 1 ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              color: _kPrimaryText,
+              fontSize: 17,
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: CupertinoTextField(
+              controller: controller,
+              placeholder: placeholder,
+              maxLines: maxLines,
+              textCapitalization: TextCapitalization.sentences,
+              textAlign: TextAlign.right,
+              decoration: const BoxDecoration(),
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              style: const TextStyle(
+                color: _kSecondaryText,
+                fontSize: 17,
+                fontWeight: FontWeight.w400,
+              ),
+              placeholderStyle: TextStyle(
+                color: _kSecondaryText.withValues(alpha: 0.7),
+                fontSize: 17,
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

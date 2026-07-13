@@ -1,24 +1,41 @@
 import 'dart:async';
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
+import 'package:in_app_purchase_android/in_app_purchase_android.dart';
 import '../../../../core/network/api_client.dart';
 
-/// Product identifiers — must match App Store Connect configuration.
+/// Product identifiers — must match App Store Connect / Google Play Console.
 const String kMonthlyProductId = 'gojo_pro_monthly';
+const String kSixMonthProductId = 'gojo_pro_six_month';
 const String kYearlyProductId = 'gojo_pro_yearly';
-const Set<String> kProductIds = {kMonthlyProductId, kYearlyProductId};
+const String kClanAddonMonthlyId = 'gojo_clan_addon_monthly';
+const String kClanAddonSixMonthId = 'gojo_clan_addon_six_month';
+const String kClanAddonYearlyId = 'gojo_clan_addon_yearly';
+
+const Set<String> kProductIds = {
+  kMonthlyProductId,
+  kSixMonthProductId,
+  kYearlyProductId,
+};
+
+const Set<String> kClanAddonProductIds = {
+  kClanAddonMonthlyId,
+  kClanAddonSixMonthId,
+  kClanAddonYearlyId,
+};
+
+const Set<String> kAllProductIds = {
+  ...kProductIds,
+  ...kClanAddonProductIds,
+};
+
+const String kAndroidPackageName = 'com.gojocalories.gojocalories';
 
 /// Possible states for the IAP purchase flow.
-enum IAPState {
-  idle,
-  loading,
-  purchasing,
-  verifying,
-  success,
-  error,
-  restored,
-}
+enum IAPState { idle, loading, purchasing, verifying, success, error, restored }
 
 /// Wraps the current state with an optional error message.
 class IAPStatus {
@@ -38,7 +55,7 @@ class IAPStatus {
 /// Singleton service managing the entire In-App Purchase lifecycle.
 ///
 /// Responsibilities:
-/// - Fetching available products from the App Store
+/// - Fetching available products from the App Store / Google Play
 /// - Initiating purchases
 /// - Listening to the purchase stream
 /// - Forwarding receipts to the backend for server-side validation
@@ -51,16 +68,19 @@ class IAPService {
   final InAppPurchase _iap = InAppPurchase.instance;
   StreamSubscription<List<PurchaseDetails>>? _subscription;
 
-  /// Available products fetched from the App Store.
+  /// Available products fetched from the store.
   List<ProductDetails> products = [];
 
   /// Current purchase flow state.
-  final ValueNotifier<IAPStatus> status = ValueNotifier(
-    const IAPStatus(),
-  );
+  final ValueNotifier<IAPStatus> status = ValueNotifier(const IAPStatus());
 
   /// Whether the service has been initialized.
   bool _initialized = false;
+
+  bool get _isAndroid => !kIsWeb && Platform.isAndroid;
+  bool get _isIOS => !kIsWeb && Platform.isIOS;
+
+  String get _storeName => _isAndroid ? 'Google Play' : 'App Store';
 
   /// Initialize the service — call once at app startup.
   Future<void> initialize() async {
@@ -87,7 +107,7 @@ class IAPService {
     );
   }
 
-  /// Fetch available subscription products from the App Store (with retries).
+  /// Fetch available subscription products from the store (with retries).
   Future<List<ProductDetails>> loadProducts() async {
     status.value = const IAPStatus(state: IAPState.loading);
 
@@ -100,7 +120,7 @@ class IAPService {
       } catch (e) {
         lastError = e;
         debugPrint('IAPService: loadProducts attempt $attempt/3 failed: $e');
-        final retryable = e.toString().toLowerCase().contains('storekit');
+        final retryable = _isRetryableLoadError(e);
         if (!retryable || attempt == 3) break;
         await Future.delayed(Duration(seconds: attempt * 2));
       }
@@ -110,13 +130,19 @@ class IAPService {
     throw lastError ?? Exception('Failed to load subscription plans');
   }
 
+  bool _isRetryableLoadError(Object error) {
+    final message = error.toString().toLowerCase();
+    if (_isIOS) {
+      return message.contains('storekit');
+    }
+    return message.contains('billing') || message.contains('play');
+  }
+
   Future<List<ProductDetails>> _queryProductsOnce() async {
     final available = await _iap.isAvailable();
     debugPrint('IAPService: Store available = $available');
     if (!available) {
-      throw Exception(
-        'App Store is not available on this device.',
-      );
+      throw Exception('$_storeName is not available on this device.');
     }
 
     final response = await _iap.queryProductDetails(kProductIds);
@@ -127,45 +153,51 @@ class IAPService {
 
     if (response.error != null) {
       throw Exception(
-        _storeKitErrorMessage(
-          response.error!.message,
-          response.notFoundIDs,
-        ),
+        _storeErrorMessage(response.error!.message, response.notFoundIDs),
       );
     }
 
     if (response.notFoundIDs.isNotEmpty) {
-      throw Exception(
-        'App Store could not find: ${response.notFoundIDs.join(", ")}. '
-        'Confirm the bundle ID com.gojocalories.gojocalories matches App Store '
-        'Connect and that both products are in the "GojoCalories Pro" group.',
-      );
+      debugPrint('IAPService: some products not found: ${response.notFoundIDs}');
     }
 
     if (response.productDetails.isEmpty) {
-      throw Exception(
-        'No subscription plans returned. Sign in with a Sandbox Apple ID '
-        '(Settings → Developer → Sandbox Apple Account) when testing debug builds.',
-      );
+      throw Exception(_emptyProductsMessage());
     }
 
     products = response.productDetails.toList()
       ..sort((a, b) {
-        if (a.id == kYearlyProductId) return -1;
-        if (b.id == kYearlyProductId) return 1;
-        return 0;
+        const order = [kYearlyProductId, kSixMonthProductId, kMonthlyProductId];
+        final ai = order.indexOf(a.id);
+        final bi = order.indexOf(b.id);
+        if (ai == -1 && bi == -1) return a.id.compareTo(b.id);
+        if (ai == -1) return 1;
+        if (bi == -1) return -1;
+        return ai.compareTo(bi);
       });
 
     return products;
+  }
+
+  /// Load a single clan add-on product for purchase.
+  Future<ProductDetails?> loadClanAddonProduct(String productId) async {
+    final response = await _iap.queryProductDetails({productId});
+    if (response.productDetails.isEmpty) return null;
+    return response.productDetails.first;
   }
 
   /// Initiate a subscription purchase.
   Future<void> buySubscription(ProductDetails product) async {
     status.value = const IAPStatus(state: IAPState.purchasing);
 
-    final purchaseParam = PurchaseParam(productDetails: product);
     try {
-      await _iap.buyNonConsumable(purchaseParam: purchaseParam);
+      if (_isAndroid) {
+        final purchaseParam = GooglePlayPurchaseParam(productDetails: product);
+        await _iap.buyNonConsumable(purchaseParam: purchaseParam);
+      } else {
+        final purchaseParam = PurchaseParam(productDetails: product);
+        await _iap.buyNonConsumable(purchaseParam: purchaseParam);
+      }
     } catch (e) {
       debugPrint('IAPService: buySubscription error: $e');
       status.value = IAPStatus(
@@ -179,6 +211,32 @@ class IAPService {
   Future<void> restorePurchases() async {
     status.value = const IAPStatus(state: IAPState.loading);
     try {
+      if (_isAndroid) {
+        final androidAddition = _iap
+            .getPlatformAddition<InAppPurchaseAndroidPlatformAddition>();
+        final response = await androidAddition.queryPastPurchases();
+        if (response.error != null) {
+          throw Exception(response.error!.message);
+        }
+
+        final purchases = response.pastPurchases
+            .where((purchase) => kProductIds.contains(purchase.productID))
+            .toList();
+
+        if (purchases.isEmpty) {
+          status.value = IAPStatus(
+            state: IAPState.error,
+            errorMessage: 'No previous purchases found for this account.',
+          );
+          return;
+        }
+
+        for (final purchase in purchases) {
+          await _handlePurchase(purchase);
+        }
+        return;
+      }
+
       await _iap.restorePurchases();
     } catch (e) {
       debugPrint('IAPService: restorePurchases error: $e');
@@ -234,29 +292,39 @@ class IAPService {
     }
   }
 
-  /// Send the receipt to our backend for server-side validation.
+  /// Send purchase data to our backend for server-side validation.
   Future<void> _verifyAndDeliver(PurchaseDetails purchase) async {
     try {
-      // On iOS, verificationData.serverVerificationData is the Base64 receipt
-      final receiptData = purchase.verificationData.serverVerificationData;
+      final Response<dynamic> response;
+      if (_isGooglePurchase(purchase)) {
+        response = await ApiClient.instance.post(
+          'payments/google/verify-purchase',
+          data: {
+            'purchase_token': purchase.verificationData.serverVerificationData,
+            'product_id': purchase.productID,
+            'package_name': kAndroidPackageName,
+          },
+        );
+      } else {
+        response = await ApiClient.instance.post(
+          'payments/apple/verify-receipt',
+          data: {
+            'receipt_data': purchase.verificationData.serverVerificationData,
+            'product_id': purchase.productID,
+          },
+        );
+      }
 
-      final response = await ApiClient.instance.post(
-        'payments/apple/verify-receipt',
-        data: {
-          'receipt_data': receiptData,
-          'product_id': purchase.productID,
-        },
-      );
-
-      if (response.statusCode == 200 &&
-          response.data['status'] == 'success' &&
-          response.data['subscription_active'] == true) {
+      if (response.statusCode == 200 && response.data['status'] == 'success') {
+        final isClanAddon = response.data['type'] == 'clan_addon';
+        final active = response.data['subscription_active'] == true;
+        if (isClanAddon || active) {
         if (purchase.status == PurchaseStatus.restored) {
           status.value = const IAPStatus(state: IAPState.restored);
         } else {
           status.value = const IAPStatus(state: IAPState.success);
         }
-      } else {
+      } }else {
         final detail = response.data['detail'] ?? 'Verification failed';
         status.value = IAPStatus(
           state: IAPState.error,
@@ -274,23 +342,75 @@ class IAPService {
       );
       status.value = IAPStatus(
         state: IAPState.error,
-        errorMessage: detail ??
+        errorMessage:
+            detail ??
             e.message ??
-            'Receipt verification failed. Please try again.',
+            'Purchase verification failed. Please try again.',
       );
     } catch (e) {
       debugPrint('IAPService: _verifyAndDeliver error: $e');
       status.value = IAPStatus(
         state: IAPState.error,
-        errorMessage: 'Receipt verification failed. Please try again.',
+        errorMessage: 'Purchase verification failed. Please try again.',
       );
     }
+  }
+
+  bool _isGooglePurchase(PurchaseDetails purchase) {
+    if (_isAndroid) return true;
+    return purchase.verificationData.source.toLowerCase().contains('google');
   }
 
   /// Clean up resources.
   void dispose() {
     _subscription?.cancel();
     status.dispose();
+  }
+
+  String _productNotFoundMessage(List<String> notFoundIds) {
+    if (_isAndroid) {
+      return 'Google Play could not find: ${notFoundIds.join(", ")}. '
+          'Confirm subscriptions are active in Play Console for '
+          '$kAndroidPackageName and linked to your testing track.';
+    }
+    return 'App Store could not find: ${notFoundIds.join(", ")}. '
+        'Confirm the bundle ID $kAndroidPackageName matches App Store '
+        'Connect and that both products are in the "GojoCalories Pro" group.';
+  }
+
+  String _emptyProductsMessage() {
+    if (_isAndroid) {
+      return 'No subscription plans returned from Google Play.\n\n'
+          'For testing:\n'
+          '• Upload a signed build to Internal testing\n'
+          '• Add your Google account as a license tester\n'
+          '• Create subscriptions with IDs gojo_pro_monthly and gojo_pro_yearly\n'
+          '• Wait a few hours after creating products in Play Console';
+    }
+    return 'No subscription plans returned. Sign in with a Sandbox Apple ID '
+        '(Settings → Developer → Sandbox Apple Account) when testing debug builds.';
+  }
+
+  String _storeErrorMessage(String message, List<String> notFoundIds) {
+    if (_isIOS) {
+      return _storeKitErrorMessage(message, notFoundIds);
+    }
+
+    final lower = message.toLowerCase();
+    if (lower.contains('billing') || lower.contains('play')) {
+      return 'Google Play could not load subscription plans.\n\n'
+          'For testing:\n'
+          '• Install the app from an Internal testing track\n'
+          '• Sign in with a license tester Google account\n'
+          '• Confirm subscriptions are active in Play Console\n\n'
+          'Tap Retry or Restore Purchase below.';
+    }
+
+    if (notFoundIds.isNotEmpty) {
+      return _productNotFoundMessage(notFoundIds);
+    }
+
+    return message;
   }
 
   static String _storeKitErrorMessage(

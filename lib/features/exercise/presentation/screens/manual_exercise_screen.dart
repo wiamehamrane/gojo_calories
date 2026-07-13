@@ -85,7 +85,7 @@ class _ManualExerciseScreenState extends ConsumerState<ManualExerciseScreen> {
         title: Text(t('manual_entry'), style: AppTextStyles.sectionHeader),
         backgroundColor: AppColors.surface,
         elevation: 0,
-        iconTheme: const IconThemeData(color: AppColors.textPrimary),
+        iconTheme: IconThemeData(color: AppColors.textPrimary),
       ),
       body: Padding(
         padding: const EdgeInsets.all(20),
@@ -153,7 +153,7 @@ class _ManualExerciseScreenState extends ConsumerState<ManualExerciseScreen> {
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontWeight: FontWeight.w600,
             color: AppColors.textSecondary,
           ),
@@ -172,7 +172,7 @@ class _ManualExerciseScreenState extends ConsumerState<ManualExerciseScreen> {
             decoration: InputDecoration(
               border: InputBorder.none,
               hintText: hint,
-              hintStyle: const TextStyle(color: AppColors.textPlaceholder),
+              hintStyle: TextStyle(color: AppColors.textPlaceholder),
             ),
           ),
         ),

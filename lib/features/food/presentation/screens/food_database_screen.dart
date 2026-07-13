@@ -126,18 +126,18 @@ class _FoodDatabaseScreenState extends ConsumerState<FoodDatabaseScreen> {
     final lang = ref.watch(localeProvider);
     String t(String k) => Translations.t(lang, k);
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.surface,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.surface,
         elevation: 0,
-        surfaceTintColor: Colors.white,
+        surfaceTintColor: AppColors.surface,
         leading: IconButton(
-          icon: const Icon(LucideIcons.arrowLeft, color: Colors.black),
+          icon: Icon(LucideIcons.arrowLeft, color: AppColors.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          t('action_food_database'),
-          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Colors.black),
+          t('action_add_food_manually'),
+          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
         ),
         centerTitle: true,
       ),
@@ -162,7 +162,7 @@ class _FoodDatabaseScreenState extends ConsumerState<FoodDatabaseScreen> {
                       onChanged: _onChanged,
                       textInputAction: TextInputAction.search,
                       onSubmitted: (v) { if (v.trim().length >= 2) _doSearch(v.trim()); },
-                      style: const TextStyle(fontSize: 15, color: Colors.black, fontWeight: FontWeight.w500),
+                      style: TextStyle(fontSize: 15, color: AppColors.textPrimary, fontWeight: FontWeight.w500),
                       decoration: const InputDecoration(
                         hintText: 'Search millions of foods…',
                         hintStyle: TextStyle(color: Color(0xFFAAAAAA), fontSize: 15),
@@ -173,9 +173,9 @@ class _FoodDatabaseScreenState extends ConsumerState<FoodDatabaseScreen> {
                     ),
                   ),
                   if (_searching)
-                    const SizedBox(
+                    SizedBox(
                       width: 18, height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
+                      child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textPrimary),
                     )
                   else if (_ctrl.text.isNotEmpty)
                     GestureDetector(
@@ -239,7 +239,7 @@ class _FoodDatabaseScreenState extends ConsumerState<FoodDatabaseScreen> {
             child: const Icon(LucideIcons.database, size: 32, color: Color(0xFFBBBBBB)),
           ),
           const SizedBox(height: 20),
-          Text(t('search_foods_database'), style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Colors.black)),
+          Text(t('search_foods_database'), style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
           const SizedBox(height: 8),
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 48),
@@ -297,7 +297,7 @@ class _FoodResultTile extends StatelessWidget {
               children: [
                 Text(
                   name,
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black),
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
                   maxLines: 1, overflow: TextOverflow.ellipsis,
                 ),
                 if (brand.isNotEmpty)
@@ -305,7 +305,7 @@ class _FoodResultTile extends StatelessWidget {
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    _Chip(label: '$calories cal', color: Colors.black),
+                    _Chip(label: '$calories cal', color: AppColors.textPrimary),
                     const SizedBox(width: 4),
                     _Chip(label: '${protein}g P', color: AppColors.protein),
                     const SizedBox(width: 4),

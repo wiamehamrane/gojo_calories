@@ -105,16 +105,4 @@ class FoodRepository {
     return res.data as List<dynamic>? ?? [];
   }
 
-  Future<void> saveFood(Map<String, dynamic> data) async {
-    await _dio.post('food/saved', data: data);
-  }
-
-  Future<List<dynamic>> getSavedFoods() async {
-    final res = await _dio.get('food/saved');
-    return res.data as List<dynamic>? ?? [];
-  }
-
-  Future<void> deleteSavedFood(String foodId) async {
-    await _dio.delete('food/saved/$foodId');
-  }
 }

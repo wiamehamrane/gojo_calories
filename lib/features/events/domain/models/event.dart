@@ -12,6 +12,7 @@ class Event {
   final DateTime startTime;
   final String? whatsappLink;
   final String? imageUrl;
+  final List<String> imageUrls;
   final int? maxParticipants;
   final DateTime createdAt;
   final int participantsCount;
@@ -30,6 +31,7 @@ class Event {
     required this.startTime,
     this.whatsappLink,
     this.imageUrl,
+    this.imageUrls = const [],
     this.maxParticipants,
     required this.createdAt,
     required this.participantsCount,
@@ -50,6 +52,7 @@ class Event {
       startTime: DateTime.parse(json['start_time'] as String),
       whatsappLink: json['whatsapp_link'] as String?,
       imageUrl: json['image_url'] as String?,
+      imageUrls: _parseImageUrls(json),
       maxParticipants: json['max_participants'] as int?,
       createdAt: DateTime.parse(json['created_at'] as String),
       participantsCount: json['participants_count'] as int,
@@ -71,10 +74,27 @@ class Event {
       'start_time': startTime.toIso8601String(),
       'whatsapp_link': whatsappLink,
       'image_url': imageUrl,
+      'image_urls': imageUrls,
       'max_participants': maxParticipants,
       'created_at': createdAt.toIso8601String(),
       'participants_count': participantsCount,
       'is_joined': isJoined,
     };
   }
+}
+
+List<String> _parseImageUrls(Map<String, dynamic> json) {
+  final raw = json['image_urls'];
+  if (raw is List) {
+    return raw
+        .whereType<String>()
+        .map((url) => url.trim())
+        .where((url) => url.isNotEmpty)
+        .toList();
+  }
+  final single = json['image_url'] as String?;
+  if (single != null && single.trim().isNotEmpty) {
+    return [single.trim()];
+  }
+  return [];
 }

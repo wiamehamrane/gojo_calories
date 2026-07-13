@@ -20,9 +20,9 @@ class TasksScreen extends ConsumerWidget {
   String _greeting(String lang, String name) {
     final hour = DateTime.now().hour;
     final String period;
-    if (hour < 12) {
+    if (hour >= 5 && hour < 12) {
       period = Translations.t(lang, 'tasks_greeting_morning');
-    } else if (hour < 17) {
+    } else if (hour >= 12 && hour < 18) {
       period = Translations.t(lang, 'tasks_greeting_afternoon');
     } else {
       period = Translations.t(lang, 'tasks_greeting_evening');
@@ -74,7 +74,7 @@ class TasksScreen extends ConsumerWidget {
     final timeLabel = DateFormat.jm().format(DateTime.now());
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.surface,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -89,8 +89,8 @@ class TasksScreen extends ConsumerWidget {
                       children: [
                         Text(
                           _greeting(lang, name),
-                          style: const TextStyle(
-                            fontSize: 26,
+                          style: TextStyle(
+                            fontSize: 32,
                             fontWeight: FontWeight.w800,
                             color: AppColors.textPrimary,
                             height: 1.1,
@@ -99,8 +99,8 @@ class TasksScreen extends ConsumerWidget {
                         const SizedBox(height: 10),
                         Text(
                           Translations.t(lang, 'tasks_subtitle'),
-                          style: const TextStyle(
-                            fontSize: 15,
+                          style: TextStyle(
+                            fontSize: 17,
                             fontWeight: FontWeight.w500,
                             color: AppColors.textSecondary,
                           ),
@@ -108,8 +108,8 @@ class TasksScreen extends ConsumerWidget {
                         const SizedBox(height: 4),
                         Text(
                           timeLabel,
-                          style: const TextStyle(
-                            fontSize: 13,
+                          style: TextStyle(
+                            fontSize: 14,
                             fontWeight: FontWeight.w600,
                             color: AppColors.primaryDark,
                           ),
@@ -119,7 +119,7 @@ class TasksScreen extends ConsumerWidget {
                   ),
                   IconButton(
                     onPressed: () => context.pop(),
-                    icon: const Icon(
+                    icon: Icon(
                       LucideIcons.x,
                       size: 24,
                       color: AppColors.textPrimary,
@@ -244,7 +244,7 @@ class _TasksEmptyState extends StatelessWidget {
                 color: AppColors.primaryLight,
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: const Icon(
+              child: Icon(
                 LucideIcons.listTodo,
                 size: 34,
                 color: AppColors.primaryDark,
@@ -254,7 +254,7 @@ class _TasksEmptyState extends StatelessWidget {
             Text(
               Translations.t(lang, 'tasks_empty_title'),
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
                 color: AppColors.textPrimary,
@@ -264,7 +264,7 @@ class _TasksEmptyState extends StatelessWidget {
             Text(
               Translations.t(lang, 'tasks_empty_message'),
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
                 height: 1.4,
@@ -307,7 +307,7 @@ class _DailyProgressBar extends StatelessWidget {
             children: [
               Text(
                 Translations.t(lang, 'tasks_daily_progress'),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                   color: AppColors.textPrimary,
@@ -315,7 +315,7 @@ class _DailyProgressBar extends StatelessWidget {
               ),
               Text(
                 '${progress.completed}/${progress.total}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w800,
                   color: AppColors.primaryDark,

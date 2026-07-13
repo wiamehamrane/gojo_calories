@@ -165,7 +165,7 @@ class _ActiveTaskCard extends StatelessWidget {
                       entry.task.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
                         color: AppColors.textPrimary,
@@ -174,7 +174,7 @@ class _ActiveTaskCard extends StatelessWidget {
                     const SizedBox(height: 6),
                     Text(
                       formatTaskDuration(remaining),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.w800,
                         color: AppColors.textPrimary,
@@ -186,7 +186,7 @@ class _ActiveTaskCard extends StatelessWidget {
                       isRunning
                           ? Translations.t(lang, 'tasks_in_progress')
                           : Translations.t(lang, 'tasks_paused'),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: AppColors.primaryDark,
@@ -195,7 +195,7 @@ class _ActiveTaskCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(
+              Icon(
                 LucideIcons.chevronRight,
                 size: 20,
                 color: AppColors.inactive,
