@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:go_router/go_router.dart';
 
 enum TabSlideDirection {
@@ -88,35 +88,81 @@ CustomTransitionPage<void> tabTransitionPage({
   );
 }
 
-/// Gentle rise + fade for pushed screens across the app.
-CustomTransitionPage<void> smoothPushPage({
+/// Pushed screens: Cupertino slide + interactive swipe-to-go-back.
+Page<void> smoothPushPage({
   required GoRouterState state,
   required Widget child,
   bool fullscreenDialog = false,
 }) {
-  return CustomTransitionPage<void>(
+  return SmoothSwipePage(
     key: state.pageKey,
     name: state.name,
-    child: child,
     fullscreenDialog: fullscreenDialog,
-    transitionDuration: const Duration(milliseconds: 340),
-    reverseTransitionDuration: const Duration(milliseconds: 280),
-    transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      final curved = CurvedAnimation(
-        parent: animation,
-        curve: Curves.easeOutCubic,
-        reverseCurve: Curves.easeInCubic,
-      );
-      return FadeTransition(
-        opacity: curved,
-        child: SlideTransition(
-          position: Tween<Offset>(
-            begin: const Offset(0.04, 0),
-            end: Offset.zero,
-          ).animate(curved),
-          child: child,
-        ),
-      );
-    },
+    child: child,
   );
+}
+
+/// Page that enables the interactive edge back-swipe on every platform.
+class SmoothSwipePage<T> extends Page<T> {
+  const SmoothSwipePage({
+    required this.child,
+    this.fullscreenDialog = false,
+    this.maintainState = true,
+    super.key,
+    super.name,
+    super.arguments,
+    super.restorationId,
+  });
+
+  final Widget child;
+  final bool fullscreenDialog;
+  final bool maintainState;
+
+  @override
+  Route<T> createRoute(BuildContext context) {
+    return _SmoothSwipePageRoute<T>(this);
+  }
+}
+
+class _SmoothSwipePageRoute<T> extends PageRoute<T>
+    with CupertinoRouteTransitionMixin<T> {
+  _SmoothSwipePageRoute(SmoothSwipePage<T> page)
+      : _page = page,
+        super(settings: page);
+
+  final SmoothSwipePage<T> _page;
+
+  @override
+  Widget buildContent(BuildContext context) => _page.child;
+
+  @override
+  String? get title => _page.name;
+
+  @override
+  bool get maintainState => _page.maintainState;
+
+  @override
+  bool get fullscreenDialog => _page.fullscreenDialog;
+
+  @override
+  Duration get transitionDuration => const Duration(milliseconds: 380);
+
+  @override
+  Duration get reverseTransitionDuration =>
+      const Duration(milliseconds: 340);
+
+  /// Force enable edge swipe-back (normally iOS/macOS only).
+  @override
+  bool get popGestureEnabled {
+    if (_page.fullscreenDialog) return false;
+    if (isFirst) return false;
+    if (willHandlePopInternally) return false;
+    if (animation?.status != AnimationStatus.completed) return false;
+    return true;
+  }
+}
+
+/// Smooth Cupertino route for imperative Navigator.push calls.
+Route<T> smoothMaterialRoute<T>({required WidgetBuilder builder}) {
+  return CupertinoPageRoute<T>(builder: builder);
 }

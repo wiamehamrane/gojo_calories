@@ -6,38 +6,58 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
+class MediaUploadError(Exception):
+    """Raised when durable media storage (S3) is unavailable."""
+
+
 def get_s3_client():
     # Use environment variables if provided, otherwise let boto3 find credentials (e.g. ECS Task Role)
     access_key = os.getenv('AWS_ACCESS_KEY_ID')
     secret_key = os.getenv('AWS_SECRET_ACCESS_KEY')
     region = os.getenv('AWS_REGION', 'us-east-1')
-    
+
     kwargs = {'region_name': region}
     if access_key and secret_key:
         kwargs['aws_access_key_id'] = access_key
         kwargs['aws_secret_access_key'] = secret_key
-    
+
     return boto3.client('s3', **kwargs)
 
+
+def _allow_local_fallback() -> bool:
+    """Local /uploads is ephemeral on ECS — only allow it in explicit local/dev mode."""
+    if os.getenv('ALLOW_LOCAL_UPLOADS', '').lower() in ('1', 'true', 'yes'):
+        return True
+    # No bucket configured ⇒ assume local development.
+    return not bool(os.getenv('AWS_BUCKET_NAME'))
+
+
 def _save_locally(file_bytes: bytes, file_name: str) -> str:
-    """Helper to save file to local uploads directory."""
+    """Helper to save file to local uploads directory (dev only)."""
     os.makedirs("uploads", exist_ok=True)
     file_path = os.path.join("uploads", file_name)
     with open(file_path, "wb") as f:
         f.write(file_bytes)
-    logger.info(f"File saved locally: {file_path}")
+    logger.warning(
+        "File saved locally at %s — this WILL disappear on container redeploy. "
+        "Set AWS_BUCKET_NAME and fix S3 access for production.",
+        file_path,
+    )
     return f"/uploads/{file_name}"
+
 
 def upload_image_to_s3(file_bytes: bytes, content_type: str) -> str:
     bucket = os.getenv('AWS_BUCKET_NAME')
     file_name = f"food_logs_{uuid.uuid4()}.jpg"
-    
+
     if not bucket:
-        logger.warning("AWS_BUCKET_NAME not set, falling back to local storage.")
-        return _save_locally(file_bytes, file_name)
-        
+        if _allow_local_fallback():
+            return _save_locally(file_bytes, file_name)
+        raise MediaUploadError("AWS_BUCKET_NAME is not configured")
+
     s3 = get_s3_client()
-    
+
     try:
         logger.info(f"Uploading image to S3 bucket: {bucket}, key: {file_name}")
         s3.put_object(
@@ -46,36 +66,41 @@ def upload_image_to_s3(file_bytes: bytes, content_type: str) -> str:
             Body=file_bytes,
             ContentType=content_type
         )
-        
+
         # Generate a pre-signed URL since the bucket is private
         url = s3.generate_presigned_url(
             'get_object',
             Params={'Bucket': bucket, 'Key': file_name},
-            ExpiresIn=604800 # 7 days
+            ExpiresIn=604800  # 7 days
         )
         logger.info(f"S3 upload successful. Generated pre-signed URL: {url}")
         return url
     except (NoCredentialsError, ClientError) as e:
-        logger.error(f"S3 Upload failed: {e}. Falling back to local storage.")
-        return _save_locally(file_bytes, file_name)
+        logger.error(f"S3 Upload failed: {e}")
+        if _allow_local_fallback():
+            return _save_locally(file_bytes, file_name)
+        raise MediaUploadError(f"S3 upload failed: {e}") from e
     except Exception as e:
-        logger.error(f"Unexpected error during S3 upload: {e}. Falling back to local storage.")
-        return _save_locally(file_bytes, file_name)
+        logger.error(f"Unexpected error during S3 upload: {e}")
+        if _allow_local_fallback():
+            return _save_locally(file_bytes, file_name)
+        raise MediaUploadError(f"S3 upload failed: {e}") from e
 
 
 def upload_image_to_s3_key(file_bytes: bytes, content_type: str, prefix: str = "") -> str:
     """Upload an image and return its stable S3 key (NOT a presigned URL).
 
     Store the key in the database and call presign_s3_key() on every read,
-    so image links never expire. Falls back to a local /uploads path when
-    S3 is unavailable.
+    so image links never expire. Falls back to a local /uploads path only
+    when ALLOW_LOCAL_UPLOADS=true or AWS_BUCKET_NAME is unset (local/dev).
     """
     bucket = os.getenv('AWS_BUCKET_NAME')
     file_name = f"{prefix}{uuid.uuid4()}.jpg"
 
     if not bucket:
-        logger.warning("AWS_BUCKET_NAME not set, falling back to local storage.")
-        return _save_locally(file_bytes, file_name.replace("/", "_"))
+        if _allow_local_fallback():
+            return _save_locally(file_bytes, file_name.replace("/", "_"))
+        raise MediaUploadError("AWS_BUCKET_NAME is not configured")
 
     s3 = get_s3_client()
     try:
@@ -88,11 +113,15 @@ def upload_image_to_s3_key(file_bytes: bytes, content_type: str, prefix: str = "
         )
         return file_name
     except (NoCredentialsError, ClientError) as e:
-        logger.error(f"S3 Upload failed: {e}. Falling back to local storage.")
-        return _save_locally(file_bytes, file_name.replace("/", "_"))
+        logger.error(f"S3 Upload failed: {e}")
+        if _allow_local_fallback():
+            return _save_locally(file_bytes, file_name.replace("/", "_"))
+        raise MediaUploadError(f"S3 upload failed: {e}") from e
     except Exception as e:
-        logger.error(f"Unexpected error during S3 upload: {e}. Falling back to local storage.")
-        return _save_locally(file_bytes, file_name.replace("/", "_"))
+        logger.error(f"Unexpected error during S3 upload: {e}")
+        if _allow_local_fallback():
+            return _save_locally(file_bytes, file_name.replace("/", "_"))
+        raise MediaUploadError(f"S3 upload failed: {e}") from e
 
 
 def presign_s3_key(key: str, expires_in: int = 604800) -> str:

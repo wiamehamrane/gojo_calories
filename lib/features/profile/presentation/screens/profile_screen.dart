@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -19,6 +20,7 @@ import '../../../../core/localization/locale_provider.dart';
 import '../../../../core/localization/translations.dart';
 import '../../../../core/di/repository_providers.dart';
 import '../../../../core/utils/error_handler.dart';
+import '../../../../core/widgets/app_pressable.dart';
 import '../providers/profile_providers.dart';
 import '../widgets/redeem_promo_sheet.dart';
 
@@ -985,25 +987,31 @@ class _SettingsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      leading: Icon(icon, size: 22, color: color ?? AppColors.textPrimary),
-      title: Text(
-        label,
-        style: TextStyle(
-          fontSize: 15,
-          fontWeight: FontWeight.w500,
-          color: color ?? AppColors.textPrimary,
+    return PressScale(
+      scale: 0.98,
+      child: ListTile(
+        leading: Icon(icon, size: 22, color: color ?? AppColors.textPrimary),
+        title: Text(
+          label,
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w500,
+            color: color ?? AppColors.textPrimary,
+          ),
         ),
+        trailing: color == null
+            ? Icon(
+                LucideIcons.chevronRight,
+                size: 18,
+                color: AppColors.inactive,
+              )
+            : null,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap();
+        },
       ),
-      trailing: color == null
-          ? Icon(
-              LucideIcons.chevronRight,
-              size: 18,
-              color: AppColors.inactive,
-            )
-          : null,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      onTap: onTap,
     );
   }
 }

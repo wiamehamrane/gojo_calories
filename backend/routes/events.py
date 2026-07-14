@@ -563,7 +563,7 @@ def leave_event(event_id: str, db: Session = Depends(get_db), current_user: User
     return {"status": "success", "message": "Left event"}
 
 from fastapi import File, UploadFile
-from s3_utils import upload_image_to_s3_key
+from s3_utils import upload_image_to_s3_key, MediaUploadError
 
 @router.post("/{event_id}/image")
 async def upload_event_image(
@@ -585,7 +585,28 @@ async def upload_event_image(
 
     # Store the stable S3 key; presigned URLs are generated fresh on every
     # read so event images never expire.
-    image_key = upload_image_to_s3_key(contents, file.content_type or "image/jpeg", prefix="events/")
+    try:
+        image_key = upload_image_to_s3_key(
+            contents, file.content_type or "image/jpeg", prefix="events/"
+        )
+    except MediaUploadError as e:
+        logger.error("Event image upload failed for event %s: %s", event_id, e)
+        raise HTTPException(
+            status_code=503,
+            detail="Image upload failed. Media storage is temporarily unavailable.",
+        ) from e
+
+    # Guard against ephemeral local paths being treated as durable uploads.
+    if isinstance(image_key, str) and image_key.startswith("/uploads/"):
+        logger.error(
+            "Event image was saved to ephemeral local disk (%s). "
+            "Fix AWS_BUCKET_NAME / IAM so images persist across deploys.",
+            image_key,
+        )
+        raise HTTPException(
+            status_code=503,
+            detail="Image upload failed. Media storage is misconfigured.",
+        )
 
     existing_keys = _event_image_keys(event)
     if len(existing_keys) >= _MAX_EVENT_IMAGES:

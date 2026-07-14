@@ -22,6 +22,16 @@ os.makedirs("uploads", exist_ok=True)
 from routes import vision, auth, stats, groups, referrals, payments, notifications, exercises, recipes, events, apple_iap, google_iap, memories, feed, friends, promo, clan, shares
 from routes.admin import router as admin_router
 
+# Durable media storage check — local /uploads is wiped on every ECS redeploy.
+_bucket = os.getenv("AWS_BUCKET_NAME")
+if _bucket:
+    logger.info("Media uploads will use S3 bucket: %s", _bucket)
+else:
+    logger.warning(
+        "AWS_BUCKET_NAME is not set — uploads fall back to local /uploads and "
+        "WILL disappear on container redeploy."
+    )
+
 if os.getenv("WIPE_DB") == "true":
     logger.warning("WIPE_DB is true. Dropping all tables via SCHEMA wipe...")
     with engine.begin() as conn:
