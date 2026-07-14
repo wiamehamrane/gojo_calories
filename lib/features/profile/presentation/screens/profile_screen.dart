@@ -182,6 +182,11 @@ class ProfileScreen extends ConsumerWidget {
                     onTap: () => context.push(RoutePaths.profileClan),
                   ),
                   _SettingsRow(
+                    icon: LucideIcons.share2,
+                    label: t('share_access_title'),
+                    onTap: () => context.push(RoutePaths.profileShare),
+                  ),
+                  _SettingsRow(
                     icon: LucideIcons.creditCard,
                     label: t('manage_subscription'),
                     onTap: () async {

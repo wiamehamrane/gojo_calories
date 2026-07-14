@@ -2,7 +2,7 @@ import os
 import urllib.parse
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse, HTMLResponse
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from database import engine, Base
@@ -19,7 +19,7 @@ load_dotenv()
 
 os.makedirs("uploads", exist_ok=True)
 
-from routes import vision, auth, stats, groups, referrals, payments, notifications, exercises, recipes, events, apple_iap, google_iap, memories, feed, friends, promo, clan
+from routes import vision, auth, stats, groups, referrals, payments, notifications, exercises, recipes, events, apple_iap, google_iap, memories, feed, friends, promo, clan, shares
 from routes.admin import router as admin_router
 
 if os.getenv("WIPE_DB") == "true":
@@ -160,6 +160,23 @@ try:
         conn.execute(text("ALTER TABLE promo_codes ADD COLUMN IF NOT EXISTS store_product_id VARCHAR;"))
         conn.execute(text("ALTER TABLE promo_codes ADD COLUMN IF NOT EXISTS notes TEXT;"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS pending_promo_code_id VARCHAR(36);"))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS share_grants (
+                id VARCHAR(36) PRIMARY KEY,
+                owner_user_id VARCHAR(36) REFERENCES users(id),
+                viewer_user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+                invite_email VARCHAR,
+                token VARCHAR NOT NULL UNIQUE,
+                status VARCHAR DEFAULT 'pending',
+                scopes VARCHAR DEFAULT 'nutrition,exercises',
+                expires_at TIMESTAMP NOT NULL,
+                accepted_at TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_share_grants_viewer ON share_grants (viewer_user_id);"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_share_grants_owner ON share_grants (owner_user_id);"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_share_grants_token ON share_grants (token);"))
         # Multilingual food names
         conn.execute(text("ALTER TABLE food_logs ADD COLUMN IF NOT EXISTS name_en VARCHAR;"))
         conn.execute(text("ALTER TABLE food_logs ADD COLUMN IF NOT EXISTS name_fr VARCHAR;"))
@@ -381,10 +398,70 @@ def read_root():
 def health_check():
     return {"status": "healthy"}
 
+
+@app.get("/share/join")
+def share_join_landing(token: str = ""):
+    """Public landing page for share invites (web domain is not live yet)."""
+    safe_token = urllib.parse.quote(token or "", safe="")
+    # Escape for HTML text / attribute contexts
+    display = (
+        (token or "missing token")
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+    )
+    app_link = f"gojocalories:///share/join?token={safe_token}"
+    app_link_js = app_link.replace("\\", "\\\\").replace("'", "\\'")
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GojoCalories — Share invite</title>
+  <style>
+    body {{ font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif;
+      margin: 0; padding: 24px; background: #f4f7f8; color: #122026; }}
+    .card {{ max-width: 420px; margin: 40px auto; background: #fff; border-radius: 16px;
+      padding: 24px; box-shadow: 0 8px 24px rgba(0,0,0,.06); }}
+    h1 {{ font-size: 22px; margin: 0 0 8px; }}
+    p {{ color: #5b6b73; line-height: 1.45; }}
+    .code {{ word-break: break-all; background: #eef3f4; padding: 12px; border-radius: 10px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }}
+    a.btn, button.btn {{ display: block; width: 100%; box-sizing: border-box; text-align: center;
+      background: #0d9488; color: #fff; text-decoration: none; border: 0; border-radius: 12px;
+      padding: 14px 16px; font-size: 16px; font-weight: 600; margin-top: 16px; cursor: pointer; }}
+    button.btn.secondary {{ background: #334155; }}
+    .hint {{ font-size: 13px; margin-top: 16px; }}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Diary invite</h1>
+    <p>Someone invited you to share access in GojoCalories. Open the app to accept.</p>
+    <a class="btn" href="{app_link}">Open in GojoCalories</a>
+    <button class="btn secondary" type="button" id="copyBtn">Copy invite code</button>
+    <p class="hint">Or open GojoCalories → Profile → Share Access → paste this code:</p>
+    <div class="code" id="token">{display}</div>
+  </div>
+  <script>
+    var token = document.getElementById('token').textContent;
+    document.getElementById('copyBtn').onclick = function () {{
+      navigator.clipboard.writeText(token);
+    }};
+    setTimeout(function () {{
+      window.location.href = '{app_link_js}';
+    }}, 400);
+  </script>
+</body>
+</html>"""
+    return HTMLResponse(content=html)
+
+
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(payments.router, prefix="/api/payments", tags=["Payments"])
 app.include_router(promo.router, prefix="/api/payments", tags=["Promo"])
 app.include_router(clan.router, prefix="/api/clan", tags=["Clan"])
+app.include_router(shares.router, prefix="/api/shares", tags=["Share Access"])
 app.include_router(apple_iap.router, prefix="/api/payments/apple", tags=["Apple IAP"])
 app.include_router(google_iap.router, prefix="/api/payments/google", tags=["Google IAP"])
 

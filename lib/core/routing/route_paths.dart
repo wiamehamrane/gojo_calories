@@ -22,6 +22,9 @@ abstract final class RoutePaths {
   static const profileNutrition = '/profile/nutrition';
   static const profileReferrals = '/profile/referrals';
   static const profileClan = '/profile/clan';
+  static const profileShare = '/profile/share';
+  static const shareClientDiary = '/share/client/:id';
+  static const shareJoin = '/share/join';
 
   static const logExercise = '/log_exercise';
   static const runIntensity = '/run_intensity';

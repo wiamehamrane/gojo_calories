@@ -101,6 +101,18 @@
 				<string>com.googleusercontent.apps.980076580409-4d78u72lc8o7aqfuoinvd72dk2tr27co</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.gojocalories.gojocalories</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>gojocalories</string>
+			</array>
+		</dict>
 	</array>
+	<key>FlutterDeepLinkingEnabled</key>
+	<true/>
 </dict>
 </plist>

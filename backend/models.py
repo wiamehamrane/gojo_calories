@@ -402,3 +402,23 @@ class ClanInvite(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     clan = relationship("Clan", back_populates="invites")
+
+
+class ShareGrant(Base):
+    """Permission for a viewer (e.g. coach) to see an owner's diary/workouts."""
+
+    __tablename__ = "share_grants"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid, index=True)
+    owner_user_id = Column(String(36), ForeignKey("users.id"), nullable=True, index=True)  # client
+    viewer_user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)  # coach
+    invite_email = Column(String, nullable=True, index=True)
+    token = Column(String, unique=True, nullable=False, index=True)
+    status = Column(String, default="pending", nullable=False)  # pending | active | revoked | expired | declined
+    scopes = Column(String, default="nutrition,exercises", nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+    accepted_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    owner = relationship("User", foreign_keys=[owner_user_id])
+    viewer = relationship("User", foreign_keys=[viewer_user_id])

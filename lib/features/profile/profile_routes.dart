@@ -8,6 +8,9 @@ import 'presentation/screens/language_screen.dart';
 import 'presentation/screens/nutrition_goals_screen.dart';
 import 'presentation/screens/feature_request_screen.dart';
 import '../clan/presentation/screens/clan_screen.dart';
+import '../share/presentation/screens/share_access_screen.dart';
+import '../share/presentation/screens/share_accept_screen.dart';
+import '../share/presentation/screens/shared_client_diary_screen.dart';
 
 List<RouteBase> get profileShellRoutes => [
       GoRoute(
@@ -61,5 +64,37 @@ List<RouteBase> get profileRoutes => [
           state: state,
           child: const ClanScreen(),
         ),
+      ),
+      GoRoute(
+        path: RoutePaths.profileShare,
+        pageBuilder: (context, state) => smoothPushPage(
+          state: state,
+          child: const ShareAccessScreen(),
+        ),
+      ),
+      GoRoute(
+        path: RoutePaths.shareClientDiary,
+        pageBuilder: (context, state) {
+          final id = state.pathParameters['id'] ?? '';
+          final extra = state.extra as Map<String, dynamic>?;
+          final name = extra?['name'] as String? ?? 'Client';
+          return smoothPushPage(
+            state: state,
+            child: SharedClientDiaryScreen(
+              ownerId: id,
+              displayName: name,
+            ),
+          );
+        },
+      ),
+      GoRoute(
+        path: RoutePaths.shareJoin,
+        pageBuilder: (context, state) {
+          final token = state.uri.queryParameters['token'] ?? '';
+          return smoothPushPage(
+            state: state,
+            child: ShareAcceptScreen(token: token),
+          );
+        },
       ),
     ];
