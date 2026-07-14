@@ -1,7 +1,9 @@
 import os
+import smtplib
 import boto3
-import httpx
 from botocore.exceptions import ClientError
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timedelta
 import jwt
 import logging
@@ -14,46 +16,44 @@ from security import SECRET_KEY, ALGORITHM
 SES_SENDER_EMAIL = os.getenv("SES_SENDER_EMAIL", "noreply@gojocalories.com")
 AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
 
-# Which provider delivers the verification-code email: "ses" (default) or
-# "firebase" (calls the sendOtpEmail Cloud Function).
+# Which provider delivers the verification-code email:
+#   "ses"  → AWS SES (default)
+#   "smtp" → direct SMTP from Python
 EMAIL_PROVIDER = os.getenv("EMAIL_PROVIDER", "ses").lower()
-FIREBASE_OTP_FUNCTION_URL = os.getenv("FIREBASE_OTP_FUNCTION_URL")
-FIREBASE_OTP_SHARED_SECRET = os.getenv("FIREBASE_OTP_SHARED_SECRET")
+
+# Direct SMTP settings (EMAIL_PROVIDER=smtp).
+SMTP_HOST = os.getenv("SMTP_HOST")
+SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USER = os.getenv("SMTP_USER")
+SMTP_PASS = os.getenv("SMTP_PASS")
+SMTP_FROM = os.getenv("SMTP_FROM", SES_SENDER_EMAIL)
 
 
-def _send_verification_code_via_firebase(to_email: str, code: str) -> None:
-    """Deliver the OTP email through the Firebase Cloud Function.
-
-    The backend still generates and verifies the code — Firebase only sends
-    the email. Raises RuntimeError on any failure so callers can surface a 503.
-    """
-    if not FIREBASE_OTP_FUNCTION_URL or not FIREBASE_OTP_SHARED_SECRET:
+def _send_via_smtp_or_raise(to_email: str, subject: str, html_body: str) -> None:
+    """Send an email directly through SMTP. Raises RuntimeError on failure."""
+    if not SMTP_HOST or not SMTP_USER or not SMTP_PASS:
         raise RuntimeError(
-            "Firebase OTP email is not configured. Set FIREBASE_OTP_FUNCTION_URL "
-            "and FIREBASE_OTP_SHARED_SECRET."
+            "SMTP is not configured. Set SMTP_HOST, SMTP_USER and SMTP_PASS."
         )
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"] = SMTP_FROM
+    msg["To"] = to_email
+    msg.attach(MIMEText(html_body, "html", "utf-8"))
     try:
-        response = httpx.post(
-            FIREBASE_OTP_FUNCTION_URL,
-            json={"email": to_email, "code": code},
-            headers={"x-otp-secret": FIREBASE_OTP_SHARED_SECRET},
-            timeout=10.0,
-        )
-    except Exception as exc:  # noqa: BLE001 - surface any transport error
-        logger.error("Firebase OTP email transport error for %s: %s", to_email, exc)
-        raise RuntimeError(f"Email could not be sent via Firebase: {exc}") from exc
-
-    if response.status_code != 200:
-        logger.error(
-            "Firebase OTP email failed for %s: [%s] %s",
-            to_email,
-            response.status_code,
-            response.text,
-        )
-        raise RuntimeError(
-            f"Email could not be sent via Firebase (HTTP {response.status_code})."
-        )
-    logger.info("Sent OTP email to %s via Firebase", to_email)
+        if SMTP_PORT == 465:
+            with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=15) as server:
+                server.login(SMTP_USER, SMTP_PASS)
+                server.sendmail(SMTP_FROM, [to_email], msg.as_string())
+        else:
+            with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=15) as server:
+                server.starttls()
+                server.login(SMTP_USER, SMTP_PASS)
+                server.sendmail(SMTP_FROM, [to_email], msg.as_string())
+    except Exception as exc:  # noqa: BLE001 - surface any SMTP error
+        logger.error("SMTP email failed for %s: %s", to_email, exc)
+        raise RuntimeError(f"Email could not be sent via SMTP: {exc}") from exc
+    logger.info("Sent OTP email to %s via SMTP", to_email)
 
 
 def get_ses_client():
@@ -83,12 +83,9 @@ def send_verification_code_email(to_email: str, code: str) -> bool:
 def send_verification_code_email_or_raise(to_email: str, code: str) -> None:
     """Send OTP email and raise if delivery fails.
 
-    Uses the Firebase Cloud Function when EMAIL_PROVIDER=firebase, otherwise SES.
+    EMAIL_PROVIDER selects delivery: "smtp" (direct Python SMTP) or
+    "ses" (default AWS SES).
     """
-    if EMAIL_PROVIDER == "firebase":
-        _send_verification_code_via_firebase(to_email, code)
-        return
-
     subject = "Your GojoCalories verification code"
     html_body = f"""
     <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
@@ -98,6 +95,11 @@ def send_verification_code_email_or_raise(to_email: str, code: str) -> None:
       <p style="color: #666; font-size: 14px;">This code expires in 15 minutes. If you didn't create an account, you can ignore this email.</p>
     </div>
     """
+
+    if EMAIL_PROVIDER == "smtp":
+        _send_via_smtp_or_raise(to_email, subject, html_body)
+        return
+
     send_email_or_raise(to_email, subject, html_body)
 
 
