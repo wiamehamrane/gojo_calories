@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "322052160242",
+    "project_id": "gojocalories-25108",
+    "storage_bucket": "gojocalories-25108.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:322052160242:android:9a80689eff5b787a88ae6b",
+        "android_client_info": {
+          "package_name": "com.gojocalories.gojocalories"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBgVTp-nA1RPruwzqD7a8tO2X2kdJfUi_8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

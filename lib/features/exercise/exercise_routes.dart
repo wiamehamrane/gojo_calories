@@ -1,5 +1,6 @@
 import 'package:go_router/go_router.dart';
 import '../../core/routing/route_paths.dart';
+import '../../core/routing/app_page_transitions.dart';
 import 'presentation/screens/log_exercise_screen.dart';
 import 'presentation/screens/run_intensity_screen.dart';
 import 'presentation/screens/weight_lifting_screen.dart';
@@ -9,22 +10,37 @@ import 'presentation/screens/manual_exercise_screen.dart';
 List<RouteBase> get exerciseRoutes => [
       GoRoute(
         path: RoutePaths.logExercise,
-        builder: (context, state) => const LogExerciseScreen(),
+        pageBuilder: (context, state) => smoothPushPage(
+          state: state,
+          child: const LogExerciseScreen(),
+        ),
       ),
       GoRoute(
         path: RoutePaths.runIntensity,
-        builder: (context, state) => const RunIntensityScreen(),
+        pageBuilder: (context, state) => smoothPushPage(
+          state: state,
+          child: const RunIntensityScreen(),
+        ),
       ),
       GoRoute(
         path: RoutePaths.weightLifting,
-        builder: (context, state) => const WeightLiftingScreen(),
+        pageBuilder: (context, state) => smoothPushPage(
+          state: state,
+          child: const WeightLiftingScreen(),
+        ),
       ),
       GoRoute(
         path: RoutePaths.describeExercise,
-        builder: (context, state) => const DescribeExerciseScreen(),
+        pageBuilder: (context, state) => smoothPushPage(
+          state: state,
+          child: const DescribeExerciseScreen(),
+        ),
       ),
       GoRoute(
         path: RoutePaths.manualExercise,
-        builder: (context, state) => const ManualExerciseScreen(),
+        pageBuilder: (context, state) => smoothPushPage(
+          state: state,
+          child: const ManualExerciseScreen(),
+        ),
       ),
     ];

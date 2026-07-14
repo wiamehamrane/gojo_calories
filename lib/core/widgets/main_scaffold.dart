@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -6,13 +7,21 @@ import '../theme/app_colors.dart';
 import '../theme/app_shadows.dart';
 import '../theme/app_spacing.dart';
 import '../routing/route_paths.dart';
+import '../routing/tab_page_transition.dart';
 import '../localization/locale_provider.dart';
 import '../localization/translations.dart';
 
-class MainScaffold extends ConsumerWidget {
+class MainScaffold extends ConsumerStatefulWidget {
   final Widget child;
 
   const MainScaffold({super.key, required this.child});
+
+  @override
+  ConsumerState<MainScaffold> createState() => _MainScaffoldState();
+}
+
+class _MainScaffoldState extends ConsumerState<MainScaffold> {
+  double _dragDx = 0.0;
 
   static int _calculateSelectedIndex(BuildContext context) {
     final String location = GoRouterState.of(context).uri.path;
@@ -27,7 +36,10 @@ class MainScaffold extends ConsumerWidget {
   }
 
   void _onItemTapped(int index, BuildContext context) {
-    if (index == _calculateSelectedIndex(context)) return;
+    final from = _calculateSelectedIndex(context);
+    if (index == from) return;
+    HapticFeedback.selectionClick();
+    prepareTabSlide(fromIndex: from, toIndex: index);
     switch (index) {
       case 0:
         context.go('/home');
@@ -42,12 +54,21 @@ class MainScaffold extends ConsumerWidget {
   }
 
   void _showActionGrid(BuildContext context, double aboveOffset) {
+    HapticFeedback.lightImpact();
     showGeneralDialog(
       context: context,
       barrierDismissible: true,
       barrierLabel: 'Dismiss',
-      barrierColor: const Color(0x59000000),
-      transitionDuration: const Duration(milliseconds: 250),
+      barrierColor: Colors.black.withValues(alpha: 0.45),
+      transitionDuration: const Duration(milliseconds: 380),
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+          reverseCurve: Curves.easeInCubic,
+        );
+        return FadeTransition(opacity: curved, child: child);
+      },
       pageBuilder: (context, anim1, anim2) {
         return GestureDetector(
           onTap: () => Navigator.of(context).pop(),
@@ -59,18 +80,9 @@ class MainScaffold extends ConsumerWidget {
                   bottom: aboveOffset,
                   left: 0,
                   right: 0,
-                  child: ScaleTransition(
-                    scale: CurvedAnimation(
-                      parent: anim1,
-                      curve: Curves.easeOutBack,
-                    ),
-                    child: FadeTransition(
-                      opacity: anim1,
-                      child: GestureDetector(
-                        onTap: () {},
-                        child: const Center(child: _ActionGrid()),
-                      ),
-                    ),
+                  child: GestureDetector(
+                    onTap: () {},
+                    child: _ActionGrid(animation: anim1),
                   ),
                 ),
               ],
@@ -82,7 +94,7 @@ class MainScaffold extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final lang = ref.watch(localeProvider);
     final int currentIndex = _calculateSelectedIndex(context);
     final bool isScan = _isScanRoute(context);
@@ -100,14 +112,20 @@ class MainScaffold extends ConsumerWidget {
         children: [
           Positioned.fill(
             child: GestureDetector(
+              onHorizontalDragStart: (_) => _dragDx = 0.0,
+              onHorizontalDragUpdate: (d) => _dragDx += d.delta.dx,
               onHorizontalDragEnd: (details) {
-                if (details.primaryVelocity! < -300 && currentIndex < 2) {
+                final velocity = details.primaryVelocity ?? 0.0;
+                final goNext = velocity < -250 || _dragDx < -80;
+                final goPrev = velocity > 250 || _dragDx > 80;
+                if (goNext && currentIndex >= 0 && currentIndex < 2) {
                   _onItemTapped(currentIndex + 1, context);
-                } else if (details.primaryVelocity! > 300 && currentIndex > 0) {
+                } else if (goPrev && currentIndex > 0) {
                   _onItemTapped(currentIndex - 1, context);
                 }
+                _dragDx = 0.0;
               },
-              child: child,
+              child: widget.child,
             ),
           ),
 
@@ -125,8 +143,6 @@ class MainScaffold extends ConsumerWidget {
               ),
             ),
 
-          // Plus button floats just above the nav bar, flush right with the
-          // home page's screen padding.
           if (!isScan && isHome)
             Positioned(
               bottom: bottomOffset + pillHeight + 4,
@@ -164,43 +180,39 @@ class _FloatingNavBar extends StatelessWidget {
       height: pillHeight,
       decoration: _pillDecoration,
       padding: const EdgeInsets.symmetric(horizontal: 8),
-      child: _buildTabsRow(),
-    );
-  }
-
-  Widget _buildTabsRow() {
-    return Row(
-      children: [
-        Expanded(
-          child: _NavSlot(
-            icon: LucideIcons.house,
-            label: Translations.t(lang, 'nav_home'),
-            isActive: currentIndex == 0,
-            onTap: () => onTap(0),
+      child: Row(
+        children: [
+          Expanded(
+            child: _NavSlot(
+              icon: LucideIcons.house,
+              label: Translations.t(lang, 'nav_home'),
+              isActive: currentIndex == 0,
+              onTap: () => onTap(0),
+            ),
           ),
-        ),
-        Expanded(
-          child: _NavSlot(
-            icon: LucideIcons.compass,
-            label: Translations.t(lang, 'nav_events'),
-            isActive: currentIndex == 1,
-            onTap: () => onTap(1),
+          Expanded(
+            child: _NavSlot(
+              icon: LucideIcons.compass,
+              label: Translations.t(lang, 'nav_events'),
+              isActive: currentIndex == 1,
+              onTap: () => onTap(1),
+            ),
           ),
-        ),
-        Expanded(
-          child: _NavSlot(
-            icon: LucideIcons.user,
-            label: Translations.t(lang, 'nav_profile'),
-            isActive: currentIndex == 2,
-            onTap: () => onTap(2),
+          Expanded(
+            child: _NavSlot(
+              icon: LucideIcons.user,
+              label: Translations.t(lang, 'nav_profile'),
+              isActive: currentIndex == 2,
+              onTap: () => onTap(2),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
 
-class _NavSlot extends StatelessWidget {
+class _NavSlot extends StatefulWidget {
   final IconData icon;
   final String label;
   final bool isActive;
@@ -214,47 +226,70 @@ class _NavSlot extends StatelessWidget {
   });
 
   @override
+  State<_NavSlot> createState() => _NavSlotState();
+}
+
+class _NavSlotState extends State<_NavSlot> {
+  bool _pressed = false;
+
+  @override
   Widget build(BuildContext context) {
+    final scale = widget.isActive ? 1.12 : (_pressed ? 0.92 : 1.0);
+
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: onTap,
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
+      onTap: widget.onTap,
       child: Center(
-        child: AnimatedContainer(
+        child: AnimatedScale(
+          scale: scale,
           duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOutCubic,
-          padding: EdgeInsets.symmetric(
-            horizontal: isActive ? 16 : 12,
-            vertical: 10,
-          ),
-          decoration: BoxDecoration(
-            color: isActive
-                ? AppColors.primary.withValues(alpha: 0.12)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(999),
-          ),
-          child: AnimatedSize(
-            duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutBack,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 260),
             curve: Curves.easeOutCubic,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  icon,
-                  size: 22,
-                  color: isActive ? AppColors.primaryDark : AppColors.inactive,
-                ),
-                if (isActive) ...[
-                  const SizedBox(width: 8),
-                  Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.primaryDark,
+            padding: EdgeInsets.symmetric(
+              horizontal: widget.isActive ? 16 : 12,
+              vertical: widget.isActive ? 10 : 8,
+            ),
+            decoration: BoxDecoration(
+              color: widget.isActive
+                  ? AppColors.primary.withValues(alpha: 0.14)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: AnimatedSize(
+              duration: const Duration(milliseconds: 260),
+              curve: Curves.easeOutCubic,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 200),
+                    child: Icon(
+                      widget.icon,
+                      key: ValueKey('${widget.label}_${widget.isActive}'),
+                      size: widget.isActive ? 24 : 22,
+                      color: widget.isActive
+                          ? AppColors.primaryDark
+                          : AppColors.inactive,
                     ),
                   ),
+                  if (widget.isActive) ...[
+                    const SizedBox(width: 8),
+                    Text(
+                      widget.label,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primaryDark,
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),
@@ -263,62 +298,147 @@ class _NavSlot extends StatelessWidget {
   }
 }
 
-class _CenterFab extends StatelessWidget {
+class _CenterFab extends StatefulWidget {
   final double size;
   final VoidCallback onTap;
 
   const _CenterFab({required this.size, required this.onTap});
 
   @override
+  State<_CenterFab> createState() => _CenterFabState();
+}
+
+class _CenterFabState extends State<_CenterFab>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 140),
+      reverseDuration: const Duration(milliseconds: 220),
+      lowerBound: 0.0,
+      upperBound: 1.0,
+    );
+    _scale = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween(begin: 1.0, end: 0.88)
+            .chain(CurveTween(curve: Curves.easeOut)),
+        weight: 40,
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: 0.88, end: 1.08)
+            .chain(CurveTween(curve: Curves.easeOutBack)),
+        weight: 60,
+      ),
+    ]).animate(_controller);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleTap() async {
+    await _controller.forward(from: 0);
+    widget.onTap();
+    if (mounted) _controller.reverse();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          color: AppColors.textPrimary,
-          shape: BoxShape.circle,
-          boxShadow: AppShadows.fabShadow,
-          border: Border.all(color: AppColors.surface, width: 3),
-        ),
-        child: Icon(
-          LucideIcons.plus,
-          size: 28,
-          color: AppColors.surface,
+    return ScaleTransition(
+      scale: _scale,
+      child: GestureDetector(
+        onTap: _handleTap,
+        child: Container(
+          width: widget.size,
+          height: widget.size,
+          decoration: BoxDecoration(
+            color: AppColors.textPrimary,
+            shape: BoxShape.circle,
+            boxShadow: AppShadows.fabShadow,
+            border: Border.all(color: AppColors.surface, width: 3),
+          ),
+          child: Icon(
+            LucideIcons.plus,
+            size: 28,
+            color: AppColors.surface,
+          ),
         ),
       ),
     );
   }
 }
 
-BoxDecoration get _pillDecoration => BoxDecoration(
-  color: AppColors.surface,
-  borderRadius: BorderRadius.all(Radius.circular(999)),
-  boxShadow: [
-    BoxShadow(
-      color: Color(0x1A000000),
-      blurRadius: 24,
-      spreadRadius: 0,
-      offset: Offset(0, 6),
-    ),
-    BoxShadow(
-      color: Color(0x0F000000),
-      blurRadius: 8,
-      offset: Offset(0, 2),
-    ),
-  ],
-);
+BoxDecoration get _pillDecoration => const BoxDecoration(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.all(Radius.circular(999)),
+      boxShadow: [
+        BoxShadow(
+          color: Color(0x1A000000),
+          blurRadius: 24,
+          spreadRadius: 0,
+          offset: Offset(0, 6),
+        ),
+        BoxShadow(
+          color: Color(0x0F000000),
+          blurRadius: 8,
+          offset: Offset(0, 2),
+        ),
+      ],
+    );
 
 class _ActionGrid extends ConsumerWidget {
-  const _ActionGrid();
+  final Animation<double> animation;
+
+  const _ActionGrid({required this.animation});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final lang = ref.watch(localeProvider);
-    final double screenWidth = MediaQuery.of(context).size.width;
-    final double gridWidth = screenWidth - 48;
-    final double cellWidth = (gridWidth - 10) / 2;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final gridWidth = screenWidth - 48;
+    final cellWidth = (gridWidth - 10) / 2;
+
+    final items = [
+      (
+        LucideIcons.footprints,
+        Translations.t(lang, 'action_log_exercise'),
+        () {
+          Navigator.pop(context);
+          context.push('/log_exercise');
+        },
+      ),
+      (
+        LucideIcons.scanLine,
+        Translations.t(lang, 'action_scan_food'),
+        () {
+          Navigator.pop(context);
+          context.go(RoutePaths.scan);
+        },
+      ),
+      (
+        LucideIcons.squarePen,
+        Translations.t(lang, 'action_add_food_manually'),
+        () {
+          Navigator.pop(context);
+          context.push('/food_database');
+        },
+      ),
+      (
+        LucideIcons.listTodo,
+        Translations.t(lang, 'action_tasks'),
+        () {
+          Navigator.pop(context);
+          context.push(RoutePaths.tasks);
+        },
+      ),
+    ];
 
     return SizedBox(
       width: gridWidth,
@@ -327,43 +447,64 @@ class _ActionGrid extends ConsumerWidget {
         runSpacing: 10,
         alignment: WrapAlignment.center,
         children: [
-          _ActionCell(
-            icon: LucideIcons.footprints,
-            label: Translations.t(lang, 'action_log_exercise'),
-            width: cellWidth,
-            onTap: () {
-              Navigator.pop(context);
-              context.push('/log_exercise');
-            },
-          ),
-          _ActionCell(
-            icon: LucideIcons.scanLine,
-            label: Translations.t(lang, 'action_scan_food'),
-            width: cellWidth,
-            onTap: () {
-              Navigator.pop(context);
-              context.go(RoutePaths.scan);
-            },
-          ),
-          _ActionCell(
-            icon: LucideIcons.squarePen,
-            label: Translations.t(lang, 'action_add_food_manually'),
-            width: cellWidth,
-            onTap: () {
-              Navigator.pop(context);
-              context.push('/food_database');
-            },
-          ),
-          _ActionCell(
-            icon: LucideIcons.listTodo,
-            label: Translations.t(lang, 'action_tasks'),
-            width: cellWidth,
-            onTap: () {
-              Navigator.pop(context);
-              context.push(RoutePaths.tasks);
-            },
-          ),
+          for (var i = 0; i < items.length; i++)
+            _StaggeredActionCell(
+              animation: animation,
+              index: i,
+              icon: items[i].$1,
+              label: items[i].$2,
+              width: cellWidth,
+              onTap: items[i].$3,
+            ),
         ],
+      ),
+    );
+  }
+}
+
+class _StaggeredActionCell extends StatelessWidget {
+  final Animation<double> animation;
+  final int index;
+  final IconData icon;
+  final String label;
+  final double width;
+  final VoidCallback onTap;
+
+  const _StaggeredActionCell({
+    required this.animation,
+    required this.index,
+    required this.icon,
+    required this.label,
+    required this.width,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final start = (0.08 * index).clamp(0.0, 0.55);
+    final end = (start + 0.45).clamp(0.0, 1.0);
+    final curved = CurvedAnimation(
+      parent: animation,
+      curve: Interval(start, end, curve: Curves.easeOutBack),
+      reverseCurve: Interval(0.0, 1.0 - start, curve: Curves.easeInCubic),
+    );
+
+    return FadeTransition(
+      opacity: curved,
+      child: SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(0, 0.25),
+          end: Offset.zero,
+        ).animate(curved),
+        child: ScaleTransition(
+          scale: Tween<double>(begin: 0.86, end: 1.0).animate(curved),
+          child: _ActionCell(
+            icon: icon,
+            label: label,
+            width: width,
+            onTap: onTap,
+          ),
+        ),
       ),
     );
   }
@@ -418,7 +559,7 @@ class _ActionCell extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 label,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                   color: AppColors.textPrimary,

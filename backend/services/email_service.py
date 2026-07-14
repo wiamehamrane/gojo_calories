@@ -1,5 +1,6 @@
 import os
 import boto3
+import httpx
 from botocore.exceptions import ClientError
 from datetime import datetime, timedelta
 import jwt
@@ -12,6 +13,47 @@ from security import SECRET_KEY, ALGORITHM
 
 SES_SENDER_EMAIL = os.getenv("SES_SENDER_EMAIL", "noreply@gojocalories.com")
 AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
+
+# Which provider delivers the verification-code email: "ses" (default) or
+# "firebase" (calls the sendOtpEmail Cloud Function).
+EMAIL_PROVIDER = os.getenv("EMAIL_PROVIDER", "ses").lower()
+FIREBASE_OTP_FUNCTION_URL = os.getenv("FIREBASE_OTP_FUNCTION_URL")
+FIREBASE_OTP_SHARED_SECRET = os.getenv("FIREBASE_OTP_SHARED_SECRET")
+
+
+def _send_verification_code_via_firebase(to_email: str, code: str) -> None:
+    """Deliver the OTP email through the Firebase Cloud Function.
+
+    The backend still generates and verifies the code — Firebase only sends
+    the email. Raises RuntimeError on any failure so callers can surface a 503.
+    """
+    if not FIREBASE_OTP_FUNCTION_URL or not FIREBASE_OTP_SHARED_SECRET:
+        raise RuntimeError(
+            "Firebase OTP email is not configured. Set FIREBASE_OTP_FUNCTION_URL "
+            "and FIREBASE_OTP_SHARED_SECRET."
+        )
+    try:
+        response = httpx.post(
+            FIREBASE_OTP_FUNCTION_URL,
+            json={"email": to_email, "code": code},
+            headers={"x-otp-secret": FIREBASE_OTP_SHARED_SECRET},
+            timeout=10.0,
+        )
+    except Exception as exc:  # noqa: BLE001 - surface any transport error
+        logger.error("Firebase OTP email transport error for %s: %s", to_email, exc)
+        raise RuntimeError(f"Email could not be sent via Firebase: {exc}") from exc
+
+    if response.status_code != 200:
+        logger.error(
+            "Firebase OTP email failed for %s: [%s] %s",
+            to_email,
+            response.status_code,
+            response.text,
+        )
+        raise RuntimeError(
+            f"Email could not be sent via Firebase (HTTP {response.status_code})."
+        )
+    logger.info("Sent OTP email to %s via Firebase", to_email)
 
 
 def get_ses_client():
@@ -39,7 +81,14 @@ def send_verification_code_email(to_email: str, code: str) -> bool:
 
 
 def send_verification_code_email_or_raise(to_email: str, code: str) -> None:
-    """Send OTP email and raise if SES rejects delivery."""
+    """Send OTP email and raise if delivery fails.
+
+    Uses the Firebase Cloud Function when EMAIL_PROVIDER=firebase, otherwise SES.
+    """
+    if EMAIL_PROVIDER == "firebase":
+        _send_verification_code_via_firebase(to_email, code)
+        return
+
     subject = "Your GojoCalories verification code"
     html_body = f"""
     <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
