@@ -205,6 +205,17 @@ class _ShareAccessScreenState extends ConsumerState<ShareAccessScreen> {
         backgroundColor: AppColors.background,
         elevation: 0,
         foregroundColor: AppColors.textPrimary,
+        automaticallyImplyLeading: false,
+        leading: IconButton(
+          icon: const Icon(LucideIcons.arrowLeft),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go(RoutePaths.profile);
+            }
+          },
+        ),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())

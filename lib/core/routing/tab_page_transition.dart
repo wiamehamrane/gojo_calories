@@ -92,11 +92,13 @@ CustomTransitionPage<void> tabTransitionPage({
 CustomTransitionPage<void> smoothPushPage({
   required GoRouterState state,
   required Widget child,
+  bool fullscreenDialog = false,
 }) {
   return CustomTransitionPage<void>(
     key: state.pageKey,
     name: state.name,
     child: child,
+    fullscreenDialog: fullscreenDialog,
     transitionDuration: const Duration(milliseconds: 340),
     reverseTransitionDuration: const Duration(milliseconds: 280),
     transitionsBuilder: (context, animation, secondaryAnimation, child) {

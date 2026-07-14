@@ -69,6 +69,8 @@ List<RouteBase> get profileRoutes => [
         path: RoutePaths.profileShare,
         pageBuilder: (context, state) => smoothPushPage(
           state: state,
+          // Disables iOS edge swipe-back on this screen.
+          fullscreenDialog: true,
           child: const ShareAccessScreen(),
         ),
       ),
