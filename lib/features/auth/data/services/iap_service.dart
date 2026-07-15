@@ -150,6 +150,13 @@ class IAPService {
       'IAPService: found=${response.productDetails.map((p) => p.id).toList()} '
       'notFound=${response.notFoundIDs} error=${response.error}',
     );
+    for (final p in response.productDetails) {
+      debugPrint(
+        'IAPService: ${p.id} price=${p.price} '
+        'currency=${p.currencyCode} symbol=${p.currencySymbol} '
+        'raw=${p.rawPrice}',
+      );
+    }
 
     if (response.error != null) {
       throw Exception(

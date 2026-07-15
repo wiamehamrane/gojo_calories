@@ -3,6 +3,8 @@ abstract final class RoutePaths {
   static const splash = '/splash';
   static const auth = '/auth';
   static const verifyOtp = '/auth/verify-otp';
+  static const forgotPassword = '/auth/forgot-password';
+  static const resetPassword = '/auth/reset-password';
   static const weightSetup = '/onboarding/weight';
   static const paywall = '/onboarding/paywall';
 

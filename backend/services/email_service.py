@@ -1,4 +1,5 @@
 import os
+import re
 import smtplib
 import boto3
 from botocore.exceptions import ClientError
@@ -29,31 +30,53 @@ SMTP_PASS = os.getenv("SMTP_PASS")
 SMTP_FROM = os.getenv("SMTP_FROM", SES_SENDER_EMAIL)
 
 
+def _smtp_envelope_from(from_header: str) -> str:
+    """Bare address for SMTP envelope — display names break some providers."""
+    match = re.search(r"<([^>]+)>", from_header or "")
+    if match:
+        return match.group(1).strip()
+    return (from_header or "").strip()
+
+
+def _html_to_plain(html_body: str) -> str:
+    text = re.sub(r"<br\s*/?>", "\n", html_body, flags=re.I)
+    text = re.sub(r"</p>", "\n\n", text, flags=re.I)
+    text = re.sub(r"<[^>]+>", "", text)
+    return re.sub(r"\n{3,}", "\n\n", text).strip()
+
+
 def _send_via_smtp_or_raise(to_email: str, subject: str, html_body: str) -> None:
     """Send an email directly through SMTP. Raises RuntimeError on failure."""
     if not SMTP_HOST or not SMTP_USER or not SMTP_PASS:
         raise RuntimeError(
             "SMTP is not configured. Set SMTP_HOST, SMTP_USER and SMTP_PASS."
         )
+    envelope_from = _smtp_envelope_from(SMTP_FROM) or SMTP_USER
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
     msg["From"] = SMTP_FROM
     msg["To"] = to_email
+    msg.attach(MIMEText(_html_to_plain(html_body), "plain", "utf-8"))
     msg.attach(MIMEText(html_body, "html", "utf-8"))
     try:
         if SMTP_PORT == 465:
             with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=15) as server:
                 server.login(SMTP_USER, SMTP_PASS)
-                server.sendmail(SMTP_FROM, [to_email], msg.as_string())
+                server.sendmail(envelope_from, [to_email], msg.as_string())
         else:
             with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=15) as server:
                 server.starttls()
                 server.login(SMTP_USER, SMTP_PASS)
-                server.sendmail(SMTP_FROM, [to_email], msg.as_string())
+                server.sendmail(envelope_from, [to_email], msg.as_string())
     except Exception as exc:  # noqa: BLE001 - surface any SMTP error
         logger.error("SMTP email failed for %s: %s", to_email, exc)
         raise RuntimeError(f"Email could not be sent via SMTP: {exc}") from exc
-    logger.info("Sent OTP email to %s via SMTP", to_email)
+    logger.info(
+        "Sent email to %s via SMTP (from=%s envelope=%s)",
+        to_email,
+        SMTP_FROM,
+        envelope_from,
+    )
 
 
 def get_ses_client():
@@ -100,6 +123,23 @@ def send_verification_code_email_or_raise(to_email: str, code: str) -> None:
         _send_via_smtp_or_raise(to_email, subject, html_body)
         return
 
+    send_email_or_raise(to_email, subject, html_body)
+
+
+def send_password_reset_email_or_raise(to_email: str, code: str) -> None:
+    """Send a password-reset OTP and raise if delivery fails."""
+    subject = "Reset your GojoCalories password"
+    html_body = f"""
+    <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+      <h2 style="color: #1a472a;">Reset your password</h2>
+      <p>Enter this code in the app to choose a new password:</p>
+      <p style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #1a472a;">{code}</p>
+      <p style="color: #666; font-size: 14px;">This code expires in 15 minutes. If you didn't request a reset, you can ignore this email.</p>
+    </div>
+    """
+    if EMAIL_PROVIDER == "smtp":
+        _send_via_smtp_or_raise(to_email, subject, html_body)
+        return
     send_email_or_raise(to_email, subject, html_body)
 
 

@@ -405,6 +405,16 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                         onPrivacyTap: () => launchUrl(
                           Uri.parse('https://gojocalories.com/privacy-policy'),
                         ),
+                        onForgotPassword: () {
+                          final email = Uri.encodeComponent(
+                            _emailCtrl.text.trim(),
+                          );
+                          context.push(
+                            email.isEmpty
+                                ? RoutePaths.forgotPassword
+                                : '${RoutePaths.forgotPassword}?email=$email',
+                          );
+                        },
                       ),
                     ),
                   ),
@@ -532,6 +542,7 @@ class _EmailAuthSheet extends StatelessWidget {
   final ValueChanged<bool> onAgreedChanged;
   final VoidCallback onSubmit;
   final VoidCallback onPrivacyTap;
+  final VoidCallback onForgotPassword;
 
   const _EmailAuthSheet({
     required this.tabController,
@@ -546,6 +557,7 @@ class _EmailAuthSheet extends StatelessWidget {
     required this.onAgreedChanged,
     required this.onSubmit,
     required this.onPrivacyTap,
+    required this.onForgotPassword,
   });
 
   @override
@@ -625,6 +637,33 @@ class _EmailAuthSheet extends StatelessWidget {
                     size: 20,
                   ),
                 ),
+              ),
+              AnimatedSize(
+                duration: const Duration(milliseconds: 280),
+                curve: Curves.easeInOutCubic,
+                alignment: Alignment.topCenter,
+                child: !isCreate
+                    ? Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: isLoading ? null : onForgotPassword,
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppColors.primaryDark,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 8,
+                            ),
+                          ),
+                          child: const Text(
+                            'Forgot password?',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      )
+                    : const SizedBox(width: double.infinity),
               ),
               // Privacy checkbox gracefully grows/shrinks when switching
               // between Create Account and Log In.
