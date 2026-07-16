@@ -47,6 +47,10 @@ variables:
   SMTP_HOST: mail.privateemail.com
   SMTP_PORT: "587"                       # 465 = SSL, 587 = STARTTLS
   SMTP_FROM: GojoCalories <contact@gojocalories.com>
+  # Smart nutrition push notifications (see SMART_NOTIFICATIONS.md)
+  SMART_NOTIF_ENABLED: "true"
+  SMART_NOTIF_INTERVAL_HOURS: "2"
+  SMART_NOTIF_TZ_OFFSET_MIN: "60"        # users' timezone offset from UTC in minutes (60 = UTC+1)
 
 secrets:
   OPENAI_API_KEY: /copilot/${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/secrets/OPENAI_API_KEY
@@ -62,4 +66,6 @@ secrets:
   APPLE_SHARED_SECRET: /copilot/${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/secrets/APPLE_SHARED_SECRET
   SMTP_USER: /copilot/${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/secrets/SMTP_USER
   SMTP_PASS: /copilot/${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/secrets/SMTP_PASS
+  ONESIGNAL_REST_API_KEY: /copilot/${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/secrets/ONESIGNAL_REST_API_KEY
+  ADMIN_API_KEY: /copilot/${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/secrets/ADMIN_API_KEY
 # IAM permissions are managed via addons/s3-ssm-policy.yml

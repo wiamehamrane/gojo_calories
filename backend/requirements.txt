@@ -65,3 +65,4 @@ uvicorn==0.44.0
 websockets==16.0
 stripe==11.4.0
 app-store-server-library==3.1.2
+APScheduler==3.11.0

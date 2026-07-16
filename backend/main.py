@@ -501,3 +501,53 @@ async def apple_callback(request: Request):
     )
     return RedirectResponse(url=intent_url)
 
+
+# ── Smart nutrition notification scheduler ────────────────────────────────────
+# Runs the personalized nutrition check every SMART_NOTIF_INTERVAL_HOURS
+# (default 2). The check itself enforces local quiet hours (10:00-22:00)
+# and per-user daily caps, so running it frequently is safe.
+SMART_NOTIF_ENABLED = os.getenv("SMART_NOTIF_ENABLED", "true").lower() in ("1", "true", "yes")
+SMART_NOTIF_INTERVAL_HOURS = float(os.getenv("SMART_NOTIF_INTERVAL_HOURS", "2"))
+
+_scheduler = None
+
+
+@app.on_event("startup")
+def _start_smart_notification_scheduler():
+    global _scheduler
+    if not SMART_NOTIF_ENABLED:
+        logger.info("Smart nutrition scheduler disabled (SMART_NOTIF_ENABLED=false)")
+        return
+    if not os.getenv("ONESIGNAL_REST_API_KEY"):
+        logger.warning("Smart nutrition scheduler not started: ONESIGNAL_REST_API_KEY not set")
+        return
+    try:
+        from apscheduler.schedulers.background import BackgroundScheduler
+        from services.smart_nutrition_service import run_nutrition_check_job
+
+        from datetime import datetime, timezone
+
+        _scheduler = BackgroundScheduler(daemon=True)
+        # Run once immediately on startup, then every SMART_NOTIF_INTERVAL_HOURS.
+        _scheduler.add_job(
+            run_nutrition_check_job,
+            "interval",
+            hours=SMART_NOTIF_INTERVAL_HOURS,
+            id="smart_nutrition_check",
+            max_instances=1,
+            coalesce=True,
+            next_run_time=datetime.now(timezone.utc),
+        )
+        _scheduler.start()
+        logger.info(
+            "Smart nutrition scheduler started (every %.1f h, first run immediate)",
+            SMART_NOTIF_INTERVAL_HOURS,
+        )
+    except Exception:
+        logger.exception("Failed to start smart nutrition scheduler")
+
+
+@app.on_event("shutdown")
+def _stop_smart_notification_scheduler():
+    if _scheduler:
+        _scheduler.shutdown(wait=False)
