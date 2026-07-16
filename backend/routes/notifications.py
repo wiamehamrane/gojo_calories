@@ -42,8 +42,13 @@ def send_onesignal_push(external_ids: List[str], title: str, body: str):
     """Send a push to users identified by their external id (our user id)."""
     if not ONESIGNAL_REST_API_KEY or not external_ids:
         return
+    auth = (
+        f"Key {ONESIGNAL_REST_API_KEY}"
+        if ONESIGNAL_REST_API_KEY.startswith("os_v2_")
+        else f"Basic {ONESIGNAL_REST_API_KEY}"
+    )
     headers = {
-        "Authorization": f"Basic {ONESIGNAL_REST_API_KEY}",
+        "Authorization": auth,
         "Content-Type": "application/json",
     }
     for i in range(0, len(external_ids), ONESIGNAL_BATCH_SIZE):

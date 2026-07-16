@@ -331,12 +331,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 32),
                     child: _LegalFooter(
-                      onTermsTap: () => launchUrl(
-                        Uri.parse('https://gojocalories.com/terms'),
-                      ),
-                      onPrivacyTap: () => launchUrl(
-                        Uri.parse('https://gojocalories.com/privacy-policy'),
-                      ),
+                      onTermsTap: () => context.push(RoutePaths.profileTerms),
+                      onPrivacyTap: () =>
+                          context.push(RoutePaths.profilePrivacy),
                     ),
                   ),
                   SizedBox(height: 24 + MediaQuery.of(context).padding.bottom),
@@ -402,9 +399,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                         onAgreedChanged: (v) =>
                             setState(() => _agreedToPrivacy = v),
                         onSubmit: _submitEmail,
-                        onPrivacyTap: () => launchUrl(
-                          Uri.parse('https://gojocalories.com/privacy-policy'),
-                        ),
+                        onPrivacyTap: () =>
+                            context.push(RoutePaths.profilePrivacy),
                         onForgotPassword: () {
                           final email = Uri.encodeComponent(
                             _emailCtrl.text.trim(),

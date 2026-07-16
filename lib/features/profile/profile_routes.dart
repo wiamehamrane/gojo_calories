@@ -7,6 +7,7 @@ import 'presentation/screens/preferences_screen.dart';
 import 'presentation/screens/language_screen.dart';
 import 'presentation/screens/nutrition_goals_screen.dart';
 import 'presentation/screens/feature_request_screen.dart';
+import 'presentation/screens/legal_screen.dart';
 import '../clan/presentation/screens/clan_screen.dart';
 import '../share/presentation/screens/share_access_screen.dart';
 import '../share/presentation/screens/share_accept_screen.dart';
@@ -56,6 +57,20 @@ List<RouteBase> get profileRoutes => [
         pageBuilder: (context, state) => smoothPushPage(
           state: state,
           child: const FeatureRequestScreen(),
+        ),
+      ),
+      GoRoute(
+        path: RoutePaths.profileTerms,
+        pageBuilder: (context, state) => smoothPushPage(
+          state: state,
+          child: const LegalScreen(docType: LegalDocType.terms),
+        ),
+      ),
+      GoRoute(
+        path: RoutePaths.profilePrivacy,
+        pageBuilder: (context, state) => smoothPushPage(
+          state: state,
+          child: const LegalScreen(docType: LegalDocType.privacy),
         ),
       ),
       GoRoute(

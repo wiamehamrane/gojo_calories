@@ -44,8 +44,8 @@ New reminder types: add an entry to `SMART_MESSAGES` in `backend/routes/notifica
 
 # Personalized Nutrition Notifications (v2)
 
-`backend/services/smart_nutrition_service.py` runs automatically every 2 hours
-(APScheduler, started in `main.py`) and sends each active user at most ONE
+`backend/services/smart_nutrition_service.py` runs automatically at fixed local times each day
+(default 10:00, 12:00, 14:00, 16:00, 18:00, 20:00; APScheduler in `main.py`) and sends each active user at most ONE
 personalized push based on today's `DailyStats` vs their targets, addressed by
 first name.
 
@@ -54,7 +54,7 @@ first name.
 | Rule | When | Message |
 |---|---|---|
 | `overeat` | calories > 110% of budget | "Mohamed, you've eaten 2600 kcal — 400 over budget. A workout would balance it out." |
-| `no_food` | 11:00-14:00, nothing logged | "The morning is almost over and you haven't logged anything yet…" |
+| `no_food` | 10:00-14:00, nothing logged | "The morning is almost over and you haven't logged anything yet…" |
 | `protein_evening` | ≥ 18:00, protein < 75% of target | "Only 40 g of protein to go — prepare a high-protein dinner!" |
 | `day_win` | ≥ 18:00, protein hit & calories within budget | "Amazing work! You hit 130 g of protein…" |
 | `on_track` | 12:00-18:00, 35-75% of calorie budget eaten | "Good job Mohamed! You've eaten 80 g of protein — only 40 g left…" |
@@ -73,7 +73,7 @@ first name.
 ```
 ONESIGNAL_REST_API_KEY=...        # required, scheduler won't start without it
 SMART_NOTIF_ENABLED=true          # set false to disable the scheduler
-SMART_NOTIF_INTERVAL_HOURS=2      # how often the check runs
+SMART_NOTIF_LOCAL_HOURS=10,12,14,16,18,20  # local times the check runs each day
 SMART_NOTIF_TZ_OFFSET_MIN=60      # user base timezone offset from UTC, minutes
 ```
 

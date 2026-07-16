@@ -10,7 +10,7 @@ OneSignal push, addressed by first name, e.g.:
 
 Rules (evaluated in priority order, local time):
   1. overeat          any time    calories > 110% of budget  -> suggest a workout
-  2. no_food          11:00-14:00 nothing logged yet         -> morning-is-over reminder
+  2. no_food          10:00-14:00 nothing logged yet         -> morning-is-over reminder
   3. protein_evening  >= 18:00    protein < 75% of target    -> high-protein dinner reminder
   4. day_win          >= 18:00    protein hit & calories OK  -> congratulate
   5. on_track         12:00-18:00 ~half of budget eaten      -> praise + remaining protein
@@ -102,9 +102,17 @@ def _mark_sent(r, user_id: str, day: str, rule: str):
 
 # ── Push delivery ────────────────────────────────────────────────────────────
 
-def _send_push(user_id: str, title: str, body: str) -> bool:
+def _auth_header() -> str:
+    # OneSignal v2 keys ("os_v2_...") require "Key <key>"; legacy keys use "Basic <key>".
+    if ONESIGNAL_REST_API_KEY.startswith("os_v2_"):
+        return f"Key {ONESIGNAL_REST_API_KEY}"
+    return f"Basic {ONESIGNAL_REST_API_KEY}"
+
+
+def _send_push(user_id: str, title: str, body: str) -> Tuple[bool, str]:
+    """Returns (ok, error_detail)."""
     if not ONESIGNAL_REST_API_KEY:
-        return False
+        return False, "no api key"
     payload = {
         "app_id": ONESIGNAL_APP_ID,
         "include_aliases": {"external_id": [user_id]},
@@ -113,14 +121,27 @@ def _send_push(user_id: str, title: str, body: str) -> bool:
         "contents": {"en": body},
     }
     headers = {
-        "Authorization": f"Basic {ONESIGNAL_REST_API_KEY}",
+        "Authorization": _auth_header(),
         "Content-Type": "application/json",
     }
     try:
         resp = requests.post(ONESIGNAL_API_URL, json=payload, headers=headers, timeout=15)
-        return resp.status_code < 400
-    except requests.RequestException:
-        return False
+        if resp.status_code >= 400:
+            detail = f"HTTP {resp.status_code}: {resp.text[:300]}"
+            logger.warning("OneSignal push failed for user %s — %s", user_id, detail)
+            return False, detail
+        # OneSignal returns 200 with errors when no subscribed device matches.
+        try:
+            data = resp.json()
+            if data.get("errors"):
+                detail = f"errors: {data['errors']}"
+                logger.info("OneSignal push not delivered for user %s — %s", user_id, detail)
+                return False, detail
+        except ValueError:
+            pass
+        return True, ""
+    except requests.RequestException as exc:
+        return False, str(exc)
 
 
 # ── Message building ─────────────────────────────────────────────────────────
@@ -183,7 +204,7 @@ def _pick_rule(hour: int, stats: dict) -> Optional[str]:
 
     if cal > budget * 1.10:
         return "overeat"
-    if 11 <= hour < 14 and cal == 0:
+    if 10 <= hour < 14 and cal == 0:
         return "no_food"
     if hour >= 18:
         if 0 < cal <= budget and protein >= protein_target:
@@ -246,7 +267,7 @@ def run_nutrition_check(db: Session) -> dict:
 
     # During the no_food window, also include verified users with no recent
     # logs — otherwise the "nothing logged" reminder can never reach them.
-    in_no_food_window = 11 <= hour < 14
+    in_no_food_window = 10 <= hour < 14
     if in_no_food_window:
         users: List[User] = (
             db.query(User)
@@ -264,24 +285,47 @@ def run_nutrition_check(db: Session) -> dict:
 
     sent = 0
     breakdown = {}
+    skipped_dedup = 0
+    matched_rules = 0
+    failures = []
     for user in users:
         uid = str(user.id)
         if _sent_count(r, uid, day_key) >= MAX_PER_DAY:
+            skipped_dedup += 1
             continue
 
         stats = _today_stats(db, uid, local_today)
         rule = _pick_rule(hour, stats)
-        if not rule or _already_sent(r, uid, day_key, rule):
+        if not rule:
+            continue
+        if _already_sent(r, uid, day_key, rule):
+            skipped_dedup += 1
             continue
 
+        matched_rules += 1
         title, body = _build_message(rule, user, stats)
-        if _send_push(uid, title, body):
+        ok, err = _send_push(uid, title, body)
+        if ok:
             _mark_sent(r, uid, day_key, rule)
             sent += 1
             breakdown[rule] = breakdown.get(rule, 0) + 1
+        elif len(failures) < 5:
+            failures.append({"user": user.email, "rule": rule, "error": err})
 
-    logger.info("Smart nutrition check: %d users checked, %d pushes sent %s", len(users), sent, breakdown)
-    return {"status": "success", "checked": len(users), "sent": sent, "breakdown": breakdown}
+    logger.info(
+        "Smart nutrition check: %d checked, %d matched, %d sent, %d deduped %s",
+        len(users), matched_rules, sent, skipped_dedup, breakdown,
+    )
+    return {
+        "status": "success",
+        "checked": len(users),
+        "matched_rules": matched_rules,
+        "sent": sent,
+        "skipped_already_sent_today": skipped_dedup,
+        "breakdown": breakdown,
+        "failures_sample": failures,
+        "server_local_time": now_local.strftime("%H:%M"),
+    }
 
 
 def run_nutrition_check_job():

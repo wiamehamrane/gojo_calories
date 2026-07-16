@@ -281,18 +281,12 @@ class ProfileScreen extends ConsumerWidget {
                   _SettingsRow(
                     icon: LucideIcons.fileText,
                     label: t('terms_of_service'),
-                    onTap: () async {
-                      final uri = Uri.parse('https://gojocalories.com/terms-of-service');
-                      if (await canLaunchUrl(uri)) await launchUrl(uri);
-                    },
+                    onTap: () => context.push('/profile/terms'),
                   ),
                   _SettingsRow(
                     icon: LucideIcons.shieldCheck,
                     label: t('privacy_policy'),
-                    onTap: () async {
-                      final uri = Uri.parse('https://gojocalories.com/privacy-policy');
-                      if (await canLaunchUrl(uri)) await launchUrl(uri);
-                    },
+                    onTap: () => context.push('/profile/privacy'),
                   ),
                 ],
               ),

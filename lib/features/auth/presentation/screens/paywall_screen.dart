@@ -458,9 +458,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                       ),
                     ),
                     GestureDetector(
-                      onTap: () => launchUrl(
-                        Uri.parse('https://gojocalories.com/privacy'),
-                      ),
+                      onTap: () => context.push('/profile/privacy'),
                       child: Text(
                         t('privacy_policy'),
                         style: const TextStyle(
@@ -471,8 +469,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                       ),
                     ),
                     GestureDetector(
-                      onTap: () =>
-                          launchUrl(Uri.parse('https://gojocalories.com/tos')),
+                      onTap: () => context.push('/profile/terms'),
                       child: const Text(
                         'Terms of Use (EULA)',
                         style: TextStyle(

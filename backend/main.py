@@ -503,11 +503,12 @@ async def apple_callback(request: Request):
 
 
 # ── Smart nutrition notification scheduler ────────────────────────────────────
-# Runs the personalized nutrition check every SMART_NOTIF_INTERVAL_HOURS
-# (default 2). The check itself enforces local quiet hours (10:00-22:00)
-# and per-user daily caps, so running it frequently is safe.
+# Runs the personalized nutrition check at fixed LOCAL times each day
+# (default 10:00, 12:00, 14:00, 16:00, 18:00, 20:00 — first reminder at 10am,
+# then every 2 hours). Local time = UTC + SMART_NOTIF_TZ_OFFSET_MIN.
+# The check itself enforces quiet hours and per-user daily caps.
 SMART_NOTIF_ENABLED = os.getenv("SMART_NOTIF_ENABLED", "true").lower() in ("1", "true", "yes")
-SMART_NOTIF_INTERVAL_HOURS = float(os.getenv("SMART_NOTIF_INTERVAL_HOURS", "2"))
+SMART_NOTIF_LOCAL_HOURS = os.getenv("SMART_NOTIF_LOCAL_HOURS", "10,12,14,16,18,20")
 
 _scheduler = None
 
@@ -523,25 +524,30 @@ def _start_smart_notification_scheduler():
         return
     try:
         from apscheduler.schedulers.background import BackgroundScheduler
-        from services.smart_nutrition_service import run_nutrition_check_job
+        from services.smart_nutrition_service import TZ_OFFSET_MIN, run_nutrition_check_job
 
-        from datetime import datetime, timezone
+        local_hours = [int(h) for h in SMART_NOTIF_LOCAL_HOURS.split(",") if h.strip()]
+        # Convert local wall-clock times to UTC slots (scheduler runs in UTC).
+        utc_slots = {}
+        for h in local_hours:
+            total = (h * 60 - TZ_OFFSET_MIN) % (24 * 60)
+            utc_slots.setdefault(total % 60, []).append(total // 60)
 
-        _scheduler = BackgroundScheduler(daemon=True)
-        # Run once immediately on startup, then every SMART_NOTIF_INTERVAL_HOURS.
-        _scheduler.add_job(
-            run_nutrition_check_job,
-            "interval",
-            hours=SMART_NOTIF_INTERVAL_HOURS,
-            id="smart_nutrition_check",
-            max_instances=1,
-            coalesce=True,
-            next_run_time=datetime.now(timezone.utc),
-        )
+        _scheduler = BackgroundScheduler(daemon=True, timezone="UTC")
+        for minute, hours in utc_slots.items():
+            _scheduler.add_job(
+                run_nutrition_check_job,
+                "cron",
+                hour=",".join(str(h) for h in sorted(hours)),
+                minute=minute,
+                id=f"smart_nutrition_check_{minute}",
+                max_instances=1,
+                coalesce=True,
+            )
         _scheduler.start()
         logger.info(
-            "Smart nutrition scheduler started (every %.1f h, first run immediate)",
-            SMART_NOTIF_INTERVAL_HOURS,
+            "Smart nutrition scheduler started (local hours %s, tz offset %d min)",
+            local_hours, TZ_OFFSET_MIN,
         )
     except Exception:
         logger.exception("Failed to start smart nutrition scheduler")
