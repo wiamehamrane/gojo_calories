@@ -4,6 +4,8 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/cached_food_image.dart';
+import '../../../food/domain/meal_share_data.dart';
+import '../../../food/presentation/utils/meal_share_helper.dart';
 import '../../domain/models/shared_meal.dart';
 
 /// Card used in the horizontal "Shared meals" row on the Events page.
@@ -142,34 +144,123 @@ void showSharedMealSheet(BuildContext context, SharedMeal meal) {
           controller: scrollController,
           padding: EdgeInsets.zero,
           children: [
-            if (meal.imageUrl != null && meal.imageUrl!.isNotEmpty)
-              SizedBox(
-                height: 240,
-                child: CachedFoodImage(
-                  imageUrl: meal.imageUrl,
-                  fit: BoxFit.cover,
-                  placeholder: const ColoredBox(color: Color(0xFFF2F2F7)),
-                  errorWidget: Container(
+            Stack(
+              children: [
+                if (meal.imageUrl != null && meal.imageUrl!.isNotEmpty)
+                  SizedBox(
+                    height: 240,
+                    width: double.infinity,
+                    child: CachedFoodImage(
+                      imageUrl: meal.imageUrl,
+                      fit: BoxFit.cover,
+                      placeholder: const ColoredBox(color: Color(0xFFF2F2F7)),
+                      errorWidget: Container(
+                        color: AppColors.primaryLight,
+                        child: const Center(
+                          child: Icon(LucideIcons.utensils,
+                              size: 42, color: AppColors.primaryDark),
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  Container(
+                    height: 160,
                     color: AppColors.primaryLight,
                     child: const Center(
                       child: Icon(LucideIcons.utensils,
                           size: 42, color: AppColors.primaryDark),
                     ),
                   ),
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: Material(
+                    color: Colors.black.withValues(alpha: 0.45),
+                    shape: const CircleBorder(),
+                    child: InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        shareMealAsImage(
+                          context,
+                          MealShareData(
+                            name: meal.name,
+                            imageUrl: meal.imageUrl,
+                            calories: meal.calories,
+                            protein: meal.protein,
+                            carbs: meal.carbs,
+                            fat: meal.fat,
+                            ingredients: meal.ingredients,
+                            authorName: meal.authorName,
+                          ),
+                        );
+                      },
+                      child: const SizedBox(
+                        width: 40,
+                        height: 40,
+                        child: Icon(
+                          LucideIcons.share,
+                          size: 18,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
-              ),
+              ],
+            ),
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 20, 24, 40),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    meal.name,
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.textPrimary,
-                    ),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          meal.name,
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      TextButton.icon(
+                        onPressed: () {
+                          HapticFeedback.lightImpact();
+                          shareMealAsImage(
+                            context,
+                            MealShareData(
+                              name: meal.name,
+                              imageUrl: meal.imageUrl,
+                              calories: meal.calories,
+                              protein: meal.protein,
+                              carbs: meal.carbs,
+                              fat: meal.fat,
+                              ingredients: meal.ingredients,
+                              authorName: meal.authorName,
+                            ),
+                          );
+                        },
+                        icon: const Icon(LucideIcons.share, size: 16),
+                        label: const Text('Share'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.primaryDark,
+                          backgroundColor: AppColors.primaryLight,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 4),
                   Text(

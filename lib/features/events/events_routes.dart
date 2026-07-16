@@ -59,7 +59,9 @@ List<RouteBase> get eventsRoutes => [
         parentNavigatorKey: rootNavigatorKey,
         pageBuilder: (context, state) => smoothPushPage(
           state: state,
-          child: const ShareMealScreen(),
+          child: ShareMealScreen(
+            prefill: state.extra as ShareMealPrefill?,
+          ),
         ),
       ),
     ];

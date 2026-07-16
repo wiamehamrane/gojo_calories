@@ -11,6 +11,8 @@ class SharedMealsRepository {
     return res.data as List<dynamic>;
   }
 
+  /// Provide either [imageFile] (new photo) or [sourceImageUrl] (reuse an
+  /// existing food-log photo).
   Future<Map<String, dynamic>> shareMeal({
     required String name,
     required List<String> ingredients,
@@ -19,7 +21,8 @@ class SharedMealsRepository {
     required int protein,
     required int carbs,
     required int fat,
-    required File imageFile,
+    File? imageFile,
+    String? sourceImageUrl,
   }) async {
     final formData = FormData.fromMap({
       'name': name,
@@ -29,10 +32,13 @@ class SharedMealsRepository {
       'protein': protein,
       'carbs': carbs,
       'fat': fat,
-      'file': await MultipartFile.fromFile(
-        imageFile.path,
-        filename: 'meal.jpg',
-      ),
+      if (sourceImageUrl != null && sourceImageUrl.isNotEmpty)
+        'source_image_url': sourceImageUrl,
+      if (imageFile != null)
+        'file': await MultipartFile.fromFile(
+          imageFile.path,
+          filename: 'meal.jpg',
+        ),
     });
     final res = await _dio.post('meals', data: formData);
     return res.data as Map<String, dynamic>;

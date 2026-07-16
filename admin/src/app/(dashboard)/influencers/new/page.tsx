@@ -84,7 +84,7 @@ export default function NewInfluencerPage() {
         backHref="/influencers"
         backLabel="Back to influencers"
         title="Add Influencer"
-        description="Onboard a new partner with panel access, optional Pro subscription, and everything you need to start tracking their promo performance."
+        description="Onboard a new partner with panel access and an optional Pro subscription."
       />
 
       <form onSubmit={handleSubmit} className="space-y-5">
@@ -201,7 +201,7 @@ export default function NewInfluencerPage() {
               checked={form.panel_access}
               onChange={(v) => setField("panel_access", v)}
               label="Panel access"
-              description="Allow login at admin.gojocalories.com to view stats and promo codes"
+              description="Allow login at admin.gojocalories.com to view their partner profile"
             />
             <FormField label="Internal notes">
               <textarea

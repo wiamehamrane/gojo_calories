@@ -107,8 +107,8 @@ const List<_LegalSection> _termsSections = [
     'Some features require a paid subscription. Subscriptions purchased through the Apple App Store or Google Play are billed and managed by those platforms, and renew automatically unless cancelled at least 24 hours before the end of the current period. You can manage or cancel your subscription in your App Store or Google Play account settings. Purchases made through our web checkout are processed by Stripe. Except where required by law or by platform policy, payments are non-refundable.',
   ),
   _LegalSection(
-    '7. Referrals and Promotions',
-    'The App may offer referral rewards or promotional codes. We reserve the right to modify, suspend, or cancel any referral or promotional program at any time, and to withhold rewards obtained through fraud, abuse, or violation of these terms.',
+    '7. Referrals',
+    'The App may offer referral rewards. We reserve the right to modify, suspend, or cancel any referral program at any time, and to withhold rewards obtained through fraud, abuse, or violation of these terms.',
   ),
   _LegalSection(
     '8. User Content and Community Features',

@@ -71,12 +71,6 @@ export default function DashboardPage() {
           value={stats.active_influencers}
           icon={Megaphone}
         />
-        <StatsCard
-          label="Promo Subscriptions"
-          value={stats.total_promo_redemptions}
-          icon={Gift}
-          accent="#E8F5E9"
-        />
       </div>
 
       <div className="mt-8 rounded-[20px] border border-border bg-surface p-6 shadow-sm">

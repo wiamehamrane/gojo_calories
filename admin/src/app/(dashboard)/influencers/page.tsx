@@ -29,7 +29,7 @@ export default function InfluencersPage() {
     <div>
       <PageHeader
         title="Influencers"
-        description="Manage influencer partners, promo codes, and conversions"
+        description="Manage influencer partners and their Pro access"
         action={
           <Link href="/influencers/new">
             <Button>Add Influencer</Button>
@@ -54,8 +54,6 @@ export default function InfluencersPage() {
           columns={[
             { key: "name", label: "Influencer" },
             { key: "platform", label: "Platform" },
-            { key: "codes", label: "Promo Codes" },
-            { key: "subs", label: "Subscriptions" },
             { key: "status", label: "Status" },
             { key: "actions", label: "", className: "text-right" },
           ]}
@@ -72,12 +70,6 @@ export default function InfluencersPage() {
               </div>
             ),
             platform: inf.platform || "—",
-            codes: `${inf.active_codes} active / ${inf.total_codes} total`,
-            subs: (
-              <span className="font-semibold text-primary-dark">
-                {inf.total_redemptions}
-              </span>
-            ),
             status: (
               <div className="flex gap-1">
                 {inf.is_active ? (

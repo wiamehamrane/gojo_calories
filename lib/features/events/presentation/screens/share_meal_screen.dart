@@ -11,10 +11,33 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/error_handler.dart';
 import '../providers/shared_meals_provider.dart';
 
+/// Prefill data when sharing from the food detail screen.
+class ShareMealPrefill {
+  final String name;
+  final int calories;
+  final int protein;
+  final int carbs;
+  final int fat;
+  final List<String> ingredients;
+  final String? imageUrl;
+
+  const ShareMealPrefill({
+    this.name = '',
+    this.calories = 0,
+    this.protein = 0,
+    this.carbs = 0,
+    this.fat = 0,
+    this.ingredients = const [],
+    this.imageUrl,
+  });
+}
+
 /// Share a meal you prepared with the community: photo of the final
 /// product, macros, ingredients, and how to cook it.
 class ShareMealScreen extends ConsumerStatefulWidget {
-  const ShareMealScreen({super.key});
+  final ShareMealPrefill? prefill;
+
+  const ShareMealScreen({super.key, this.prefill});
 
   @override
   ConsumerState<ShareMealScreen> createState() => _ShareMealScreenState();
@@ -30,7 +53,24 @@ class _ShareMealScreenState extends ConsumerState<ShareMealScreen> {
   final _fatCtrl = TextEditingController();
 
   File? _image;
+  String? _existingImageUrl; // photo already stored for this food log
   bool _submitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final p = widget.prefill;
+    if (p != null) {
+      _nameCtrl.text = p.name;
+      if (p.calories > 0) _caloriesCtrl.text = '${p.calories}';
+      if (p.protein > 0) _proteinCtrl.text = '${p.protein}';
+      if (p.carbs > 0) _carbsCtrl.text = '${p.carbs}';
+      if (p.fat > 0) _fatCtrl.text = '${p.fat}';
+      _ingredientsCtrl.text = p.ingredients.join('\n');
+      _existingImageUrl =
+          (p.imageUrl != null && p.imageUrl!.isNotEmpty) ? p.imageUrl : null;
+    }
+  }
 
   @override
   void dispose() {
@@ -69,7 +109,7 @@ class _ShareMealScreenState extends ConsumerState<ShareMealScreen> {
       _showError('Give your meal a name.');
       return;
     }
-    if (_image == null) {
+    if (_image == null && _existingImageUrl == null) {
       _showError('Add a photo of the final product.');
       return;
     }
@@ -93,7 +133,8 @@ class _ShareMealScreenState extends ConsumerState<ShareMealScreen> {
             protein: int.tryParse(_proteinCtrl.text.trim()) ?? 0,
             carbs: int.tryParse(_carbsCtrl.text.trim()) ?? 0,
             fat: int.tryParse(_fatCtrl.text.trim()) ?? 0,
-            imageFile: _image!,
+            imageFile: _image,
+            sourceImageUrl: _image == null ? _existingImageUrl : null,
           );
       if (!mounted) return;
       HapticFeedback.mediumImpact();
@@ -203,6 +244,15 @@ class _ShareMealScreenState extends ConsumerState<ShareMealScreen> {
   }
 
   Widget _buildImagePicker() {
+    DecorationImage? preview;
+    if (_image != null) {
+      preview = DecorationImage(image: FileImage(_image!), fit: BoxFit.cover);
+    } else if (_existingImageUrl != null) {
+      preview = DecorationImage(
+        image: NetworkImage(_existingImageUrl!),
+        fit: BoxFit.cover,
+      );
+    }
     return GestureDetector(
       onTap: _pickImage,
       child: Container(
@@ -211,11 +261,9 @@ class _ShareMealScreenState extends ConsumerState<ShareMealScreen> {
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: AppColors.border),
-          image: _image != null
-              ? DecorationImage(image: FileImage(_image!), fit: BoxFit.cover)
-              : null,
+          image: preview,
         ),
-        child: _image == null
+        child: preview == null
             ? const Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

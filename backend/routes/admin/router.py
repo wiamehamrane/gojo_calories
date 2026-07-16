@@ -21,8 +21,6 @@ from models import (
     Memory,
     Post,
     PostLike,
-    PromoCode,
-    PromoRedemption,
     Referral,
     User,
     Withdrawal,
@@ -241,15 +239,6 @@ def dashboard_stats(
         "active_influencers": (
             db.query(func.count(Influencer.id))
             .filter(Influencer.is_active == True)
-            .scalar()
-            or 0
-        ),
-        "total_promo_redemptions": (
-            db.query(func.count(PromoRedemption.id)).scalar() or 0
-        ),
-        "active_promo_codes": (
-            db.query(func.count(PromoCode.id))
-            .filter(PromoCode.is_active == True)
             .scalar()
             or 0
         ),

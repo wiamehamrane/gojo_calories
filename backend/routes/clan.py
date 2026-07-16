@@ -103,7 +103,7 @@ def get_my_clan(
     return {
         "has_clan": False,
         "clan": None,
-        "can_create": user.has_paid and user.subscription_source in ("apple", "google", "stripe", "clan_owner", "promo"),
+        "can_create": user.has_paid and user.subscription_source in ("apple", "google", "stripe", "clan_owner", "admin_grant"),
         "catalog": build_catalog()["clan_addons"],
         "max_members": CLAN_MAX_MEMBERS,
     }

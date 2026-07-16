@@ -1,24 +1,14 @@
-import datetime
-import random
-import string
-from typing import List, Optional
+from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import desc, func
+from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import Influencer, PromoCode, PromoRedemption, User
+from models import Influencer, User
 from security import get_password_hash, get_current_user, require_admin_user
 from services.subscription_service import grant_subscription, revoke_subscription
-# Store product ids per plan (kept local; the user-facing promo
-# redemption flow has been removed).
-PLAN_TO_STORE_PRODUCT = {
-    "monthly": "gojo_pro_monthly",
-    "six_month": "gojo_pro_six_month",
-    "yearly": "gojo_pro_yearly",
-}
 
 router = APIRouter()
 
@@ -53,62 +43,11 @@ class GrantSubscriptionRequest(BaseModel):
     plan_type: str  # monthly | yearly | lifetime | trial_7d
 
 
-class PromoCodeCreate(BaseModel):
-    code: Optional[str] = None
-    platform: str = "internal"  # internal | apple | google
-    plan_type: str
-    max_redemptions: Optional[int] = None
-    expires_at: Optional[datetime.datetime] = None
-    notes: Optional[str] = None
-
-
-class AppleBatchPromoCreate(BaseModel):
-    plan_type: str
-    number_of_codes: int = 10
-    expiration_date: str  # YYYY-MM-DD
-    environment: str = "production"
-
-
-class PromoCodeUpdate(BaseModel):
-    plan_type: Optional[str] = None
-    max_redemptions: Optional[int] = None
-    is_active: Optional[bool] = None
-    expires_at: Optional[datetime.datetime] = None
-
-
 # ── Helpers ───────────────────────────────────────────────────────────────────
-
-
-def _generate_code(length: int = 8) -> str:
-    chars = string.ascii_uppercase + string.digits
-    return "".join(random.choices(chars, k=length))
 
 
 def _influencer_summary(influencer: Influencer, db: Session) -> dict:
     user = influencer.user
-    total_codes = (
-        db.query(func.count(PromoCode.id))
-        .filter(PromoCode.influencer_id == influencer.id)
-        .scalar()
-        or 0
-    )
-    total_redemptions = (
-        db.query(func.count(PromoRedemption.id))
-        .join(PromoCode)
-        .filter(PromoCode.influencer_id == influencer.id)
-        .scalar()
-        or 0
-    )
-    active_codes = (
-        db.query(func.count(PromoCode.id))
-        .filter(
-            PromoCode.influencer_id == influencer.id,
-            PromoCode.is_active == True,
-        )
-        .scalar()
-        or 0
-    )
-
     return {
         "id": influencer.id,
         "user_id": influencer.user_id,
@@ -128,37 +67,7 @@ def _influencer_summary(influencer: Influencer, db: Session) -> dict:
             if user and user.subscription_expires_at
             else None
         ),
-        "total_codes": total_codes,
-        "active_codes": active_codes,
-        "total_redemptions": total_redemptions,
         "created_at": influencer.created_at.isoformat() if influencer.created_at else None,
-    }
-
-
-def _promo_summary(promo: PromoCode, db: Session) -> dict:
-    platform = promo.platform or "internal"
-    return {
-        "id": promo.id,
-        "code": promo.code,
-        "platform": platform,
-        "plan_type": promo.plan_type,
-        "store_product_id": promo.store_product_id,
-        "notes": promo.notes,
-        "max_redemptions": promo.max_redemptions,
-        "redemption_count": promo.redemption_count,
-        "is_active": promo.is_active,
-        "expires_at": promo.expires_at.isoformat() if promo.expires_at else None,
-        "created_at": promo.created_at.isoformat() if promo.created_at else None,
-        "remaining": (
-            promo.max_redemptions - promo.redemption_count
-            if promo.max_redemptions is not None
-            else None
-        ),
-        "redeem_url": (
-            f"https://play.google.com/redeem?code={promo.code}"
-            if platform == "google"
-            else None
-        ),
     }
 
 
@@ -248,36 +157,7 @@ def get_influencer(
     influencer = db.query(Influencer).filter(Influencer.id == influencer_id).first()
     if not influencer:
         raise HTTPException(status_code=404, detail="Influencer not found")
-
-    promos = (
-        db.query(PromoCode)
-        .filter(PromoCode.influencer_id == influencer_id)
-        .order_by(desc(PromoCode.created_at))
-        .all()
-    )
-    redemptions = (
-        db.query(PromoRedemption)
-        .join(PromoCode)
-        .filter(PromoCode.influencer_id == influencer_id)
-        .order_by(desc(PromoRedemption.redeemed_at))
-        .limit(50)
-        .all()
-    )
-
-    return {
-        **_influencer_summary(influencer, db),
-        "promo_codes": [_promo_summary(p, db) for p in promos],
-        "recent_redemptions": [
-            {
-                "id": r.id,
-                "user_email": r.user.email if r.user else None,
-                "code": r.promo_code.code if r.promo_code else None,
-                "plan_granted": r.plan_granted,
-                "redeemed_at": r.redeemed_at.isoformat() if r.redeemed_at else None,
-            }
-            for r in redemptions
-        ],
-    }
+    return _influencer_summary(influencer, db)
 
 
 @router.patch("/influencers/{influencer_id}")
@@ -347,186 +227,6 @@ def revoke_influencer_subscription(
     return _influencer_summary(influencer, db)
 
 
-# ── Promo codes ───────────────────────────────────────────────────────────────
-
-
-@router.post("/influencers/{influencer_id}/promo-codes")
-def create_promo_code(
-    influencer_id: str,
-    body: PromoCodeCreate,
-    admin: User = Depends(require_admin_user),
-    db: Session = Depends(get_db),
-):
-    influencer = db.query(Influencer).filter(Influencer.id == influencer_id).first()
-    if not influencer:
-        raise HTTPException(status_code=404, detail="Influencer not found")
-
-    valid_plans = ("monthly", "six_month", "yearly", "lifetime", "trial_7d")
-    if body.plan_type not in valid_plans:
-        raise HTTPException(status_code=400, detail=f"Plan must be one of: {valid_plans}")
-
-    platform = (body.platform or "internal").lower()
-    if platform not in ("internal", "apple", "google"):
-        raise HTTPException(status_code=400, detail="Platform must be internal, apple, or google")
-
-    code = (body.code or _generate_code()).strip().upper()
-    existing = db.query(PromoCode).filter(PromoCode.code == code).first()
-    if existing:
-        raise HTTPException(status_code=400, detail="Promo code already exists")
-
-    store_product_id = None
-    if platform in ("apple", "google"):
-        store_product_id = PLAN_TO_STORE_PRODUCT.get(body.plan_type)
-        if not store_product_id:
-            raise HTTPException(
-                status_code=400,
-                detail=f"No store product mapped for plan {body.plan_type}",
-            )
-        if not body.code:
-            raise HTTPException(
-                status_code=400,
-                detail="Store promo codes must be registered with the exact code from App Store Connect or Google Play Console",
-            )
-
-    promo = PromoCode(
-        influencer_id=influencer_id,
-        code=code,
-        platform=platform,
-        plan_type=body.plan_type,
-        store_product_id=store_product_id,
-        notes=body.notes,
-        max_redemptions=body.max_redemptions,
-        expires_at=body.expires_at,
-    )
-    db.add(promo)
-    db.commit()
-    db.refresh(promo)
-    return _promo_summary(promo, db)
-
-
-@router.post("/influencers/{influencer_id}/promo-codes/apple-batch")
-def create_apple_batch_promo_codes(
-    influencer_id: str,
-    body: AppleBatchPromoCreate,
-    admin: User = Depends(require_admin_user),
-    db: Session = Depends(get_db),
-):
-    """Generate one-time offer codes via App Store Connect API and register each in our DB."""
-    from services import apple_asc_service
-
-    influencer = db.query(Influencer).filter(Influencer.id == influencer_id).first()
-    if not influencer:
-        raise HTTPException(status_code=404, detail="Influencer not found")
-
-    valid_plans = ("monthly", "six_month", "yearly")
-    if body.plan_type not in valid_plans:
-        raise HTTPException(status_code=400, detail=f"Plan must be one of: {valid_plans}")
-
-    if body.number_of_codes < 1 or body.number_of_codes > 500:
-        raise HTTPException(status_code=400, detail="number_of_codes must be between 1 and 500")
-
-    try:
-        codes = apple_asc_service.generate_one_time_codes(
-            plan_type=body.plan_type,
-            number_of_codes=body.number_of_codes,
-            expiration_date=body.expiration_date,
-            environment=body.environment,
-        )
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=str(e))
-
-    store_product_id = PLAN_TO_STORE_PRODUCT.get(body.plan_type)
-    created = []
-    for raw_code in codes:
-        code = raw_code.strip().upper()
-        if db.query(PromoCode).filter(PromoCode.code == code).first():
-            continue
-        promo = PromoCode(
-            influencer_id=influencer_id,
-            code=code,
-            platform="apple",
-            plan_type=body.plan_type,
-            store_product_id=store_product_id,
-            notes=f"ASC batch {body.expiration_date}",
-            max_redemptions=1,
-        )
-        db.add(promo)
-        created.append(code)
-
-    db.commit()
-    promos = (
-        db.query(PromoCode)
-        .filter(PromoCode.influencer_id == influencer_id, PromoCode.code.in_(created))
-        .all()
-    )
-    return {
-        "generated_count": len(created),
-        "codes": [_promo_summary(p, db) for p in promos],
-    }
-
-
-@router.patch("/influencers/{influencer_id}/promo-codes/{promo_id}")
-def update_promo_code(
-    influencer_id: str,
-    promo_id: str,
-    body: PromoCodeUpdate,
-    admin: User = Depends(require_admin_user),
-    db: Session = Depends(get_db),
-):
-    promo = (
-        db.query(PromoCode)
-        .filter(PromoCode.id == promo_id, PromoCode.influencer_id == influencer_id)
-        .first()
-    )
-    if not promo:
-        raise HTTPException(status_code=404, detail="Promo code not found")
-
-    updates = body.model_dump(exclude_unset=True)
-    for key, value in updates.items():
-        setattr(promo, key, value)
-    db.commit()
-    db.refresh(promo)
-    return _promo_summary(promo, db)
-
-
-@router.get("/influencers/{influencer_id}/promo-codes/{promo_id}/redemptions")
-def list_promo_redemptions(
-    influencer_id: str,
-    promo_id: str,
-    admin: User = Depends(require_admin_user),
-    db: Session = Depends(get_db),
-):
-    promo = (
-        db.query(PromoCode)
-        .filter(PromoCode.id == promo_id, PromoCode.influencer_id == influencer_id)
-        .first()
-    )
-    if not promo:
-        raise HTTPException(status_code=404, detail="Promo code not found")
-
-    redemptions = (
-        db.query(PromoRedemption)
-        .filter(PromoRedemption.promo_code_id == promo_id)
-        .order_by(desc(PromoRedemption.redeemed_at))
-        .all()
-    )
-
-    return {
-        "code": promo.code,
-        "items": [
-            {
-                "id": r.id,
-                "user_id": r.user_id,
-                "user_email": r.user.email if r.user else None,
-                "plan_granted": r.plan_granted,
-                "redeemed_at": r.redeemed_at.isoformat() if r.redeemed_at else None,
-            }
-            for r in redemptions
-        ],
-        "total": len(redemptions),
-    }
-
-
 # ── Influencer self-service (panel access) ────────────────────────────────────
 
 
@@ -546,33 +246,4 @@ def influencer_me(
     if not influencer or not influencer.panel_access:
         raise HTTPException(status_code=403, detail="Influencer access required")
 
-    promos = (
-        db.query(PromoCode)
-        .filter(PromoCode.influencer_id == influencer.id)
-        .order_by(desc(PromoCode.created_at))
-        .all()
-    )
-    redemptions = (
-        db.query(PromoRedemption)
-        .join(PromoCode)
-        .filter(PromoCode.influencer_id == influencer.id)
-        .order_by(desc(PromoRedemption.redeemed_at))
-        .limit(50)
-        .all()
-    )
-
-    return {
-        **_influencer_summary(influencer, db),
-        "promo_codes": [_promo_summary(p, db) for p in promos],
-        "recent_redemptions": [
-            {
-                "id": r.id,
-                "user_email": r.user.email if r.user else None,
-                "code": r.promo_code.code if r.promo_code else None,
-                "plan_granted": r.plan_granted,
-                "redeemed_at": r.redeemed_at.isoformat() if r.redeemed_at else None,
-            }
-            for r in redemptions
-        ],
-    }
-
+    return _influencer_summary(influencer, db)

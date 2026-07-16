@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -7,6 +8,7 @@ import 'package:gojocalories/core/theme/app_colors.dart';
 import 'package:gojocalories/core/theme/app_radius.dart';
 import 'package:gojocalories/core/theme/app_spacing.dart';
 import '../providers/feed_provider.dart';
+import '../utils/feed_share_helper.dart';
 
 class FeedTab extends ConsumerWidget {
   const FeedTab({super.key});
@@ -314,9 +316,15 @@ class _PostCard extends StatelessWidget {
                         label: '0',
                       ),
                       const SizedBox(width: 16),
-                      const _PostActionOverlay(
-                        icon: LucideIcons.send,
-                        label: '',
+                      GestureDetector(
+                        onTap: () {
+                          HapticFeedback.lightImpact();
+                          shareFeedPostAsImage(context, post);
+                        },
+                        child: const _PostActionOverlay(
+                          icon: LucideIcons.send,
+                          label: '',
+                        ),
                       ),
                       const Spacer(),
                       const Icon(

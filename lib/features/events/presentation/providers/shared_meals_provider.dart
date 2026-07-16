@@ -36,7 +36,8 @@ class SharedMealsNotifier extends Notifier<AsyncValue<List<SharedMeal>>> {
     required int protein,
     required int carbs,
     required int fat,
-    required File imageFile,
+    File? imageFile,
+    String? sourceImageUrl,
   }) async {
     final data = await ref.read(sharedMealsRepositoryProvider).shareMeal(
           name: name,
@@ -47,6 +48,7 @@ class SharedMealsNotifier extends Notifier<AsyncValue<List<SharedMeal>>> {
           carbs: carbs,
           fat: fat,
           imageFile: imageFile,
+          sourceImageUrl: sourceImageUrl,
         );
     final meal = SharedMeal.fromJson(data);
     final current = state.value ?? [];

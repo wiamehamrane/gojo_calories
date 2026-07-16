@@ -14,7 +14,12 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from models import SharedMeal, User
-from s3_utils import MediaUploadError, resolve_media_url, upload_image_to_s3_key
+from s3_utils import (
+    MediaUploadError,
+    extract_s3_key_from_url,
+    resolve_media_url,
+    upload_image_to_s3_key,
+)
 from security import get_current_user
 
 logger = logging.getLogger(__name__)
@@ -67,7 +72,8 @@ async def share_meal(
     protein: int = Form(0),
     carbs: int = Form(0),
     fat: int = Form(0),
-    file: UploadFile = File(...),
+    file: Optional[UploadFile] = File(None),
+    source_image_url: str = Form(""),  # reuse an existing food-log photo
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -84,20 +90,35 @@ async def share_meal(
         ingredient_list = [line.strip() for line in raw.split("\n") if line.strip()]
     ingredient_list = [str(i).strip() for i in ingredient_list if str(i).strip()][:40]
 
-    contents = await file.read()
-    if not contents:
+    image_key: Optional[str] = None
+    if file is not None:
+        contents = await file.read()
+        if not contents:
+            raise HTTPException(status_code=400, detail="The uploaded photo is empty")
+        try:
+            image_key = upload_image_to_s3_key(
+                contents, file.content_type or "image/jpeg", prefix="shared_meals/"
+            )
+        except MediaUploadError as e:
+            logger.error("Shared meal image upload failed: %s", e)
+            raise HTTPException(
+                status_code=503,
+                detail="Image upload failed. Media storage is temporarily unavailable.",
+            ) from e
+    elif source_image_url.strip():
+        # Reuse the photo already stored for this food log.
+        entry = source_image_url.strip()
+        if entry.startswith("http"):
+            image_key = extract_s3_key_from_url(entry)
+        elif not entry.startswith("/"):
+            image_key = entry  # already a raw S3 key
+        if not image_key:
+            raise HTTPException(
+                status_code=400,
+                detail="Could not reuse the existing photo. Please pick a new one.",
+            )
+    else:
         raise HTTPException(status_code=400, detail="A photo of the meal is required")
-
-    try:
-        image_key = upload_image_to_s3_key(
-            contents, file.content_type or "image/jpeg", prefix="shared_meals/"
-        )
-    except MediaUploadError as e:
-        logger.error("Shared meal image upload failed: %s", e)
-        raise HTTPException(
-            status_code=503,
-            detail="Image upload failed. Media storage is temporarily unavailable.",
-        ) from e
 
     meal = SharedMeal(
         user_id=current_user.id,

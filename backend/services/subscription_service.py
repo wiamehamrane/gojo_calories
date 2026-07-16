@@ -24,7 +24,7 @@ def expires_at_for_plan(plan_type: str, from_time: Optional[datetime.datetime] =
 def grant_subscription(
     user: User,
     plan_type: str,
-    source: str = "promo",
+    source: str = "admin_grant",
 ) -> None:
     """Activate or extend a subscription on a user account."""
     user.has_paid = True

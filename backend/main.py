@@ -106,30 +106,6 @@ try:
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """))
-        conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS promo_codes (
-                id VARCHAR(36) PRIMARY KEY,
-                influencer_id VARCHAR(36) NOT NULL REFERENCES influencers(id) ON DELETE CASCADE,
-                code VARCHAR NOT NULL UNIQUE,
-                plan_type VARCHAR NOT NULL,
-                max_redemptions INTEGER,
-                redemption_count INTEGER DEFAULT 0,
-                is_active BOOLEAN DEFAULT TRUE,
-                expires_at TIMESTAMP,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        """))
-        conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS promo_redemptions (
-                id VARCHAR(36) PRIMARY KEY,
-                promo_code_id VARCHAR(36) NOT NULL REFERENCES promo_codes(id) ON DELETE CASCADE,
-                user_id VARCHAR(36) NOT NULL UNIQUE REFERENCES users(id),
-                plan_granted VARCHAR NOT NULL,
-                redeemed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        """))
-        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_promo_codes_influencer ON promo_codes (influencer_id);"))
-        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_promo_redemptions_code ON promo_redemptions (promo_code_id);"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_plan VARCHAR;"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_discount_used BOOLEAN DEFAULT FALSE;"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS clan_id VARCHAR(36);"))
@@ -166,10 +142,6 @@ try:
             );
         """))
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_clan_members_clan ON clan_members (clan_id);"))
-        conn.execute(text("ALTER TABLE promo_codes ADD COLUMN IF NOT EXISTS platform VARCHAR DEFAULT 'internal';"))
-        conn.execute(text("ALTER TABLE promo_codes ADD COLUMN IF NOT EXISTS store_product_id VARCHAR;"))
-        conn.execute(text("ALTER TABLE promo_codes ADD COLUMN IF NOT EXISTS notes TEXT;"))
-        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS pending_promo_code_id VARCHAR(36);"))
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS share_grants (
                 id VARCHAR(36) PRIMARY KEY,
