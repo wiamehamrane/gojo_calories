@@ -9,6 +9,7 @@ from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
 
 from database import get_db
+from s3_utils import resolve_media_url
 import models
 from security import get_current_user
 from services import share_service
@@ -215,7 +216,7 @@ def shared_history(
             "name_fr": log.name_fr,
             "name_ar": log.name_ar,
             "calories": log.calories,
-            "image_url": log.image_url,
+            "image_url": resolve_media_url(log.image_url),
             "protein": log.protein,
             "carbs": log.carbs,
             "fat": log.fat,

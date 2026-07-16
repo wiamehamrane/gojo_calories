@@ -159,3 +159,20 @@ def extract_s3_key_from_url(url: str):
     if bucket and path.startswith(f"{bucket}/"):
         path = path[len(bucket) + 1:]
     return path or None
+
+
+def resolve_media_url(entry):
+    """Turn a stored media entry into a URL valid right now.
+
+    - S3 keys (new style) get a fresh presigned URL on every read.
+    - Legacy presigned URLs (possibly expired) are re-signed from their key.
+    - Local /uploads paths and non-S3 URLs pass through unchanged.
+    """
+    if not entry or not isinstance(entry, str):
+        return entry
+    if entry.startswith('http'):
+        key = extract_s3_key_from_url(entry)
+        return presign_s3_key(key) if key else entry
+    if entry.startswith('/'):
+        return entry
+    return presign_s3_key(entry)

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from database import get_db
+from s3_utils import resolve_media_url
 from models import DailyStats, User, WeighIn
 from pydantic import BaseModel
 from typing import List, Optional
@@ -318,7 +319,7 @@ def get_user_history(
             "name_fr": log.name_fr,
             "name_ar": log.name_ar,
             "calories": log.calories,
-            "image_url": log.image_url,
+            "image_url": resolve_media_url(log.image_url),
             "protein": log.protein,
             "carbs": log.carbs,
             "fat": log.fat,

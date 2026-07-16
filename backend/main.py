@@ -19,7 +19,7 @@ load_dotenv()
 
 os.makedirs("uploads", exist_ok=True)
 
-from routes import vision, auth, stats, groups, referrals, payments, notifications, exercises, recipes, events, apple_iap, google_iap, memories, feed, friends, promo, clan, shares
+from routes import vision, auth, stats, groups, referrals, payments, notifications, exercises, recipes, events, apple_iap, google_iap, memories, feed, friends, clan, shares, shared_meals
 from routes.admin import router as admin_router
 
 # Durable media storage check — local /uploads is wiped on every ECS redeploy.
@@ -469,7 +469,6 @@ def share_join_landing(token: str = ""):
 
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(payments.router, prefix="/api/payments", tags=["Payments"])
-app.include_router(promo.router, prefix="/api/payments", tags=["Promo"])
 app.include_router(clan.router, prefix="/api/clan", tags=["Clan"])
 app.include_router(shares.router, prefix="/api/shares", tags=["Share Access"])
 app.include_router(apple_iap.router, prefix="/api/payments/apple", tags=["Apple IAP"])
@@ -485,6 +484,7 @@ app.include_router(exercises.router, prefix="/api/exercises", tags=["Exercises"]
 app.include_router(recipes.router, prefix="/api/recipes", tags=["Recipes"])
 app.include_router(events.router, prefix="/api/events", tags=["Events"])
 app.include_router(memories.router, prefix="/api/memories", tags=["Memories"])
+app.include_router(shared_meals.router, prefix="/api/meals", tags=["Shared Meals"])
 app.include_router(feed.router, prefix="/api/feed", tags=["Feed"])
 app.include_router(friends.router, prefix="/api/friends", tags=["Friends"])
 app.include_router(admin_router.router, prefix="/api/admin", tags=["Admin"])

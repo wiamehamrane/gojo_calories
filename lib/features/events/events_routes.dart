@@ -8,6 +8,7 @@ import 'presentation/screens/edit_event_screen.dart';
 import 'presentation/screens/event_detail_screen.dart';
 import 'presentation/screens/events_feed_screen.dart';
 import 'presentation/screens/my_events_screen.dart';
+import 'presentation/screens/share_meal_screen.dart';
 
 List<RouteBase> get eventsShellRoutes => [
       GoRoute(
@@ -51,6 +52,14 @@ List<RouteBase> get eventsRoutes => [
         pageBuilder: (context, state) => smoothPushPage(
           state: state,
           child: EditEventScreen(event: state.extra as Event),
+        ),
+      ),
+      GoRoute(
+        path: RoutePaths.shareMeal,
+        parentNavigatorKey: rootNavigatorKey,
+        pageBuilder: (context, state) => smoothPushPage(
+          state: state,
+          child: const ShareMealScreen(),
         ),
       ),
     ];

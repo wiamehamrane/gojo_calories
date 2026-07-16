@@ -10,9 +10,12 @@ import 'package:gojocalories/core/theme/app_radius.dart';
 import 'package:gojocalories/core/theme/app_spacing.dart';
 import 'package:gojocalories/core/theme/app_text_styles.dart';
 import '../providers/events_provider.dart';
+import '../providers/shared_meals_provider.dart';
 import '../widgets/event_card.dart';
 import '../widgets/event_shimmer.dart';
+import '../widgets/shared_meal_card.dart';
 import '../../domain/models/event.dart';
+import '../../domain/models/shared_meal.dart';
 
 const _kDarkBackground = Color(0xFF0A0A0A);
 const _kSheetRadius = 32.0;
@@ -92,7 +95,10 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
           onRefresh: () async {
             setState(() => _activeQuery = null);
             _searchController.clear();
-            await ref.read(eventsProvider.notifier).fetchEvents();
+            await Future.wait([
+              ref.read(eventsProvider.notifier).fetchEvents(),
+              ref.read(sharedMealsProvider.notifier).fetchMeals(),
+            ]);
           },
           child: CustomScrollView(
             physics: const BouncingScrollPhysics(),
@@ -274,6 +280,7 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (_activeQuery == null) _buildSharedMealsSection(),
           Padding(
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.screenPadding,
@@ -297,9 +304,128 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
     );
   }
 
+  // ── Shared meals row ─────────────────────────────────────────────────────
+
+  Widget _buildSharedMealsSection() {
+    final mealsAsync = ref.watch(sharedMealsProvider);
+    final meals = mealsAsync.value ?? const <SharedMeal>[];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.screenPadding,
+            20,
+            AppSpacing.screenPadding,
+            12,
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Shared meals',
+                  style: AppTextStyles.sectionHeader.copyWith(fontSize: 18),
+                ),
+              ),
+              GestureDetector(
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  context.push(RoutePaths.shareMeal);
+                },
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryLight,
+                    borderRadius: BorderRadius.circular(AppRadius.chip),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(LucideIcons.plus,
+                          size: 13, color: AppColors.primaryDark),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Share yours',
+                        style: AppTextStyles.bodyBold.copyWith(
+                          fontSize: 12,
+                          color: AppColors.primaryDark,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(
+          height: 208,
+          child: mealsAsync.isLoading && meals.isEmpty
+              ? const Center(
+                  child: CupertinoActivityIndicator(radius: 11),
+                )
+              : meals.isEmpty
+                  ? _buildSharedMealsEmpty()
+                  : ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.screenPadding,
+                      ),
+                      itemCount: meals.length,
+                      itemBuilder: (context, index) =>
+                          SharedMealCard(meal: meals[index]),
+                    ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSharedMealsEmpty() {
+    return Padding(
+      padding:
+          const EdgeInsets.symmetric(horizontal: AppSpacing.screenPadding),
+      child: GestureDetector(
+        onTap: () => context.push(RoutePaths.shareMeal),
+        child: Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: AppColors.surfaceMuted,
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(LucideIcons.utensils,
+                  size: 30, color: AppColors.inactive),
+              const SizedBox(height: 10),
+              Text(
+                'No meals shared yet',
+                style: AppTextStyles.bodyBold.copyWith(fontSize: 14),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Cooked something great? Share it\nwith photo, macros & recipe.',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.bodyRegular.copyWith(
+                  fontSize: 12,
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildSectionHeader() {
     if (_activeQuery == null) {
-     return SizedBox();
+      return Text(
+        'Upcoming events',
+        style: AppTextStyles.sectionHeader.copyWith(fontSize: 18),
+      );
     }
     return Row(
       children: [

@@ -12,7 +12,13 @@ from database import get_db
 from models import Influencer, PromoCode, PromoRedemption, User
 from security import get_password_hash, get_current_user, require_admin_user
 from services.subscription_service import grant_subscription, revoke_subscription
-from services.promo_redemption_service import PLAN_TO_STORE_PRODUCT
+# Store product ids per plan (kept local; the user-facing promo
+# redemption flow has been removed).
+PLAN_TO_STORE_PRODUCT = {
+    "monthly": "gojo_pro_monthly",
+    "six_month": "gojo_pro_six_month",
+    "yearly": "gojo_pro_yearly",
+}
 
 router = APIRouter()
 

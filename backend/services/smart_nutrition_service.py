@@ -130,13 +130,16 @@ def _send_push(user_id: str, title: str, body: str) -> Tuple[bool, str]:
             detail = f"HTTP {resp.status_code}: {resp.text[:300]}"
             logger.warning("OneSignal push failed for user %s — %s", user_id, detail)
             return False, detail
-        # OneSignal returns 200 with errors when no subscribed device matches.
+        # OneSignal may return "errors" for stale duplicate registrations while
+        # still delivering to the valid subscription. The reliable success
+        # signal is a non-empty notification "id" in the response.
         try:
             data = resp.json()
-            if data.get("errors"):
-                detail = f"errors: {data['errors']}"
-                logger.info("OneSignal push not delivered for user %s — %s", user_id, detail)
-                return False, detail
+            if data.get("id"):
+                return True, ""
+            detail = f"errors: {data.get('errors') or data}"
+            logger.info("OneSignal push not delivered for user %s — %s", user_id, detail)
+            return False, detail
         except ValueError:
             pass
         return True, ""

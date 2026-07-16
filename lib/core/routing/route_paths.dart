@@ -16,6 +16,7 @@ abstract final class RoutePaths {
   static const eventDetail = '/events/detail/:id';
   static const myEvents = '/events/mine';
   static const editEvent = '/events/edit';
+  static const shareMeal = '/meals/share';
   static const profile = '/profile';
 
   static const profilePersonal = '/profile/personal';

@@ -1,4 +1,5 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Query, Request
+from s3_utils import resolve_media_url
 import os
 from typing import Optional, Any, List
 from dotenv import load_dotenv
@@ -139,9 +140,11 @@ Schema:
         # Upload to S3 (non-fatal — if it fails we just skip the image URL)
         s3_url = None
         try:
-            from s3_utils import upload_image_to_s3
+            from s3_utils import upload_image_to_s3_key
             logger.info(f"Uploading vision scan image to S3 for user {current_user_id}")
-            s3_url = upload_image_to_s3(contents, file.content_type or 'image/jpeg')
+            # Store the stable S3 key; presigned URLs are generated on read
+            # so food images never expire or vanish on redeploy.
+            s3_url = upload_image_to_s3_key(contents, file.content_type or 'image/jpeg', prefix="food_logs/")
         except Exception as s3_err:
             logger.error(f"S3 upload error in vision scan: {s3_err}")
         
@@ -227,7 +230,8 @@ Schema:
         except Exception:
             pass
 
-        data['image_url'] = s3_url
+        from s3_utils import resolve_media_url
+        data['image_url'] = resolve_media_url(s3_url)
         if s3_url and s3_url.startswith('/'):
             # Convert relative path to absolute URL
             base_url = str(request.base_url).rstrip('/')
@@ -372,8 +376,9 @@ async def fix_food_log(body: FixRequest, current_user_id: str = Depends(get_curr
             except Exception:
                 pass
             
+            from s3_utils import resolve_media_url
             data['log_id'] = log.id
-            data['image_url'] = log.image_url
+            data['image_url'] = resolve_media_url(log.image_url)
             data['created_at'] = log.created_at.isoformat() + "Z"
             return data
             
@@ -715,7 +720,7 @@ async def get_saved_foods(
                 "name_en": f.name_en,
                 "name_fr": f.name_fr,
                 "name_ar": f.name_ar,
-                "image_url": f.image_url,
+                "image_url": resolve_media_url(f.image_url),
                 "calories": f.calories,
                 "protein": f.protein,
                 "carbs": f.carbs,

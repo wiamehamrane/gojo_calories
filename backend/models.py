@@ -184,6 +184,27 @@ class ExerciseLog(Base):
     
     user = relationship("User", back_populates="exercise_logs")
 
+class SharedMeal(Base):
+    """A meal a user prepared and shared with the community.
+
+    Shown as a horizontal row on the Events page: photo of the final
+    product, macros, ingredients, and how to cook it.
+    """
+    __tablename__ = "shared_meals"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid, index=True)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    name = Column(String, nullable=False)
+    image_url = Column(String, nullable=True)          # stable S3 key
+    ingredients = Column(JSON, nullable=False)         # list[str]
+    instructions = Column(Text, nullable=True)         # how to cook
+    calories = Column(Integer, default=0)
+    protein = Column(Integer, default=0)
+    carbs = Column(Integer, default=0)
+    fat = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
 class Recipe(Base):
     __tablename__ = "recipes"
     

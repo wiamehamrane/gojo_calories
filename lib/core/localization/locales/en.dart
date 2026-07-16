@@ -260,14 +260,6 @@ const Map<String, String> en = {
   'onboard_referral_title': 'Got a referral code?',
   'onboard_referral_subtitle': 'Enter it here (optional)',
   'promo_code_hint': 'Promo code',
-  'redeem_promo_title': 'Redeem promo code',
-  'redeem_promo': 'Redeem',
-  'redeem_promo_subtitle': 'Enter an influencer or partner code (e.g. WIAM10)',
-  'promo_redeemed': 'Promo code applied! 🎉',
-  'promo_apple_continue':
-      'Complete redemption in the App Store, then subscribe or restore purchases in Gojo.',
-  'promo_google_continue':
-      'Finish in Google Play, then return and subscribe or restore purchases.',
   'promo_invalid': 'Invalid or expired promo code',
   'cannot_fix_unsaved': 'Cannot fix an unsaved log.',
   'failed_save_details': 'Failed to save changes.',

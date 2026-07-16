@@ -26,12 +26,17 @@ import '../../../tasks/presentation/widgets/day_progress_dots.dart';
 import '../widgets/bmi_widget.dart';
 import '../widgets/health_connect_card.dart';
 import '../../../tasks/presentation/widgets/active_tasks_carousel.dart';
+import '../../../profile/presentation/providers/profile_providers.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Eagerly load the profile so the device is linked to the user in
+    // OneSignal (push notifications) as soon as the user lands on Home —
+    // not only when they open the Profile tab.
+    ref.watch(profileProvider);
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: SafeArea(

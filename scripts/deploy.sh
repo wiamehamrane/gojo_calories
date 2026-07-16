@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e
+export AWS_PAGER=""  # never open interactive pager for AWS CLI output
 
 AWS_REGION="${AWS_REGION:-us-east-1}"
 AWS_ACCOUNT_ID="${AWS_ACCOUNT_ID:-640471340191}"

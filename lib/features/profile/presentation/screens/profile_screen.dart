@@ -22,7 +22,6 @@ import '../../../../core/di/repository_providers.dart';
 import '../../../../core/utils/error_handler.dart';
 import '../../../../core/widgets/app_pressable.dart';
 import '../providers/profile_providers.dart';
-import '../widgets/redeem_promo_sheet.dart';
 
 
 class ProfileScreen extends ConsumerWidget {
@@ -172,11 +171,6 @@ class ProfileScreen extends ConsumerWidget {
                     icon: LucideIcons.languages,
                     label: t('language'),
                     onTap: () => context.push('/profile/language'),
-                  ),
-                  _SettingsRow(
-                    icon: LucideIcons.ticket,
-                    label: t('redeem_promo_title'),
-                    onTap: () => showRedeemPromoSheet(context),
                   ),
                   _SettingsRow(
                     icon: LucideIcons.users,

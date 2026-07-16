@@ -8,7 +8,7 @@ from database import get_db
 from models import User, Post, PostLike
 from security import get_current_user
 from pydantic import BaseModel
-from s3_utils import upload_image_to_s3
+from s3_utils import upload_image_to_s3_key, resolve_media_url
 
 router = APIRouter()
 
@@ -42,7 +42,7 @@ async def create_post(
     image_url = None
     if file:
         contents = await file.read()
-        image_url = upload_image_to_s3(contents, file.content_type)
+        image_url = upload_image_to_s3_key(contents, file.content_type, prefix="posts/")
     
     new_post = Post(
         user_id=current_user.id,
@@ -58,7 +58,7 @@ async def create_post(
         "user_id": new_post.user_id,
         "user": current_user,
         "content": new_post.content,
-        "image_url": new_post.image_url,
+        "image_url": resolve_media_url(new_post.image_url),
         "likes_count": 0,
         "is_liked": False,
         "created_at": new_post.created_at
@@ -86,7 +86,7 @@ def get_global_feed(
             "user_id": post.user_id,
             "user": post.user,
             "content": post.content,
-            "image_url": post.image_url,
+            "image_url": resolve_media_url(post.image_url),
             "likes_count": likes_count,
             "is_liked": is_liked,
             "created_at": post.created_at
