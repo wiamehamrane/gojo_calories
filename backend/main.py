@@ -230,6 +230,36 @@ try:
             );
         """))
         conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS shared_meals (
+                id VARCHAR(36) PRIMARY KEY,
+                user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+                name VARCHAR NOT NULL,
+                image_url VARCHAR,
+                ingredients JSON NOT NULL,
+                instructions TEXT,
+                calories INTEGER DEFAULT 0,
+                protein INTEGER DEFAULT 0,
+                carbs INTEGER DEFAULT 0,
+                fat INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS shared_meal_stars (
+                id VARCHAR(36) PRIMARY KEY,
+                user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+                shared_meal_id VARCHAR(36) NOT NULL REFERENCES shared_meals(id) ON DELETE CASCADE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE (user_id, shared_meal_id)
+            );
+        """))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_shared_meal_stars_user ON shared_meal_stars (user_id);"
+        ))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_shared_meal_stars_meal ON shared_meal_stars (shared_meal_id);"
+        ))
+        conn.execute(text("""
             CREATE TABLE IF NOT EXISTS friendships (
                 id VARCHAR(36) PRIMARY KEY,
                 user_id VARCHAR(36) NOT NULL REFERENCES users(id),

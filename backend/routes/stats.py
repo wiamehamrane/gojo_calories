@@ -287,6 +287,8 @@ def get_streak(
 def get_user_history(
     date: Optional[str] = None,
     tz_offset: Optional[int] = Query(0, description="Timezone offset in minutes (e.g. 60 for UTC+1)"),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=50),
     db: Session = Depends(get_db), 
     current_user_id: str = Depends(get_current_user_id)
 ):
@@ -309,7 +311,12 @@ def get_user_history(
         except ValueError:
             pass
 
-    logs = query.order_by(FoodLog.created_at.desc()).limit(50).all()
+    logs = (
+        query.order_by(FoodLog.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
     res = []
     for log in logs:
         res.append({

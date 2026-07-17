@@ -155,90 +155,100 @@ class _ShareMealScreenState extends ConsumerState<ShareMealScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text(
-          'Share a meal',
-          style: TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
-          ),
-        ),
+    return GestureDetector(
+      onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+      behavior: HitTestBehavior.opaque,
+      child: Scaffold(
         backgroundColor: AppColors.background,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: AppColors.textPrimary),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
-        children: [
-          _buildImagePicker(),
-          const SizedBox(height: 20),
-          _label('Meal name'),
-          _textField(
-            controller: _nameCtrl,
-            hint: 'e.g. High-protein chicken bowl',
-          ),
-          const SizedBox(height: 18),
-          _label('Macros (per serving)'),
-          Row(
-            children: [
-              Expanded(child: _macroField(_caloriesCtrl, 'kcal')),
-              const SizedBox(width: 8),
-              Expanded(child: _macroField(_proteinCtrl, 'Protein g')),
-              const SizedBox(width: 8),
-              Expanded(child: _macroField(_carbsCtrl, 'Carbs g')),
-              const SizedBox(width: 8),
-              Expanded(child: _macroField(_fatCtrl, 'Fats g')),
-            ],
-          ),
-          const SizedBox(height: 18),
-          _label('Ingredients (one per line)'),
-          _textField(
-            controller: _ingredientsCtrl,
-            hint: '200g chicken breast\n100g rice\n1 tbsp olive oil',
-            maxLines: 5,
-          ),
-          const SizedBox(height: 18),
-          _label('How to cook it'),
-          _textField(
-            controller: _instructionsCtrl,
-            hint: 'Describe the steps to prepare this meal…',
-            maxLines: 6,
-          ),
-          const SizedBox(height: 28),
-          SizedBox(
-            height: 54,
-            child: ElevatedButton(
-              onPressed: _submitting ? null : _submit,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryDark,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                elevation: 0,
-              ),
-              child: _submitting
-                  ? const SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Text(
-                      'Share meal',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
+        appBar: AppBar(
+          title: const Text(
+            'Share a meal',
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
             ),
           ),
-        ],
+          backgroundColor: AppColors.background,
+          elevation: 0,
+          iconTheme: const IconThemeData(color: AppColors.textPrimary),
+        ),
+        body: ListView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
+          children: [
+            _buildImagePicker(),
+            const SizedBox(height: 20),
+            _label('Meal name'),
+            _textField(
+              controller: _nameCtrl,
+              hint: 'e.g. High-protein chicken bowl',
+            ),
+            const SizedBox(height: 18),
+            _label('Macros (per serving)'),
+            Row(
+              children: [
+                Expanded(child: _macroField(_caloriesCtrl, 'kcal')),
+                const SizedBox(width: 8),
+                Expanded(child: _macroField(_proteinCtrl, 'Protein g')),
+                const SizedBox(width: 8),
+                Expanded(child: _macroField(_carbsCtrl, 'Carbs g')),
+                const SizedBox(width: 8),
+                Expanded(child: _macroField(_fatCtrl, 'Fats g')),
+              ],
+            ),
+            const SizedBox(height: 18),
+            _label('Ingredients (one per line)'),
+            _textField(
+              controller: _ingredientsCtrl,
+              hint: '200g chicken breast\n100g rice\n1 tbsp olive oil',
+              maxLines: 5,
+            ),
+            const SizedBox(height: 18),
+            _label('How to cook it'),
+            _textField(
+              controller: _instructionsCtrl,
+              hint: 'Describe the steps to prepare this meal…',
+              maxLines: 6,
+            ),
+            const SizedBox(height: 28),
+            SizedBox(
+              height: 54,
+              child: ElevatedButton(
+                onPressed: _submitting
+                    ? null
+                    : () {
+                        FocusManager.instance.primaryFocus?.unfocus();
+                        _submit();
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryDark,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  elevation: 0,
+                ),
+                child: _submitting
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text(
+                        'Share meal',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -318,6 +328,8 @@ class _ShareMealScreenState extends ConsumerState<ShareMealScreen> {
     return TextField(
       controller: controller,
       maxLines: maxLines,
+      textInputAction:
+          maxLines == 1 ? TextInputAction.next : TextInputAction.newline,
       style: const TextStyle(fontSize: 15, color: AppColors.textPrimary),
       decoration: InputDecoration(
         hintText: hint,
@@ -350,6 +362,8 @@ class _ShareMealScreenState extends ConsumerState<ShareMealScreen> {
       controller: controller,
       keyboardType: TextInputType.number,
       textAlign: TextAlign.center,
+      textInputAction: TextInputAction.done,
+      onSubmitted: (_) => FocusManager.instance.primaryFocus?.unfocus(),
       style: const TextStyle(
         fontSize: 14,
         fontWeight: FontWeight.w600,

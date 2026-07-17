@@ -2,18 +2,18 @@
 
 Users share meals they prepared — a photo of the final product, macros,
 ingredients, and cooking instructions. The app shows them as a horizontal
-row on the Events page.
+row on the Events page. Users can star meals and revisit them from Profile.
 """
 
 import json
 import logging
-from typing import List, Optional
+from typing import List, Optional, Set
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import SharedMeal, User
+from models import SharedMeal, SharedMealStar, User
 from s3_utils import (
     MediaUploadError,
     extract_s3_key_from_url,
@@ -29,7 +29,12 @@ router = APIRouter()
 _MAX_MEALS_RETURNED = 50
 
 
-def _meal_view(meal: SharedMeal, author_name: Optional[str]) -> dict:
+def _meal_view(
+    meal: SharedMeal,
+    author_name: Optional[str],
+    *,
+    is_starred: bool = False,
+) -> dict:
     ingredients = meal.ingredients if isinstance(meal.ingredients, list) else []
     return {
         "id": meal.id,
@@ -43,8 +48,23 @@ def _meal_view(meal: SharedMeal, author_name: Optional[str]) -> dict:
         "protein": meal.protein or 0,
         "carbs": meal.carbs or 0,
         "fat": meal.fat or 0,
+        "is_starred": is_starred,
         "created_at": meal.created_at.isoformat() if meal.created_at else None,
     }
+
+
+def _starred_ids_for_user(db: Session, user_id: str, meal_ids: List[str]) -> Set[str]:
+    if not meal_ids:
+        return set()
+    rows = (
+        db.query(SharedMealStar.shared_meal_id)
+        .filter(
+            SharedMealStar.user_id == user_id,
+            SharedMealStar.shared_meal_id.in_(meal_ids),
+        )
+        .all()
+    )
+    return {row[0] for row in rows}
 
 
 @router.get("")
@@ -60,7 +80,33 @@ def list_shared_meals(
         .limit(_MAX_MEALS_RETURNED)
         .all()
     )
-    return [_meal_view(meal, author_name) for meal, author_name in rows]
+    meal_ids = [meal.id for meal, _ in rows]
+    starred = _starred_ids_for_user(db, current_user.id, meal_ids)
+    return [
+        _meal_view(meal, author_name, is_starred=meal.id in starred)
+        for meal, author_name in rows
+    ]
+
+
+@router.get("/starred")
+def list_starred_meals(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Meals the current user has starred, newest stars first."""
+    rows = (
+        db.query(SharedMeal, User.name)
+        .join(SharedMealStar, SharedMealStar.shared_meal_id == SharedMeal.id)
+        .join(User, User.id == SharedMeal.user_id)
+        .filter(SharedMealStar.user_id == current_user.id)
+        .order_by(SharedMealStar.created_at.desc())
+        .limit(_MAX_MEALS_RETURNED)
+        .all()
+    )
+    return [
+        _meal_view(meal, author_name, is_starred=True)
+        for meal, author_name in rows
+    ]
 
 
 @router.post("", status_code=201)
@@ -135,7 +181,35 @@ async def share_meal(
     db.commit()
     db.refresh(meal)
 
-    return _meal_view(meal, current_user.name)
+    return _meal_view(meal, current_user.name, is_starred=False)
+
+
+@router.post("/{meal_id}/star")
+def toggle_star_meal(
+    meal_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    meal = db.query(SharedMeal).filter(SharedMeal.id == meal_id).first()
+    if not meal:
+        raise HTTPException(status_code=404, detail="Meal not found")
+
+    existing = (
+        db.query(SharedMealStar)
+        .filter(
+            SharedMealStar.shared_meal_id == meal_id,
+            SharedMealStar.user_id == current_user.id,
+        )
+        .first()
+    )
+    if existing:
+        db.delete(existing)
+        db.commit()
+        return {"status": "success", "is_starred": False}
+
+    db.add(SharedMealStar(shared_meal_id=meal_id, user_id=current_user.id))
+    db.commit()
+    return {"status": "success", "is_starred": True}
 
 
 @router.delete("/{meal_id}")

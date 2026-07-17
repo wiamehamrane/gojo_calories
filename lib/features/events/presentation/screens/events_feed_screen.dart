@@ -30,9 +30,11 @@ class EventsFeedScreen extends ConsumerStatefulWidget {
 class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocus = FocusNode();
+  final PageController _mealsPageController = PageController();
 
   String? _activeQuery;
   bool _searchHasText = false;
+  int _mealsPageIndex = 0;
 
   @override
   void initState() {
@@ -49,6 +51,7 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
   void dispose() {
     _searchController.dispose();
     _searchFocus.dispose();
+    _mealsPageController.dispose();
     super.dispose();
   }
 
@@ -109,7 +112,7 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
                 child: SafeArea(bottom: false, child: _buildDarkHeader()),
               ),
               if (_activeQuery == null) ...[
-                SliverToBoxAdapter(child: _buildMealsSection()),
+                SliverToBoxAdapter(child: Padding(padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenPadding), child: _buildMealsSection(),)),
                 const SliverToBoxAdapter(child: SizedBox(height: 20)),
               ],
               ..._buildEventsSlivers(eventsAsync),
@@ -294,7 +297,7 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
               GestureDetector(
                 onTap: () {
                   HapticFeedback.lightImpact();
-                  context.push(RoutePaths.shareMeal);
+                  context.push(RoutePaths.shareMealChooser);
                 },
                 child: Container(
                   padding:
@@ -329,29 +332,52 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
           ),
         ),
         Container(
+          clipBehavior: Clip.hardEdge,
           width: double.infinity,
           decoration: const BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.all(Radius.circular(_kSheetRadius)),
           ),
-          padding: const EdgeInsets.symmetric(vertical: 18),
-          child: SizedBox(
-            height: 208,
-            child: mealsAsync.isLoading && meals.isEmpty
-                ? const Center(child: CupertinoActivityIndicator(radius: 11))
-                : meals.isEmpty
-                    ? _buildSharedMealsEmpty()
-                    : ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        physics: const BouncingScrollPhysics(),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.screenPadding,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          child: mealsAsync.isLoading && meals.isEmpty
+              ? const SizedBox(
+                  height: 260,
+                  child: Center(child: CupertinoActivityIndicator(radius: 11)),
+                )
+              : meals.isEmpty
+                  ? SizedBox(height: 260, child: _buildSharedMealsEmpty())
+                  : Column(
+                      children: [
+                        SizedBox(
+                          height: 260,
+                          child: PageView.builder(
+                            controller: _mealsPageController,
+                            itemCount: meals.length,
+                            onPageChanged: (index) {
+                              HapticFeedback.selectionClick();
+                              setState(() => _mealsPageIndex = index);
+                            },
+                            itemBuilder: (context, index) {
+                              return Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 14),
+                                child: SharedMealCard(
+                                  meal: meals[index],
+                                  width: double.infinity,
+                                ),
+                              );
+                            },
+                          ),
                         ),
-                        itemCount: meals.length,
-                        itemBuilder: (context, index) =>
-                            SharedMealCard(meal: meals[index]),
-                      ),
-          ),
+                        if (meals.length > 1) ...[
+                          const SizedBox(height: 12),
+                          _MealsPageDots(
+                            count: meals.length,
+                            index: _mealsPageIndex.clamp(0, meals.length - 1),
+                          ),
+                        ],
+                      ],
+                    ),
         ),
       ],
     );
@@ -362,7 +388,7 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
       padding:
           const EdgeInsets.symmetric(horizontal: AppSpacing.screenPadding),
       child: GestureDetector(
-        onTap: () => context.push(RoutePaths.shareMeal),
+        onTap: () => context.push(RoutePaths.shareMealChooser),
         child: Container(
           width: double.infinity,
           decoration: BoxDecoration(
@@ -626,6 +652,33 @@ class _EmptyState extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _MealsPageDots extends StatelessWidget {
+  final int count;
+  final int index;
+
+  const _MealsPageDots({required this.count, required this.index});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(count.clamp(0, 12), (i) {
+        final active = i == index;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          margin: const EdgeInsets.symmetric(horizontal: 3),
+          width: active ? 16 : 6,
+          height: 6,
+          decoration: BoxDecoration(
+            color: active ? AppColors.primaryDark : AppColors.border,
+            borderRadius: BorderRadius.circular(999),
+          ),
+        );
+      }),
     );
   }
 }

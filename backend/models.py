@@ -202,6 +202,25 @@ class SharedMeal(Base):
     fat = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
+    stars = relationship(
+        "SharedMealStar", back_populates="meal", cascade="all, delete-orphan"
+    )
+
+
+class SharedMealStar(Base):
+    """A user's star/favorite on a community shared meal."""
+    __tablename__ = "shared_meal_stars"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid, index=True)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    shared_meal_id = Column(
+        String(36), ForeignKey("shared_meals.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    meal = relationship("SharedMeal", back_populates="stars")
+    user = relationship("User")
+
 
 class Recipe(Base):
     __tablename__ = "recipes"

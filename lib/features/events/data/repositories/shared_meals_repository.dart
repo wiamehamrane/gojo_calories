@@ -11,6 +11,17 @@ class SharedMealsRepository {
     return res.data as List<dynamic>;
   }
 
+  Future<List<dynamic>> getStarredMeals() async {
+    final res = await _dio.get('meals/starred');
+    return res.data as List<dynamic>;
+  }
+
+  Future<bool> toggleStar(String mealId) async {
+    final res = await _dio.post('meals/$mealId/star');
+    final data = res.data as Map<String, dynamic>;
+    return data['is_starred'] as bool? ?? false;
+  }
+
   /// Provide either [imageFile] (new photo) or [sourceImageUrl] (reuse an
   /// existing food-log photo).
   Future<Map<String, dynamic>> shareMeal({

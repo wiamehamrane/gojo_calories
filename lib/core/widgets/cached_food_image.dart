@@ -18,6 +18,10 @@ class CachedFoodImage extends StatelessWidget {
   final Widget? placeholder;
   final Widget? errorWidget;
 
+  /// Default decode width when callers omit [memCacheWidth] — keeps list/detail
+  /// scrolls smoother without blowing memory on full-res S3 photos.
+  static const int defaultMemCacheWidth = 900;
+
   const CachedFoodImage({
     super.key,
     required this.imageUrl,
@@ -58,11 +62,13 @@ class CachedFoodImage extends StatelessWidget {
     }
 
     if (isLocalPath(url)) {
+      final dpr = MediaQuery.maybeDevicePixelRatioOf(context) ?? 2.0;
       return Image.file(
         File(url.replaceFirst('file://', '')),
         fit: fit,
         width: width,
         height: height,
+        cacheWidth: memCacheWidth ?? (defaultMemCacheWidth * dpr).round(),
         errorBuilder: (_, _, _) => errorWidget ?? _defaultPlaceholder(),
       );
     }
@@ -72,14 +78,21 @@ class CachedFoodImage extends StatelessWidget {
       return errorWidget ?? _defaultPlaceholder();
     }
 
+    final dpr = MediaQuery.maybeDevicePixelRatioOf(context) ?? 2.0;
+    // Explicit memCacheWidth from callers is already in pixels; default scales with DPR.
+    final resolvedMemWidth =
+        memCacheWidth ?? (defaultMemCacheWidth * dpr).round();
+    final resolvedMemHeight = memCacheHeight;
+
     return CachedNetworkImage(
       imageUrl: resolved,
       cacheKey: stableCacheKey(resolved),
       fit: fit,
       width: width,
       height: height,
-      memCacheWidth: memCacheWidth,
-      memCacheHeight: memCacheHeight,
+      memCacheWidth: resolvedMemWidth,
+      memCacheHeight: resolvedMemHeight,
+      maxWidthDiskCache: resolvedMemWidth,
       fadeInDuration: const Duration(milliseconds: 180),
       placeholder: (_, _) => placeholder ?? _loadingPlaceholder(),
       errorWidget: (_, _, _) => errorWidget ?? _defaultPlaceholder(),

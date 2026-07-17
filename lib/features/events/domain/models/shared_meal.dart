@@ -10,6 +10,7 @@ class SharedMeal {
   final int protein;
   final int carbs;
   final int fat;
+  final bool isStarred;
   final DateTime? createdAt;
 
   SharedMeal({
@@ -24,6 +25,7 @@ class SharedMeal {
     this.protein = 0,
     this.carbs = 0,
     this.fat = 0,
+    this.isStarred = false,
     this.createdAt,
   });
 
@@ -43,9 +45,28 @@ class SharedMeal {
       protein: (json['protein'] as num?)?.toInt() ?? 0,
       carbs: (json['carbs'] as num?)?.toInt() ?? 0,
       fat: (json['fat'] as num?)?.toInt() ?? 0,
+      isStarred: json['is_starred'] as bool? ?? false,
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'] as String)
           : null,
+    );
+  }
+
+  SharedMeal copyWith({bool? isStarred}) {
+    return SharedMeal(
+      id: id,
+      userId: userId,
+      authorName: authorName,
+      name: name,
+      imageUrl: imageUrl,
+      ingredients: ingredients,
+      instructions: instructions,
+      calories: calories,
+      protein: protein,
+      carbs: carbs,
+      fat: fat,
+      isStarred: isStarred ?? this.isStarred,
+      createdAt: createdAt,
     );
   }
 }

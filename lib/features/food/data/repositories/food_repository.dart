@@ -68,6 +68,21 @@ class FoodRepository {
     return res.data as List<dynamic>? ?? [];
   }
 
+  /// Paginated food logs for picking a meal to share (newest first).
+  Future<List<dynamic>> getHistoryPage({
+    required int skip,
+    int limit = 20,
+  }) async {
+    final res = await _dio.get(
+      'stats/history',
+      queryParameters: {
+        'skip': skip,
+        'limit': limit,
+      },
+    );
+    return res.data as List<dynamic>? ?? [];
+  }
+
   Future<void> logFoodItem(Map<String, dynamic> data) async {
     await _dio.post('food/log', data: data);
   }

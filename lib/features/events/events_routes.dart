@@ -8,7 +8,10 @@ import 'presentation/screens/edit_event_screen.dart';
 import 'presentation/screens/event_detail_screen.dart';
 import 'presentation/screens/events_feed_screen.dart';
 import 'presentation/screens/my_events_screen.dart';
+import 'presentation/screens/share_meal_chooser_screen.dart';
+import 'presentation/screens/share_existing_meal_screen.dart';
 import 'presentation/screens/share_meal_screen.dart';
+import 'presentation/screens/starred_meals_screen.dart';
 
 List<RouteBase> get eventsShellRoutes => [
       GoRoute(
@@ -55,6 +58,22 @@ List<RouteBase> get eventsRoutes => [
         ),
       ),
       GoRoute(
+        path: RoutePaths.shareMealChooser,
+        parentNavigatorKey: rootNavigatorKey,
+        pageBuilder: (context, state) => smoothPushPage(
+          state: state,
+          child: const ShareMealChooserScreen(),
+        ),
+      ),
+      GoRoute(
+        path: RoutePaths.shareExistingMeal,
+        parentNavigatorKey: rootNavigatorKey,
+        pageBuilder: (context, state) => smoothPushPage(
+          state: state,
+          child: const ShareExistingMealScreen(),
+        ),
+      ),
+      GoRoute(
         path: RoutePaths.shareMeal,
         parentNavigatorKey: rootNavigatorKey,
         pageBuilder: (context, state) => smoothPushPage(
@@ -62,6 +81,14 @@ List<RouteBase> get eventsRoutes => [
           child: ShareMealScreen(
             prefill: state.extra as ShareMealPrefill?,
           ),
+        ),
+      ),
+      GoRoute(
+        path: RoutePaths.starredMeals,
+        parentNavigatorKey: rootNavigatorKey,
+        pageBuilder: (context, state) => smoothPushPage(
+          state: state,
+          child: const StarredMealsScreen(),
         ),
       ),
     ];

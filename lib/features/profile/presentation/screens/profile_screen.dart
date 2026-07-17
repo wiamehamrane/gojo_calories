@@ -153,6 +153,19 @@ class ProfileScreen extends ConsumerWidget {
               ),
 
               const SizedBox(height: 20),
+              _SectionLabel(t('starred_meals')),
+
+              _GroupedListCard(
+                rows: [
+                  _SettingsRow(
+                    icon: LucideIcons.star,
+                    label: t('view_starred_meals'),
+                    onTap: () => context.push(RoutePaths.starredMeals),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 20),
               _SectionLabel(t('settings')),
 
               _GroupedListCard(
