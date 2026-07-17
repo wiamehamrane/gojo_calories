@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -19,8 +20,8 @@ import '../../../../core/localization/locale_provider.dart';
 import '../../../../core/localization/translations.dart';
 import '../../../../core/di/repository_providers.dart';
 import '../../../../core/utils/error_handler.dart';
+import '../../../../core/widgets/app_pressable.dart';
 import '../providers/profile_providers.dart';
-import '../widgets/redeem_promo_sheet.dart';
 
 
 class ProfileScreen extends ConsumerWidget {
@@ -152,6 +153,19 @@ class ProfileScreen extends ConsumerWidget {
               ),
 
               const SizedBox(height: 20),
+              _SectionLabel(t('starred_meals')),
+
+              _GroupedListCard(
+                rows: [
+                  _SettingsRow(
+                    icon: LucideIcons.star,
+                    label: t('view_starred_meals'),
+                    onTap: () => context.push(RoutePaths.starredMeals),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 20),
               _SectionLabel(t('settings')),
 
               _GroupedListCard(
@@ -172,14 +186,14 @@ class ProfileScreen extends ConsumerWidget {
                     onTap: () => context.push('/profile/language'),
                   ),
                   _SettingsRow(
-                    icon: LucideIcons.ticket,
-                    label: t('redeem_promo_title'),
-                    onTap: () => showRedeemPromoSheet(context),
-                  ),
-                  _SettingsRow(
                     icon: LucideIcons.users,
                     label: t('clan_title'),
                     onTap: () => context.push(RoutePaths.profileClan),
+                  ),
+                  _SettingsRow(
+                    icon: LucideIcons.share2,
+                    label: t('share_access_title'),
+                    onTap: () => context.push(RoutePaths.profileShare),
                   ),
                   _SettingsRow(
                     icon: LucideIcons.creditCard,
@@ -274,18 +288,12 @@ class ProfileScreen extends ConsumerWidget {
                   _SettingsRow(
                     icon: LucideIcons.fileText,
                     label: t('terms_of_service'),
-                    onTap: () async {
-                      final uri = Uri.parse('https://gojocalories.com/terms-of-service');
-                      if (await canLaunchUrl(uri)) await launchUrl(uri);
-                    },
+                    onTap: () => context.push('/profile/terms'),
                   ),
                   _SettingsRow(
                     icon: LucideIcons.shieldCheck,
                     label: t('privacy_policy'),
-                    onTap: () async {
-                      final uri = Uri.parse('https://gojocalories.com/privacy-policy');
-                      if (await canLaunchUrl(uri)) await launchUrl(uri);
-                    },
+                    onTap: () => context.push('/profile/privacy'),
                   ),
                 ],
               ),
@@ -980,25 +988,31 @@ class _SettingsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      leading: Icon(icon, size: 22, color: color ?? AppColors.textPrimary),
-      title: Text(
-        label,
-        style: TextStyle(
-          fontSize: 15,
-          fontWeight: FontWeight.w500,
-          color: color ?? AppColors.textPrimary,
+    return PressScale(
+      scale: 0.98,
+      child: ListTile(
+        leading: Icon(icon, size: 22, color: color ?? AppColors.textPrimary),
+        title: Text(
+          label,
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w500,
+            color: color ?? AppColors.textPrimary,
+          ),
         ),
+        trailing: color == null
+            ? Icon(
+                LucideIcons.chevronRight,
+                size: 18,
+                color: AppColors.inactive,
+              )
+            : null,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap();
+        },
       ),
-      trailing: color == null
-          ? Icon(
-              LucideIcons.chevronRight,
-              size: 18,
-              color: AppColors.inactive,
-            )
-          : null,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      onTap: onTap,
     );
   }
 }

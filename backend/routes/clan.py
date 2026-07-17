@@ -54,8 +54,6 @@ def _serialize_clan(db: Session, clan: models.Clan, viewer: models.User) -> dict
     )
 
     addon_product_id = clan_addon_product_for_plan(clan.plan_id)
-    catalog = build_catalog()
-    addon_info = catalog["clan_addons"].get(clan.plan_id, {})
 
     return {
         "id": clan.id,
@@ -66,7 +64,6 @@ def _serialize_clan(db: Session, clan: models.Clan, viewer: models.User) -> dict
         "pending_addon_slots": pending_addon_slots(db, clan.id),
         "is_owner": clan.owner_user_id == viewer.id,
         "addon_product_id": addon_product_id,
-        "addon_display_price": addon_info.get("display_price"),
         "members": [
             {
                 "user_id": m.user_id,
@@ -106,7 +103,7 @@ def get_my_clan(
     return {
         "has_clan": False,
         "clan": None,
-        "can_create": user.has_paid and user.subscription_source in ("apple", "google", "stripe", "clan_owner", "promo"),
+        "can_create": user.has_paid and user.subscription_source in ("apple", "google", "stripe", "clan_owner", "admin_grant"),
         "catalog": build_catalog()["clan_addons"],
         "max_members": CLAN_MAX_MEMBERS,
     }

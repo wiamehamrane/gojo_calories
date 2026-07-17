@@ -1,9 +1,11 @@
 import random
 import string
 import os
+import logging
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from database import get_db
 from models import User, Referral, WeighIn, DailyStats
 from pydantic import BaseModel
@@ -17,6 +19,7 @@ import httpx
 from services import email_service
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 optional_bearer = HTTPBearer(auto_error=False)
 
 GOOGLE_WEB_CLIENT_ID = os.getenv("GOOGLE_WEB_CLIENT_ID", "dummy_if_not_set")
@@ -98,6 +101,16 @@ class VerifyOtpBody(BaseModel):
 
 class ResendVerificationBody(BaseModel):
     email: Optional[str] = None
+
+
+class ForgotPasswordBody(BaseModel):
+    email: str
+
+
+class ResetPasswordBody(BaseModel):
+    email: str
+    otp: str
+    new_password: str
 
 @router.post("/register")
 def register(user: UserCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
@@ -250,6 +263,88 @@ def resend_verification(
     db.commit()
     return {"status": "success", "message": "Verification code sent"}
 
+
+def _deliver_password_reset_code(user: User) -> None:
+    otp = _set_verification_code(user)
+    try:
+        email_service.send_password_reset_email_or_raise(user.email, otp)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.post("/forgot-password")
+def forgot_password(body: ForgotPasswordBody, db: Session = Depends(get_db)):
+    """Send a password-reset code. Always returns success to avoid email enumeration."""
+    email = (body.email or "").strip().lower()
+    generic = {
+        "status": "success",
+        "message": "If an account exists for that email, a reset code has been sent.",
+    }
+    if not email:
+        raise HTTPException(status_code=400, detail="Email is required")
+
+    user = db.query(User).filter(func.lower(User.email) == email).first()
+    if not user:
+        logger.info("Forgot-password: no account for %s", email)
+        return generic
+
+    # Send even for social-login accounts so they can set a password.
+    if DEV_MODE:
+        otp = _set_verification_code(user)
+        db.commit()
+        logger.info("Forgot-password DEV_MODE code for %s: %s", email, otp)
+        return {**generic, "dev_code": otp}
+
+    try:
+        _deliver_password_reset_code(user)
+        db.commit()
+        logger.info("Forgot-password: reset code emailed to %s", user.email)
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:  # noqa: BLE001
+        db.rollback()
+        logger.exception("Forgot-password failed for %s: %s", email, exc)
+        raise HTTPException(
+            status_code=503,
+            detail="Could not send reset email. Please try again in a moment.",
+        ) from exc
+    return generic
+
+
+@router.post("/reset-password")
+def reset_password(body: ResetPasswordBody, db: Session = Depends(get_db)):
+    email = (body.email or "").strip().lower()
+    otp = (body.otp or "").strip()
+    new_password = body.new_password or ""
+
+    if not email or not otp:
+        raise HTTPException(status_code=400, detail="Email and code are required")
+    if len(new_password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+
+    user = db.query(User).filter(func.lower(User.email) == email).first()
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid or expired code")
+
+    if (
+        not user.verification_code
+        or otp != user.verification_code
+        or not user.verification_code_expires_at
+        or user.verification_code_expires_at < datetime.datetime.utcnow()
+    ):
+        raise HTTPException(status_code=400, detail="Invalid or expired code")
+
+    user.hashed_password = get_password_hash(new_password)
+    user.is_email_verified = True
+    user.verification_code = None
+    user.verification_code_expires_at = None
+    db.commit()
+
+    return {
+        "status": "success",
+        "message": "Password updated. You can log in with your new password.",
+    }
 
 
 # ── SOCIAL LOGIN ─────────────────────────────────────────────────────────────

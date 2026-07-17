@@ -3,6 +3,8 @@ abstract final class RoutePaths {
   static const splash = '/splash';
   static const auth = '/auth';
   static const verifyOtp = '/auth/verify-otp';
+  static const forgotPassword = '/auth/forgot-password';
+  static const resetPassword = '/auth/reset-password';
   static const weightSetup = '/onboarding/weight';
   static const paywall = '/onboarding/paywall';
 
@@ -14,6 +16,10 @@ abstract final class RoutePaths {
   static const eventDetail = '/events/detail/:id';
   static const myEvents = '/events/mine';
   static const editEvent = '/events/edit';
+  static const shareMeal = '/meals/share';
+  static const shareMealChooser = '/meals/share/choose';
+  static const shareExistingMeal = '/meals/share/existing';
+  static const starredMeals = '/meals/starred';
   static const profile = '/profile';
 
   static const profilePersonal = '/profile/personal';
@@ -22,6 +28,11 @@ abstract final class RoutePaths {
   static const profileNutrition = '/profile/nutrition';
   static const profileReferrals = '/profile/referrals';
   static const profileClan = '/profile/clan';
+  static const profileShare = '/profile/share';
+  static const profileTerms = '/profile/terms';
+  static const profilePrivacy = '/profile/privacy';
+  static const shareClientDiary = '/share/client/:id';
+  static const shareJoin = '/share/join';
 
   static const logExercise = '/log_exercise';
   static const runIntensity = '/run_intensity';

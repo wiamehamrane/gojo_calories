@@ -42,8 +42,13 @@ def send_onesignal_push(external_ids: List[str], title: str, body: str):
     """Send a push to users identified by their external id (our user id)."""
     if not ONESIGNAL_REST_API_KEY or not external_ids:
         return
+    auth = (
+        f"Key {ONESIGNAL_REST_API_KEY}"
+        if ONESIGNAL_REST_API_KEY.startswith("os_v2_")
+        else f"Basic {ONESIGNAL_REST_API_KEY}"
+    )
     headers = {
-        "Authorization": f"Basic {ONESIGNAL_REST_API_KEY}",
+        "Authorization": auth,
         "Content-Type": "application/json",
     }
     for i in range(0, len(external_ids), ONESIGNAL_BATCH_SIZE):
@@ -151,3 +156,24 @@ def send_smart_notification(
         "message": f"Smart '{payload.reminder_type}' push queued for {len(users)} users",
         "breakdown": {k: len(v) for k, v in users_by_gender.items()},
     }
+
+
+# ─── Smart nutrition check (personalized, per-user) ──────────────────────────
+
+class NutritionCheckPayload(BaseModel):
+    admin_key: str
+
+
+@router.post("/nutrition-check")
+def trigger_nutrition_check(payload: NutritionCheckPayload, db: Session = Depends(get_db)):
+    """Manually trigger the smart nutrition notification pass.
+
+    The same pass runs automatically every SMART_NOTIF_INTERVAL_HOURS via the
+    in-process scheduler (see main.py). Each active user gets at most one
+    personalized push per run: missed-breakfast reminder, protein-gap dinner
+    reminder, overeating -> workout suggestion, or a good-job progress update.
+    """
+    if payload.admin_key != ADMIN_API_KEY:
+        raise HTTPException(status_code=403, detail="Invalid admin key")
+    from services.smart_nutrition_service import run_nutrition_check
+    return run_nutrition_check(db)

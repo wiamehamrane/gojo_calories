@@ -13,6 +13,7 @@ import 'package:gojocalories/features/auth/presentation/providers/catalog_provid
 import 'package:gojocalories/features/auth/data/services/iap_service.dart';
 import 'package:gojocalories/core/localization/locale_provider.dart';
 import 'package:gojocalories/core/localization/translations.dart';
+import 'package:gojocalories/core/utils/store_price_format.dart';
 
 class PaywallScreen extends ConsumerStatefulWidget {
   const PaywallScreen({super.key});
@@ -365,12 +366,16 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                       }
                       if (product == null) return const SizedBox.shrink();
 
+                      final payPercent =
+                          (referralOffer?['pay_percent'] as num?)?.toInt();
+
                       return _buildPlanCard(
                         product: product,
                         planMeta: plan,
                         isSelected: _selectedProductId == product.id,
                         primaryDark: primaryDark,
                         primaryMedium: primaryMedium,
+                        referralPayPercent: payPercent,
                         onTap: () {
                           setState(() => _selectedProductId = product.id);
                         },
@@ -453,9 +458,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                       ),
                     ),
                     GestureDetector(
-                      onTap: () => launchUrl(
-                        Uri.parse('https://gojocalories.com/privacy'),
-                      ),
+                      onTap: () => context.push('/profile/privacy'),
                       child: Text(
                         t('privacy_policy'),
                         style: const TextStyle(
@@ -466,8 +469,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                       ),
                     ),
                     GestureDetector(
-                      onTap: () =>
-                          launchUrl(Uri.parse('https://gojocalories.com/tos')),
+                      onTap: () => context.push('/profile/terms'),
                       child: const Text(
                         'Terms of Use (EULA)',
                         style: TextStyle(
@@ -495,17 +497,31 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
     required Color primaryDark,
     required Color primaryMedium,
     required VoidCallback onTap,
+    int? referralPayPercent,
   }) {
     final label = planMeta['name'] as String? ?? product.title;
-    final subtitle = planMeta['tagline'] as String? ?? product.description;
+    // Always show Apple/Google localized price for this user's storefront.
+    final storePrice = StorePriceFormat.display(product);
+    final interval = planMeta['interval'] as String? ?? 'month';
+    final intervalCount = (planMeta['interval_count'] as num?)?.toInt() ?? 1;
+    final monthlyEq = StorePriceFormat.equivalentMonthly(
+      product,
+      intervalCount: intervalCount,
+      interval: interval,
+    );
+    final subtitle = monthlyEq != null
+        ? '$monthlyEq / mo'
+        : (planMeta['tagline'] as String? ?? product.description);
     final badge = planMeta['badge'] as String?;
-    final referralPrice = planMeta['referral_display_price'] as String?;
-    final displayPrice =
-        (referralPrice != null && referralPrice.isNotEmpty)
-            ? referralPrice
-            : (planMeta['display_price'] as String? ?? product.price);
-    final showReferralStrikethrough =
-        referralPrice != null && referralPrice.isNotEmpty;
+
+    final hasReferral = referralPayPercent != null &&
+        referralPayPercent > 0 &&
+        referralPayPercent < 100 &&
+        planMeta['referral_price_cents'] != null;
+    final displayPrice = hasReferral
+        ? StorePriceFormat.referralDisplay(product, referralPayPercent)
+        : storePrice;
+    final showReferralStrikethrough = hasReferral;
 
     return GestureDetector(
       onTap: _isProcessing ? null : onTap,
@@ -611,7 +627,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                 children: [
                   if (showReferralStrikethrough)
                     Text(
-                      product.price,
+                      storePrice,
                       style: TextStyle(
                         fontSize: 12,
                         decoration: TextDecoration.lineThrough,

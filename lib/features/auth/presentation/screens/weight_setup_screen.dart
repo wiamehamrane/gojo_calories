@@ -12,7 +12,6 @@ import 'package:gojocalories/core/routing/route_paths.dart';
 import 'package:gojocalories/core/utils/image.dart';
 import 'package:gojocalories/core/routing/app_navigation.dart';
 import 'package:gojocalories/core/utils/error_handler.dart';
-import 'package:gojocalories/features/auth/data/services/promo_redeem_flow.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:dio/dio.dart';
 
@@ -31,7 +30,7 @@ class _WeightSetupScreenState extends ConsumerState<WeightSetupScreen> {
   Timer? _planWatchdog;
   late PageController _pageCtrl;
   int _currentIndex = 0;
-  final int _totalPages = 9;
+  final int _totalPages = 8;
 
   String _gender = 'male';
   String _activityLevel = 'sedentary';
@@ -44,12 +43,11 @@ class _WeightSetupScreenState extends ConsumerState<WeightSetupScreen> {
   final _currentWtCtrl = TextEditingController();
   final _goalWtCtrl = TextEditingController();
   final _referralCtrl = TextEditingController();
-  final _promoCtrl = TextEditingController();
 
-  final _focusNodes = List.generate(6, (_) => FocusNode());
+  final _focusNodes = List.generate(5, (_) => FocusNode());
 
   /// Pages that show a text field and may show the keyboard.
-  static const _keyboardPageIndices = {0, 1, 2, 3, 6, 7};
+  static const _keyboardPageIndices = {0, 1, 2, 3, 6};
 
   @override
   void initState() {
@@ -69,7 +67,6 @@ class _WeightSetupScreenState extends ConsumerState<WeightSetupScreen> {
     _currentWtCtrl.dispose();
     _goalWtCtrl.dispose();
     _referralCtrl.dispose();
-    _promoCtrl.dispose();
     for (var f in _focusNodes) {
       f.dispose();
     }
@@ -81,8 +78,6 @@ class _WeightSetupScreenState extends ConsumerState<WeightSetupScreen> {
       FocusManager.instance.primaryFocus?.unfocus();
     } else if (pageIndex == 6) {
       _focusNodes[4].requestFocus();
-    } else if (pageIndex == 7) {
-      _focusNodes[5].requestFocus();
     } else if (pageIndex < _focusNodes.length) {
       _focusNodes[pageIndex].requestFocus();
     }
@@ -131,7 +126,6 @@ class _WeightSetupScreenState extends ConsumerState<WeightSetupScreen> {
     final ageStr = _ageCtrl.text.trim();
     final heightStr = _heightCtrl.text.trim();
     final referralStr = _referralCtrl.text.trim();
-    final promoStr = _promoCtrl.text.trim();
 
     if (currentStr.isEmpty ||
         goalStr.isEmpty ||
@@ -193,53 +187,6 @@ class _WeightSetupScreenState extends ConsumerState<WeightSetupScreen> {
 
       _planWatchdog?.cancel();
       if (!mounted) return;
-
-      final codeToRedeem = promoStr.isNotEmpty
-          ? promoStr
-          : (referralStr.isNotEmpty ? referralStr : '');
-
-      if (codeToRedeem.isNotEmpty) {
-        try {
-          final outcome = await PromoRedeemFlow.redeem(codeToRedeem);
-          if (!mounted) return;
-
-          if (outcome.isInstantGrant) {
-            final prefs = await SharedPreferences.getInstance();
-            await prefs.setBool('is_onboarded', true);
-            _planComplete = true;
-            setState(() => _isLoading = false);
-            if (mounted) context.go(RoutePaths.home);
-            return;
-          }
-
-          if (outcome.needsStoreRedeem) {
-            await PromoRedeemFlow.openStoreRedemption(outcome);
-            if (!mounted) return;
-            _planComplete = true;
-            setState(() => _isLoading = false);
-            AppNavigation.goToPaywall(context: context);
-            return;
-          }
-        } on DioException catch (e) {
-          if (!mounted) return;
-          setState(() {
-            _isLoading = false;
-            _planError =
-                '${AppErrorHandler.message(e)} Tap Continue to skip or go back to fix the code.';
-            _allowContinue = true;
-          });
-          return;
-        } catch (e) {
-          if (!mounted) return;
-          setState(() {
-            _isLoading = false;
-            _planError =
-                '${AppErrorHandler.message(e)} Tap Continue to skip or go back to fix the code.';
-            _allowContinue = true;
-          });
-          return;
-        }
-      }
 
       _planComplete = true;
       if (mounted) {
@@ -517,7 +464,7 @@ class _WeightSetupScreenState extends ConsumerState<WeightSetupScreen> {
                   ),
                   _buildStep(
                     title: 'Got a referral code?',
-                    subtitle: 'A friend\'s invite code — not an influencer promo',
+                    subtitle: 'A friend\'s invite code — optional',
                     icon: Icons.card_giftcard_rounded,
                     inputChild: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -526,40 +473,6 @@ class _WeightSetupScreenState extends ConsumerState<WeightSetupScreen> {
                           child: TextField(
                             controller: _referralCtrl,
                             focusNode: _focusNodes[4],
-                            textInputAction: TextInputAction.done,
-                            onSubmitted: (_) => _nextPage(),
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 32,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.primaryDark,
-                              letterSpacing: 2,
-                            ),
-                            decoration: InputDecoration(
-                              hintText: 'ABC123',
-                              hintStyle: TextStyle(
-                                color: AppColors.primary.withValues(alpha: 0.2),
-                              ),
-                              border: InputBorder.none,
-                              isDense: true,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  _buildStep(
-                    title: 'Got a promo code?',
-                    subtitle: 'Influencer / partner code (e.g. WIAM10) — optional',
-                    icon: Icons.local_offer_rounded,
-                    inputChild: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _promoCtrl,
-                            focusNode: _focusNodes[5],
-                            textCapitalization: TextCapitalization.characters,
                             textInputAction: TextInputAction.done,
                             onSubmitted: (_) => _submitWeights(),
                             textAlign: TextAlign.center,
@@ -570,7 +483,7 @@ class _WeightSetupScreenState extends ConsumerState<WeightSetupScreen> {
                               letterSpacing: 2,
                             ),
                             decoration: InputDecoration(
-                              hintText: 'PROMO',
+                              hintText: 'ABC123',
                               hintStyle: TextStyle(
                                 color: AppColors.primary.withValues(alpha: 0.2),
                               ),

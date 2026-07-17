@@ -7,7 +7,7 @@ from database import get_db
 from models import User, Memory
 from security import get_current_user
 from pydantic import BaseModel
-from s3_utils import upload_image_to_s3
+from s3_utils import upload_image_to_s3_key, resolve_media_url
 
 router = APIRouter()
 
@@ -31,7 +31,7 @@ async def create_memory(
     current_user: User = Depends(get_current_user)
 ):
     contents = await file.read()
-    image_url = upload_image_to_s3(contents, file.content_type)
+    image_url = upload_image_to_s3_key(contents, file.content_type, prefix="memories/")
     
     new_memory = Memory(
         user_id=current_user.id,
@@ -42,15 +42,34 @@ async def create_memory(
     db.add(new_memory)
     db.commit()
     db.refresh(new_memory)
-    
-    return new_memory
+
+    return _memory_view(new_memory)
+
+
+def _memory_view(memory: Memory) -> dict:
+    """Serialize a memory with a freshly signed image URL (keys never expire)."""
+    return {
+        "id": memory.id,
+        "user_id": memory.user_id,
+        "image_url": resolve_media_url(memory.image_url),
+        "caption": memory.caption,
+        "is_private": memory.is_private,
+        "created_at": memory.created_at,
+    }
+
 
 @router.get("", response_model=List[MemoryResponse])
 def get_my_memories(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    return db.query(Memory).filter(Memory.user_id == current_user.id).order_by(Memory.created_at.desc()).all()
+    memories = (
+        db.query(Memory)
+        .filter(Memory.user_id == current_user.id)
+        .order_by(Memory.created_at.desc())
+        .all()
+    )
+    return [_memory_view(m) for m in memories]
 
 @router.delete("/{memory_id}")
 def delete_memory(

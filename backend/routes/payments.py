@@ -31,7 +31,7 @@ def get_catalog(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Server-driven plan catalog — prices and copy are never hardcoded in the app."""
+    """Plan metadata (ids, intervals, badges). Display amounts come from the store."""
     return build_catalog(referral_eligible=_referral_eligible(current_user))
 
 

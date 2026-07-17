@@ -5,7 +5,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:share_plus/share_plus.dart';
 import '../../../../core/theme/app_colors.dart';
 
 import '../../../../core/widgets/cached_food_image.dart';
@@ -15,7 +14,11 @@ import '../../../stats/presentation/providers/selected_date_provider.dart';
 import '../../../stats/presentation/providers/dashboard_provider.dart';
 import '../../../stats/presentation/providers/history_provider.dart';
 import '../../../stats/presentation/providers/weekly_stats_provider.dart';
+import '../../../../core/routing/route_paths.dart';
+import '../../../events/presentation/screens/share_meal_screen.dart';
+import '../../domain/meal_share_data.dart';
 import '../providers/food_providers.dart';
+import '../utils/meal_share_helper.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Screen
@@ -31,6 +34,7 @@ class FoodDetailScreen extends ConsumerStatefulWidget {
 
 class _FoodDetailScreenState extends ConsumerState<FoodDetailScreen> {
   int _quantity = 1;
+  bool _sharing = false;
 
   // Ingredients — seeded from log data or fetched lazily
   List<_Ingredient> _ingredients = [];
@@ -121,11 +125,68 @@ class _FoodDetailScreenState extends ConsumerState<FoodDetailScreen> {
     }
   }
 
-  void _share() {
+  Future<void> _share() async {
+    if (_sharing) return;
+    setState(() => _sharing = true);
+    HapticFeedback.lightImpact();
+    try {
+      final lang = ref.read(localeProvider);
+      final name = _displayName(lang);
+      final qty = _quantity;
+      final ingredients = _ingredients
+          .where((i) => i.name.trim().isNotEmpty)
+          .map((i) {
+            final amount = i.amount.trim();
+            return amount.isEmpty ? i.name.trim() : '${i.name.trim()} · $amount';
+          })
+          .toList();
+
+      final rawImage = log['image_url'] ?? log['local_image_path'];
+      final imageUrl = rawImage?.toString();
+
+      await shareMealAsImage(
+        context,
+        MealShareData(
+          name: name,
+          imageUrl: (imageUrl != null && imageUrl.isNotEmpty) ? imageUrl : null,
+          calories: (log['calories'] as num? ?? 0).toInt() * qty,
+          protein: (log['protein'] as num? ?? 0).toInt() * qty,
+          carbs: (log['carbs'] as num? ?? 0).toInt() * qty,
+          fat: (log['fat'] as num? ?? 0).toInt() * qty,
+          ingredients: ingredients,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _sharing = false);
+    }
+  }
+
+  /// Opens the community share screen prefilled with this food's data.
+  /// The user can review/edit ingredients and add cooking instructions
+  /// before posting it to the Shared Meals row on the Events page.
+  void _shareWithCommunity() {
     final lang = ref.read(localeProvider);
-    final name = _displayName(lang);
-    final cal = (log['calories'] as num? ?? 0).toInt() * _quantity;
-    Share.share('I just logged $name — $cal kcal 🔥  via GojoCalories');
+    final qty = _quantity;
+    final ingredients = _ingredients
+        .where((i) => i.name.trim().isNotEmpty)
+        .map((i) {
+          final amount = i.amount.trim();
+          return amount.isEmpty ? i.name.trim() : '${i.name.trim()} · $amount';
+        })
+        .toList();
+
+    context.push(
+      RoutePaths.shareMeal,
+      extra: ShareMealPrefill(
+        name: _displayName(lang),
+        calories: (log['calories'] as num? ?? 0).toInt() * qty,
+        protein: (log['protein'] as num? ?? 0).toInt() * qty,
+        carbs: (log['carbs'] as num? ?? 0).toInt() * qty,
+        fat: (log['fat'] as num? ?? 0).toInt() * qty,
+        ingredients: ingredients,
+        imageUrl: log['image_url'] as String?,
+      ),
+    );
   }
 
   void _showMenu() {
@@ -133,6 +194,10 @@ class _FoodDetailScreenState extends ConsumerState<FoodDetailScreen> {
       context: context,
       backgroundColor: Colors.transparent,
       builder: (_) => _ActionSheet(
+        onShareCommunity: () {
+          Navigator.pop(context);
+          _shareWithCommunity();
+        },
         onDelete: () {
           Navigator.pop(context); // close sheet
           Navigator.pop(context); // go back
@@ -235,7 +300,7 @@ class _FoodDetailScreenState extends ConsumerState<FoodDetailScreen> {
                       const Spacer(),
                       _CircleIconBtn(
                         icon: LucideIcons.share,
-                        onTap: _share,
+                        onTap: _sharing ? null : _share,
                       ),
                       const SizedBox(width: 8),
                       _CircleIconBtn(
@@ -588,7 +653,7 @@ class _FoodDetailScreenState extends ConsumerState<FoodDetailScreen> {
 
 class _CircleIconBtn extends StatelessWidget {
   final IconData icon;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final bool filled;
   const _CircleIconBtn({required this.icon, required this.onTap, this.filled = false});
 
@@ -596,13 +661,16 @@ class _CircleIconBtn extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        width: 38, height: 38,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: Colors.black.withValues(alpha: 0.45),
+      child: Opacity(
+        opacity: onTap == null ? 0.45 : 1,
+        child: Container(
+          width: 38, height: 38,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.black.withValues(alpha: 0.45),
+          ),
+          child: Icon(icon, size: 18, color: filled ? Colors.yellow.shade200 : Colors.white),
         ),
-        child: Icon(icon, size: 18, color: filled ? Colors.yellow.shade200 : Colors.white),
       ),
     );
   }
@@ -928,9 +996,14 @@ class _Field extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _ActionSheet extends StatelessWidget {
+  final VoidCallback onShareCommunity;
   final VoidCallback onDelete;
   final VoidCallback onChangePic;
-  const _ActionSheet({required this.onDelete, required this.onChangePic});
+  const _ActionSheet({
+    required this.onShareCommunity,
+    required this.onDelete,
+    required this.onChangePic,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -948,6 +1021,12 @@ class _ActionSheet extends StatelessWidget {
             decoration: BoxDecoration(color: const Color(0xFFDDDDDD), borderRadius: BorderRadius.circular(2)),
           ),
           const SizedBox(height: 20),
+          _SheetTile(
+            icon: LucideIcons.utensils,
+            label: 'Share with community',
+            onTap: onShareCommunity,
+          ),
+          const Divider(height: 1, color: Color(0xFFF0F0F0)),
           _SheetTile(icon: LucideIcons.image, label: 'Change photo', onTap: onChangePic),
           const Divider(height: 1, color: Color(0xFFF0F0F0)),
           _SheetTile(

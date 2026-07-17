@@ -72,6 +72,29 @@ class AuthRepository {
     );
   }
 
+  Future<Map<String, dynamic>> forgotPassword({required String email}) async {
+    final res = await _dio.post(
+      'auth/forgot-password',
+      data: {'email': email.trim()},
+    );
+    return Map<String, dynamic>.from(res.data as Map);
+  }
+
+  Future<void> resetPassword({
+    required String email,
+    required String otp,
+    required String newPassword,
+  }) async {
+    await _dio.post(
+      'auth/reset-password',
+      data: {
+        'email': email.trim(),
+        'otp': otp.trim(),
+        'new_password': newPassword,
+      },
+    );
+  }
+
   Future<Map<String, dynamic>> updateWeight(Map<String, dynamic> data) async {
     final res = await _dio.put('auth/me/weight', data: data);
     return res.data as Map<String, dynamic>;

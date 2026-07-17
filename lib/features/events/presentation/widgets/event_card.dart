@@ -138,6 +138,7 @@ class EventCard extends StatelessWidget {
       return CachedFoodImage(
         imageUrl: imageUrl,
         fit: BoxFit.cover,
+        memCacheWidth: 800,
         placeholder: _buildGradientFallback(typeColor),
         errorWidget: _buildGradientFallback(typeColor),
       );

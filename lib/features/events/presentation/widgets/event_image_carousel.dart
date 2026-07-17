@@ -123,6 +123,7 @@ class _NetworkImage extends StatelessWidget {
       imageUrl: url,
       fit: BoxFit.cover,
       width: double.infinity,
+      memCacheWidth: 1080,
       placeholder: const ColoredBox(color: Color(0xFFF2F2F7)),
       errorWidget: const ColoredBox(color: Color(0xFFF2F2F7)),
     );

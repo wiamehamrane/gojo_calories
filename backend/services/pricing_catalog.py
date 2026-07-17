@@ -107,10 +107,6 @@ def _discounted_cents(price_cents: int, pay_percent: int) -> int:
     return max(1, round(price_cents * pay_percent / 100))
 
 
-def _format_usd(cents: int) -> str:
-    return f"${cents / 100:.2f}"
-
-
 def _plan_entry(
     plan_id: str,
     name: str,
@@ -122,17 +118,22 @@ def _plan_entry(
     badge: Optional[str] = None,
     referral_eligible: bool = False,
 ) -> dict[str, Any]:
+    """Build a plan row for the catalog API.
+
+    Do not embed formatted USD strings — the app must show App Store /
+    Play Billing localized prices (e.g. MAD in Morocco). Keep cents for
+    Stripe/admin only.
+    """
     equivalent_monthly = round(price_cents / max(interval_count, 1))
     entry: dict[str, Any] = {
         "id": plan_id,
         "name": name,
         "tagline": tagline,
         "price_cents": price_cents,
-        "display_price": _format_usd(price_cents),
+        "price_currency": "USD",  # reference currency for price_cents only
         "interval": interval,
         "interval_count": interval_count,
         "equivalent_monthly_cents": equivalent_monthly,
-        "equivalent_monthly_display": _format_usd(equivalent_monthly),
         "store_product_id": store_product_id,
     }
     if badge:
@@ -140,7 +141,6 @@ def _plan_entry(
     if referral_eligible:
         discounted = _discounted_cents(price_cents, REFERRAL_PAY_PERCENT)
         entry["referral_price_cents"] = discounted
-        entry["referral_display_price"] = _format_usd(discounted)
     return entry
 
 
@@ -160,7 +160,7 @@ def build_catalog(*, referral_eligible: bool = False) -> dict[str, Any]:
         _plan_entry(
             "six_month",
             "6-Month",
-            f"Pay {_format_usd(PLAN_SIX_MONTH_CENTS)} every six months.",
+            "Billed every six months.",
             PLAN_SIX_MONTH_CENTS,
             "month",
             6,
@@ -171,7 +171,7 @@ def build_catalog(*, referral_eligible: bool = False) -> dict[str, Any]:
         _plan_entry(
             "yearly",
             "Yearly",
-            f"Pay {_format_usd(PLAN_YEARLY_CENTS)} per year.",
+            "Billed once per year.",
             PLAN_YEARLY_CENTS,
             "year",
             1,
@@ -184,19 +184,19 @@ def build_catalog(*, referral_eligible: bool = False) -> dict[str, Any]:
     clan_addons = {
         "monthly": {
             "price_cents": CLAN_ADDON_MONTHLY_CENTS,
-            "display_price": _format_usd(CLAN_ADDON_MONTHLY_CENTS),
+            "price_currency": "USD",
             "store_product_id": PRODUCT_CLAN_ADDON_MONTHLY,
             "description": "Add a family member to your monthly plan",
         },
         "six_month": {
             "price_cents": CLAN_ADDON_SIX_MONTH_CENTS,
-            "display_price": _format_usd(CLAN_ADDON_SIX_MONTH_CENTS),
+            "price_currency": "USD",
             "store_product_id": PRODUCT_CLAN_ADDON_SIX_MONTH,
             "description": "Add a family member to your 6-month plan",
         },
         "yearly": {
             "price_cents": CLAN_ADDON_YEARLY_CENTS,
-            "display_price": _format_usd(CLAN_ADDON_YEARLY_CENTS),
+            "price_currency": "USD",
             "store_product_id": PRODUCT_CLAN_ADDON_YEARLY,
             "description": "Add a family member to your yearly plan",
         },

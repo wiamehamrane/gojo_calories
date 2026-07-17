@@ -32,8 +32,6 @@ export interface DashboardStats {
   pending_withdrawals: number;
   total_influencers: number;
   active_influencers: number;
-  total_promo_redemptions: number;
-  active_promo_codes: number;
   subscription_breakdown: Record<string, number>;
 }
 

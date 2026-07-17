@@ -60,8 +60,6 @@ class User(Base):
     referral_code = Column(String, unique=True, nullable=True, index=True)
     referral_balance = Column(Float, default=0.0, nullable=False)
     referred_by = Column(String(36), ForeignKey("users.id"), nullable=True)
-    
-    pending_promo_code_id = Column(String(36), ForeignKey("promo_codes.id"), nullable=True, index=True)
 
     daily_stats = relationship("DailyStats", back_populates="user")
     weigh_ins = relationship("WeighIn", back_populates="user", cascade="all, delete-orphan")
@@ -183,6 +181,46 @@ class ExerciseLog(Base):
     log_date = Column(Date, nullable=True, index=True)
     
     user = relationship("User", back_populates="exercise_logs")
+
+class SharedMeal(Base):
+    """A meal a user prepared and shared with the community.
+
+    Shown as a horizontal row on the Events page: photo of the final
+    product, macros, ingredients, and how to cook it.
+    """
+    __tablename__ = "shared_meals"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid, index=True)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    name = Column(String, nullable=False)
+    image_url = Column(String, nullable=True)          # stable S3 key
+    ingredients = Column(JSON, nullable=False)         # list[str]
+    instructions = Column(Text, nullable=True)         # how to cook
+    calories = Column(Integer, default=0)
+    protein = Column(Integer, default=0)
+    carbs = Column(Integer, default=0)
+    fat = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    stars = relationship(
+        "SharedMealStar", back_populates="meal", cascade="all, delete-orphan"
+    )
+
+
+class SharedMealStar(Base):
+    """A user's star/favorite on a community shared meal."""
+    __tablename__ = "shared_meal_stars"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid, index=True)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    shared_meal_id = Column(
+        String(36), ForeignKey("shared_meals.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    meal = relationship("SharedMeal", back_populates="stars")
+    user = relationship("User")
+
 
 class Recipe(Base):
     __tablename__ = "recipes"
@@ -324,40 +362,6 @@ class Influencer(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     user = relationship("User")
-    promo_codes = relationship("PromoCode", back_populates="influencer", cascade="all, delete-orphan")
-
-
-class PromoCode(Base):
-    __tablename__ = "promo_codes"
-
-    id = Column(String(36), primary_key=True, default=generate_uuid, index=True)
-    influencer_id = Column(String(36), ForeignKey("influencers.id"), nullable=False, index=True)
-    code = Column(String, unique=True, nullable=False, index=True)
-    platform = Column(String, default="internal", nullable=False)  # internal | apple | google
-    plan_type = Column(String, nullable=False)  # monthly | yearly | lifetime | trial_7d | six_month
-    store_product_id = Column(String, nullable=True)  # IAP product id for apple/google codes
-    notes = Column(Text, nullable=True)
-    max_redemptions = Column(Integer, nullable=True)
-    redemption_count = Column(Integer, default=0, nullable=False)
-    is_active = Column(Boolean, default=True, nullable=False)
-    expires_at = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
-
-    influencer = relationship("Influencer", back_populates="promo_codes")
-    redemptions = relationship("PromoRedemption", back_populates="promo_code", cascade="all, delete-orphan")
-
-
-class PromoRedemption(Base):
-    __tablename__ = "promo_redemptions"
-
-    id = Column(String(36), primary_key=True, default=generate_uuid, index=True)
-    promo_code_id = Column(String(36), ForeignKey("promo_codes.id"), nullable=False, index=True)
-    user_id = Column(String(36), ForeignKey("users.id"), unique=True, nullable=False, index=True)
-    plan_granted = Column(String, nullable=False)
-    redeemed_at = Column(DateTime, default=datetime.datetime.utcnow)
-
-    promo_code = relationship("PromoCode", back_populates="redemptions")
-    user = relationship("User")
 
 
 class Clan(Base):
@@ -402,3 +406,23 @@ class ClanInvite(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     clan = relationship("Clan", back_populates="invites")
+
+
+class ShareGrant(Base):
+    """Permission for a viewer (e.g. coach) to see an owner's diary/workouts."""
+
+    __tablename__ = "share_grants"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid, index=True)
+    owner_user_id = Column(String(36), ForeignKey("users.id"), nullable=True, index=True)  # client
+    viewer_user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)  # coach
+    invite_email = Column(String, nullable=True, index=True)
+    token = Column(String, unique=True, nullable=False, index=True)
+    status = Column(String, default="pending", nullable=False)  # pending | active | revoked | expired | declined
+    scopes = Column(String, default="nutrition,exercises", nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+    accepted_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    owner = relationship("User", foreign_keys=[owner_user_id])
+    viewer = relationship("User", foreign_keys=[viewer_user_id])

@@ -8,6 +8,7 @@ import '../../data/clan_repository.dart';
 import '../../../../core/localization/locale_provider.dart';
 import '../../../../core/localization/translations.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/store_price_format.dart';
 
 final clanRepositoryProvider = Provider((ref) => ClanRepository());
 
@@ -24,6 +25,7 @@ class _ClanScreenState extends ConsumerState<ClanScreen> {
   bool _submitting = false;
   Map<String, dynamic>? _data;
   String? _error;
+  String? _localAddonPrice;
 
   @override
   void initState() {
@@ -37,6 +39,24 @@ class _ClanScreenState extends ConsumerState<ClanScreen> {
     super.dispose();
   }
 
+  Future<void> _resolveLocalAddonPrice(String? productId) async {
+    if (productId == null) {
+      if (mounted) setState(() => _localAddonPrice = null);
+      return;
+    }
+    try {
+      final product =
+          await ref.read(iapServiceProvider).loadClanAddonProduct(productId);
+      if (!mounted) return;
+      setState(() {
+        _localAddonPrice =
+            product != null ? StorePriceFormat.display(product) : null;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _localAddonPrice = null);
+    }
+  }
+
   Future<void> _load() async {
     setState(() {
       _loading = true;
@@ -44,11 +64,15 @@ class _ClanScreenState extends ConsumerState<ClanScreen> {
     });
     try {
       final data = await ref.read(clanRepositoryProvider).getMyClan();
+      if (!mounted) return;
       setState(() {
         _data = data;
         _loading = false;
       });
+      final clan = data['clan'] as Map<String, dynamic>?;
+      await _resolveLocalAddonPrice(clan?['addon_product_id'] as String?);
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _error = e.toString();
         _loading = false;
@@ -171,7 +195,8 @@ class _ClanScreenState extends ConsumerState<ClanScreen> {
     final members = (clan['members'] as List?)?.cast<Map<String, dynamic>>() ?? [];
     final invites = (clan['pending_invites'] as List?)?.cast<Map<String, dynamic>>() ?? [];
     final pendingSlots = clan['pending_addon_slots'] as int? ?? 0;
-    final addonPrice = clan['addon_display_price'] as String?;
+    // Prefer store-localized price only — never fall back to server USD.
+    final addonPrice = _localAddonPrice;
     final addonProductId = clan['addon_product_id'] as String?;
 
     return Column(

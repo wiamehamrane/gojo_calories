@@ -39,3 +39,51 @@ Call the endpoint from any cron scheduler to build the reminder plan, e.g.:
 ```
 
 New reminder types: add an entry to `SMART_MESSAGES` in `backend/routes/notifications.py`.
+
+---
+
+# Personalized Nutrition Notifications (v2)
+
+`backend/services/smart_nutrition_service.py` runs automatically at fixed local times each day
+(default 10:00, 12:00, 14:00, 16:00, 18:00, 20:00; APScheduler in `main.py`) and sends each active user at most ONE
+personalized push based on today's `DailyStats` vs their targets, addressed by
+first name.
+
+## Rules (priority order, local time)
+
+| Rule | When | Message |
+|---|---|---|
+| `overeat` | calories > 110% of budget | "Mohamed, you've eaten 2600 kcal — 400 over budget. A workout would balance it out." |
+| `no_food` | 10:00-14:00, nothing logged | "The morning is almost over and you haven't logged anything yet…" |
+| `protein_evening` | ≥ 18:00, protein < 75% of target | "Only 40 g of protein to go — prepare a high-protein dinner!" |
+| `day_win` | ≥ 18:00, protein hit & calories within budget | "Amazing work! You hit 130 g of protein…" |
+| `on_track` | 12:00-18:00, 35-75% of calorie budget eaten | "Good job Mohamed! You've eaten 80 g of protein — only 40 g left…" |
+
+## Anti-spam
+- Quiet hours: nothing before 10:00 or after 22:00 local.
+- Each rule fires max once per user per day; hard cap 3 pushes/user/day.
+- Audience: users with `DailyStats` activity in the last 7 days. During the
+  `no_food` window (11:00–14:00) every verified non-banned user is also
+  considered, so people who never logged still get the missed-meal reminder.
+- Dedup state in Redis (`smartnotif:*` keys, 36h TTL); in-memory fallback.
+- Scheduler runs once immediately on API startup, then every
+  `SMART_NOTIF_INTERVAL_HOURS`.
+
+## Config (env)
+```
+ONESIGNAL_REST_API_KEY=...        # required, scheduler won't start without it
+SMART_NOTIF_ENABLED=true          # set false to disable the scheduler
+SMART_NOTIF_LOCAL_HOURS=10,12,14,16,18,20  # local times the check runs each day
+SMART_NOTIF_TZ_OFFSET_MIN=60      # user base timezone offset from UTC, minutes
+```
+
+## Manual trigger (testing)
+```
+POST /api/notifications/nutrition-check
+{ "admin_key": "<ADMIN_API_KEY>" }
+```
+Response includes `checked`, `sent`, and a per-rule `breakdown`.
+
+Note: pushes are sent one API call per user (content is personalized). Fine up
+to tens of thousands of users per run. A future upgrade: store each user's
+`tz_offset` from the app instead of the global `SMART_NOTIF_TZ_OFFSET_MIN`.

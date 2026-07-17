@@ -24,8 +24,10 @@ Resources:
               - s3:GetObject
               - s3:ListBucket
             Resource:
-              - arn:aws:s3:::gojocalories-media-uploads
-              - arn:aws:s3:::gojocalories-media-uploads/*
+              # Wildcard: covers any media bucket named gojocalories-media*
+              # (the exact name lives in the AWS_BUCKET_NAME secret).
+              - arn:aws:s3:::gojocalories-media*
+              - arn:aws:s3:::gojocalories-media*/*
           - Effect: Allow
             Action:
               - ssm:GetParameters

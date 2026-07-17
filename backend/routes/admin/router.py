@@ -21,8 +21,6 @@ from models import (
     Memory,
     Post,
     PostLike,
-    PromoCode,
-    PromoRedemption,
     Referral,
     User,
     Withdrawal,
@@ -241,15 +239,6 @@ def dashboard_stats(
         "active_influencers": (
             db.query(func.count(Influencer.id))
             .filter(Influencer.is_active == True)
-            .scalar()
-            or 0
-        ),
-        "total_promo_redemptions": (
-            db.query(func.count(PromoRedemption.id)).scalar() or 0
-        ),
-        "active_promo_codes": (
-            db.query(func.count(PromoCode.id))
-            .filter(PromoCode.is_active == True)
             .scalar()
             or 0
         ),
@@ -820,6 +809,57 @@ def send_notification(
     return {
         "status": "success",
         "message": f"Notifications queued for {len(target_emails)} users",
+    }
+
+
+class PushNotificationRequest(BaseModel):
+    title: str
+    message: str
+    target_users: str = "custom"  # "all" or "custom"
+    emails: Optional[List[str]] = None
+
+
+@router.post("/notifications/push")
+def send_push_notification(
+    body: PushNotificationRequest,
+    admin: User = Depends(require_admin_user),
+    db: Session = Depends(get_db),
+):
+    """Send an OneSignal push to specific users (by email) or all verified users.
+
+    Sends synchronously and returns a per-user delivery report, so admins can
+    immediately see whether a device is linked/subscribed — useful for testing.
+    """
+    from services.smart_nutrition_service import _send_push
+
+    if body.target_users == "all":
+        users = db.query(User).filter(User.is_email_verified == True).all()  # noqa: E712
+    else:
+        emails = [e.strip().lower() for e in (body.emails or []) if e.strip()]
+        if not emails:
+            raise HTTPException(status_code=400, detail="No target emails provided")
+        users = db.query(User).filter(func.lower(User.email).in_(emails)).all()
+
+    if not users:
+        raise HTTPException(status_code=404, detail="No matching users found")
+
+    results = []
+    sent = 0
+    for user in users:
+        ok, err = _send_push(str(user.id), body.title, body.message)
+        if ok:
+            sent += 1
+        results.append({
+            "email": user.email,
+            "delivered": ok,
+            "error": err or None,
+        })
+
+    return {
+        "status": "success",
+        "sent": sent,
+        "total": len(users),
+        "results": results,
     }
 
 
