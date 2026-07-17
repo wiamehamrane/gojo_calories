@@ -20,6 +20,7 @@ abstract final class RoutePaths {
   static const shareMealChooser = '/meals/share/choose';
   static const shareExistingMeal = '/meals/share/existing';
   static const starredMeals = '/meals/starred';
+  static const publicProfile = '/users/:id';
   static const profile = '/profile';
 
   static const profilePersonal = '/profile/personal';

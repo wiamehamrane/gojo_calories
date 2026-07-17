@@ -75,6 +75,66 @@ class SharedMealsNotifier extends Notifier<AsyncValue<List<SharedMeal>>> {
     );
   }
 
+  void applyLikeState(String mealId, {required bool isLiked, required int likesCount}) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncValue.data(
+      current
+          .map(
+            (m) => m.id == mealId
+                ? m.copyWith(isLiked: isLiked, likesCount: likesCount)
+                : m,
+          )
+          .toList(),
+    );
+  }
+
+  void bumpCommentsCount(String mealId, int delta) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncValue.data(
+      current
+          .map(
+            (m) => m.id == mealId
+                ? m.copyWith(
+                    commentsCount: (m.commentsCount + delta).clamp(0, 999999),
+                  )
+                : m,
+          )
+          .toList(),
+    );
+  }
+
+  Future<bool> toggleLike(String mealId) async {
+    final previous = state.value;
+    if (previous != null) {
+      state = AsyncValue.data(
+        previous.map((m) {
+          if (m.id != mealId) return m;
+          final nextLiked = !m.isLiked;
+          return m.copyWith(
+            isLiked: nextLiked,
+            likesCount: (m.likesCount + (nextLiked ? 1 : -1)).clamp(0, 999999),
+          );
+        }).toList(),
+      );
+    }
+
+    try {
+      final data =
+          await ref.read(sharedMealsRepositoryProvider).toggleLike(mealId);
+      applyLikeState(
+        mealId,
+        isLiked: data['is_liked'] as bool? ?? false,
+        likesCount: (data['likes_count'] as num?)?.toInt() ?? 0,
+      );
+      return true;
+    } catch (_) {
+      if (previous != null) state = AsyncValue.data(previous);
+      return false;
+    }
+  }
+
   Future<bool> toggleStar(String mealId) async {
     final previous = state.value;
     if (previous != null) {
@@ -147,3 +207,14 @@ class StarredSharedMealsNotifier
 
 final starredSharedMealsProvider = NotifierProvider<StarredSharedMealsNotifier,
     AsyncValue<List<SharedMeal>>>(StarredSharedMealsNotifier.new);
+
+final mealCommentsProvider = FutureProvider.autoDispose
+    .family<List<SharedMealComment>, String>((ref, mealId) async {
+  final data =
+      await ref.read(sharedMealsRepositoryProvider).getComments(mealId);
+  return data
+      .map((e) =>
+          SharedMealComment.fromJson(Map<String, dynamic>.from(e as Map)))
+      .toList();
+});
+

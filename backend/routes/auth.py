@@ -90,6 +90,7 @@ class UserProfileUpdate(BaseModel):
     fat_target: Optional[int] = None
     phone: Optional[str] = None
     share_phone: Optional[bool] = None
+    profile_public: Optional[bool] = None
 
 class UserLogin(BaseModel):
     email: str
@@ -497,6 +498,7 @@ def get_me(db: Session = Depends(get_db), current_user_id: str = Depends(get_cur
         "is_email_verified": getattr(user, 'is_email_verified', False),
         "phone": user.phone,
         "share_phone": user.share_phone,
+        "profile_public": bool(getattr(user, "profile_public", True)),
         "created_at": user.created_at.isoformat() if getattr(user, "created_at", None) else None,
     }
 
@@ -541,6 +543,8 @@ def update_profile(
         user.phone = profile_data.phone
     if profile_data.share_phone is not None:
         user.share_phone = profile_data.share_phone
+    if profile_data.profile_public is not None:
+        user.profile_public = profile_data.profile_public
 
     db.commit()
     db.refresh(user)
