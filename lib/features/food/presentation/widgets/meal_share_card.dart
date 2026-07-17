@@ -1,7 +1,6 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/theme/app_colors.dart';
@@ -30,7 +29,6 @@ class MealShareCard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Meal photo (same hero feel as Nutrition screen)
           SizedBox(
             height: 280,
             child: Stack(
@@ -58,8 +56,6 @@ class MealShareCard extends StatelessWidget {
               ],
             ),
           ),
-
-          // White content — mirrors food_detail_screen layout
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
             child: Column(
@@ -87,8 +83,6 @@ class MealShareCard extends StatelessWidget {
                   ),
                 ],
                 const SizedBox(height: 16),
-
-                // Calories card — black flame, black value
                 Container(
                   decoration: BoxDecoration(
                     color: Colors.white,
@@ -146,8 +140,6 @@ class MealShareCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 14),
-
-                // Macro row — light grey tiles, colored icons, black amounts
                 Row(
                   children: [
                     _MacroTile(
@@ -172,7 +164,6 @@ class MealShareCard extends StatelessWidget {
                     ),
                   ],
                 ),
-
                 if (ingredients.isNotEmpty) ...[
                   const SizedBox(height: 22),
                   const Text(
@@ -216,8 +207,6 @@ class MealShareCard extends StatelessWidget {
               ],
             ),
           ),
-
-          // Brand footer
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 18, 20, 22),
             child: Container(
@@ -283,19 +272,16 @@ class _PhotoFallback extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Icon only — SvgPicture can fail during RepaintBoundary capture.
     return Container(
       color: const Color(0xFF1A1A1A),
-      child: Center(
+      child: const Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            SvgPicture.asset(
-              'assets/icons/avocado.svg',
-              width: 56,
-              height: 56,
-            ),
-            const SizedBox(height: 10),
-            const Text(
+            Icon(LucideIcons.utensils, size: 48, color: Colors.white30),
+            SizedBox(height: 10),
+            Text(
               'No photo',
               style: TextStyle(color: Colors.white30, fontSize: 13),
             ),
@@ -306,7 +292,6 @@ class _PhotoFallback extends StatelessWidget {
   }
 }
 
-/// Matches [food_detail_screen] `_MacroTile`: light grey card, colored icon, black value.
 class _MacroTile extends StatelessWidget {
   final String label;
   final String value;

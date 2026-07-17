@@ -90,7 +90,8 @@ Future<Uint8List?> resolveShareImageBytes(String? imageUrl) async {
 }
 
 Future<void> captureAndShareWidget(
-  BuildContext context, {
+  BuildContext context,
+  {
   required WidgetBuilder builder,
   required double cardWidth,
   required String filePrefix,
@@ -104,13 +105,15 @@ Future<void> captureAndShareWidget(
   OverlayState? overlay;
   try {
     overlay = Overlay.of(context, rootOverlay: true);
-  } catch (_) {
+  } catch (e) {
+    debugPrint('Share overlay unavailable: $e');
     messenger?.showSnackBar(
       const SnackBar(content: Text('Could not share right now.')),
     );
     return;
   }
 
+  messenger?.hideCurrentSnackBar();
   messenger?.showSnackBar(
     const SnackBar(
       content: Text('Preparing share image…'),
@@ -122,7 +125,9 @@ Future<void> captureAndShareWidget(
   if (precacheBytes != null && precacheBytes.isNotEmpty) {
     try {
       await precacheImage(MemoryImage(precacheBytes), context);
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Share precache failed: $e');
+    }
   }
   if (!context.mounted) return;
 
@@ -131,13 +136,19 @@ Future<void> captureAndShareWidget(
 
   entry = OverlayEntry(
     builder: (ctx) => Positioned(
-      left: -cardWidth - 40,
+      // Keep on-screen (opacity 0) — off-screen capture fails on some devices.
+      left: 0,
       top: 0,
-      child: Material(
-        type: MaterialType.transparency,
-        child: RepaintBoundary(
-          key: boundaryKey,
-          child: builder(ctx),
+      child: IgnorePointer(
+        child: Opacity(
+          opacity: 0.01,
+          child: Material(
+            type: MaterialType.transparency,
+            child: RepaintBoundary(
+              key: boundaryKey,
+              child: builder(ctx),
+            ),
+          ),
         ),
       ),
     ),
@@ -146,9 +157,11 @@ Future<void> captureAndShareWidget(
   overlay.insert(entry);
 
   try {
-    await Future<void>.delayed(const Duration(milliseconds: 50));
+    // Let the overlay layout + paint before capturing.
     await WidgetsBinding.instance.endOfFrame;
-    await Future<void>.delayed(const Duration(milliseconds: 100));
+    await Future<void>.delayed(const Duration(milliseconds: 80));
+    await WidgetsBinding.instance.endOfFrame;
+    await Future<void>.delayed(const Duration(milliseconds: 120));
     await WidgetsBinding.instance.endOfFrame;
 
     final boundary =
@@ -157,9 +170,9 @@ Future<void> captureAndShareWidget(
       throw Exception('Share card failed to render');
     }
 
-    // Wait until the first paint finishes (image decoded).
-    if (boundary.debugNeedsPaint) {
-      await Future<void>.delayed(const Duration(milliseconds: 80));
+    // Extra frame if layout size is still empty.
+    if (boundary.size.isEmpty) {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
       await WidgetsBinding.instance.endOfFrame;
     }
 
@@ -179,9 +192,9 @@ Future<void> captureAndShareWidget(
 
     if (!context.mounted) return;
 
-    final box = context.findRenderObject() as RenderBox?;
-    final origin = sharePositionOrigin ??
-        (box != null ? box.localToGlobal(Offset.zero) & box.size : null);
+    messenger?.hideCurrentSnackBar();
+
+    final origin = _shareOrigin(context, sharePositionOrigin);
 
     await Share.shareXFiles(
       [
@@ -194,7 +207,8 @@ Future<void> captureAndShareWidget(
       text: shareText,
       sharePositionOrigin: origin,
     );
-  } catch (_) {
+  } catch (e, st) {
+    debugPrint('Share image failed: $e\n$st');
     if (context.mounted) {
       ScaffoldMessenger.maybeOf(context)?.showSnackBar(
         const SnackBar(content: Text('Could not create share image.')),
@@ -203,6 +217,23 @@ Future<void> captureAndShareWidget(
   } finally {
     entry.remove();
   }
+}
+
+/// iPad / iOS require a non-zero popover origin for the share sheet.
+Rect _shareOrigin(BuildContext context, Rect? preferred) {
+  if (preferred != null && preferred.width > 0 && preferred.height > 0) {
+    return preferred;
+  }
+  final box = context.findRenderObject() as RenderBox?;
+  if (box != null && box.hasSize && box.size.width > 0 && box.size.height > 0) {
+    return box.localToGlobal(Offset.zero) & box.size;
+  }
+  final size = MediaQuery.sizeOf(context);
+  return Rect.fromCenter(
+    center: Offset(size.width / 2, size.height / 2),
+    width: 2,
+    height: 2,
+  );
 }
 
 Future<Uint8List?> downloadShareImage(String url) async {
@@ -218,7 +249,8 @@ Future<Uint8List?> downloadShareImage(String url) async {
     final data = response.data;
     if (data == null || data.isEmpty) return null;
     return Uint8List.fromList(data);
-  } catch (_) {
+  } catch (e) {
+    debugPrint('Share image download failed: $e');
     return null;
   }
 }
