@@ -36,12 +36,14 @@ class ProgressPhotosNotifier extends Notifier<AsyncValue<List<ProgressPhoto>>> {
   Future<bool> uploadPhoto(
     File imageFile, {
     String? note,
+    BodyPose? pose,
     DateTime? photoDate,
   }) async {
     try {
       await ref.read(progressPhotosRepositoryProvider).uploadPhoto(
             imageFile,
             note: note,
+            pose: pose?.id,
             photoDate: photoDate,
           );
       await fetchPhotos();
@@ -71,3 +73,30 @@ final progressPhotosProvider =
     NotifierProvider<ProgressPhotosNotifier, AsyncValue<List<ProgressPhoto>>>(
   ProgressPhotosNotifier.new,
 );
+
+DateTime _dayKey(DateTime d) => DateTime(d.year, d.month, d.day);
+
+/// Photos grouped by calendar day, newest day first. Legacy photos with no
+/// pose are still grouped so nothing is lost from a user's existing timeline.
+final progressDaysProvider = Provider<List<ProgressDay>>((ref) {
+  final photos = ref.watch(progressPhotosProvider).value ?? const [];
+  final map = <DateTime, List<ProgressPhoto>>{};
+  for (final p in photos) {
+    map.putIfAbsent(_dayKey(p.photoDate), () => []).add(p);
+  }
+  final days = map.entries
+      .map((e) => ProgressDay(date: e.key, photos: e.value))
+      .toList()
+    ..sort((a, b) => b.date.compareTo(a.date));
+  return days;
+});
+
+/// The set of poses already captured today — drives the "you still need X" UI.
+final todayCompletedPosesProvider = Provider<Set<BodyPose>>((ref) {
+  final today = _dayKey(DateTime.now());
+  final days = ref.watch(progressDaysProvider);
+  for (final d in days) {
+    if (_dayKey(d.date) == today) return d.completedPoses;
+  }
+  return <BodyPose>{};
+});

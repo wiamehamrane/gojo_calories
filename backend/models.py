@@ -389,6 +389,9 @@ class ProgressPhoto(Base):
     user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
     image_url = Column(String, nullable=False)  # stable S3 key
     note = Column(String, nullable=True)
+    # Which of the four standardized angles this shot is: front | left | right | back.
+    # Nullable for legacy rows created before guided capture existed.
+    pose = Column(String(10), nullable=True, index=True)
     photo_date = Column(Date, nullable=False, default=datetime.date.today, index=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 

@@ -14,12 +14,14 @@ class ProgressPhotosRepository {
   Future<Map<String, dynamic>> uploadPhoto(
     File imageFile, {
     String? note,
+    String? pose,
     DateTime? photoDate,
   }) async {
     final fileName = imageFile.path.split('/').last;
     final formData = FormData.fromMap({
       'file': await MultipartFile.fromFile(imageFile.path, filename: fileName),
       if (note != null && note.isNotEmpty) 'note': note,
+      if (pose != null && pose.isNotEmpty) 'pose': pose,
       if (photoDate != null)
         'photo_date':
             '${photoDate.year.toString().padLeft(4, '0')}-${photoDate.month.toString().padLeft(2, '0')}-${photoDate.day.toString().padLeft(2, '0')}',
