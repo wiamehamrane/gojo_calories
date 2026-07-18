@@ -25,7 +25,19 @@ const _specialtyOptions = [
   'general',
 ];
 
-const _languageOptions = ['fr', 'ar', 'en'];
+const _languageOptions = [
+  'en',
+  'fr',
+  'ar',
+  'es',
+  'nl',
+  'pt',
+  'zh',
+  'ru',
+  'de',
+  'ja',
+  'ko',
+];
 
 class BecomeCoachScreen extends ConsumerStatefulWidget {
   const BecomeCoachScreen({super.key});
@@ -864,7 +876,7 @@ class _AboutStep extends StatelessWidget {
                 spacing: 8,
                 children: _languageOptions.map((l) {
                   return _Chip(
-                    label: l.toUpperCase(),
+                    label: t('lang_name_$l'),
                     selected: languages.contains(l),
                     onTap: () => onToggleLanguage(l),
                   );
@@ -1054,7 +1066,9 @@ class _ReviewStep extends StatelessWidget {
               if (languages.isNotEmpty)
                 _ReviewLine(
                   label: t('become_coach_languages'),
-                  value: languages.map((e) => e.toUpperCase()).join(' · '),
+                  value: languages
+                      .map((e) => t('lang_name_$e'))
+                      .join(' · '),
                 ),
               _ReviewLine(label: t('become_coach_phone'), value: phone),
               _ReviewLine(

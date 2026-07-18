@@ -35,6 +35,11 @@ class GojoCaloriesApp extends ConsumerWidget {
           Locale('es'),
           Locale('nl'),
           Locale('pt'),
+          Locale('zh'),
+          Locale('ru'),
+          Locale('de'),
+          Locale('ja'),
+          Locale('ko'),
         ],
         localizationsDelegates: const [
           GlobalMaterialLocalizations.delegate,
