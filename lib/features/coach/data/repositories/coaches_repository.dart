@@ -50,6 +50,11 @@ class CoachesRepository {
     final res = await ApiClient.instance.post('coaches/activate');
     return CoachOwnerProfile.fromJson(Map<String, dynamic>.from(res.data as Map));
   }
+
+  Future<CoachOwnerProfile> deactivate() async {
+    final res = await ApiClient.instance.post('coaches/deactivate');
+    return CoachOwnerProfile.fromJson(Map<String, dynamic>.from(res.data as Map));
+  }
 }
 
 class MyCoachResponse {

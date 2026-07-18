@@ -182,9 +182,36 @@ def activate_coach(
             detail="Coach subscription required",
         )
 
+    if SKIP_COACH_PAYMENT and not coach_service.coach_subscription_active(
+        coach, allow_skip=False
+    ):
+        coach.subscription_plan = coach.subscription_plan or "yearly"
+        coach.subscription_source = coach.subscription_source or "skip"
+        coach.subscription_expires_at = datetime.datetime.utcnow() + datetime.timedelta(
+            days=365
+        )
+
     coach.is_active = True
     coach.updated_at = datetime.datetime.utcnow()
     user.is_coach = True
+    db.commit()
+    db.refresh(coach)
+    return coach_service.serialize_owner(coach, user)
+
+
+@router.post("/deactivate")
+def deactivate_coach(
+    user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Hide the coach from search. Profile is kept; can activate again later."""
+    coach = _get_own_coach(db, user.id)
+    if not coach:
+        raise HTTPException(status_code=404, detail="Coach profile not found")
+
+    coach.is_active = False
+    coach.updated_at = datetime.datetime.utcnow()
+    # Keep user.is_coach so they can manage / re-list without re-onboarding.
     db.commit()
     db.refresh(coach)
     return coach_service.serialize_owner(coach, user)

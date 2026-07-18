@@ -33,6 +33,7 @@ class ProfileScreen extends ConsumerWidget {
     final lang = ref.watch(localeProvider);
     String t(String k) => Translations.t(lang, k);
     final profileAsync = ref.watch(profileProvider);
+    final isCoach = profileAsync.asData?.value['is_coach'] == true;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -198,7 +199,9 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                   _SettingsRow(
                     icon: LucideIcons.dumbbell,
-                    label: t('become_coach_title'),
+                    label: isCoach
+                        ? t('become_coach_manage_title')
+                        : t('become_coach_title'),
                     onTap: () => context.push(RoutePaths.becomeCoach),
                   ),
                   _SettingsRow(

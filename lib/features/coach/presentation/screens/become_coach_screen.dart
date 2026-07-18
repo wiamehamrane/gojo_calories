@@ -15,6 +15,7 @@ import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_shadows.dart';
 import '../../../events/domain/models/event_location_selection.dart';
 import '../../../events/presentation/widgets/event_location_picker_sheet.dart';
+import '../../../profile/presentation/providers/profile_providers.dart';
 
 const _specialtyOptions = [
   'nutrition',
@@ -212,10 +213,130 @@ class _BecomeCoachScreenState extends ConsumerState<BecomeCoachScreen> {
       _isActive = activated.isActive;
       _hasCoachSub = activated.hasActiveCoachSubscription || _hasCoachSub;
     });
+    ref.invalidate(profileProvider);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(_t('become_coach_success'))),
     );
     context.pop();
+  }
+
+  Future<void> _saveProfileOnly() async {
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    try {
+      await ref.read(coachesRepositoryProvider).upsertMe(_payload());
+      if (!mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_t('become_coach_saved'))),
+      );
+    } on DioException catch (e) {
+      final detail = e.response?.data is Map
+          ? (e.response!.data['detail']?.toString() ?? '')
+          : '';
+      setState(() {
+        _saving = false;
+        _error = detail.isNotEmpty ? detail : 'become_coach_failed';
+      });
+    } catch (_) {
+      setState(() {
+        _saving = false;
+        _error = 'become_coach_failed';
+      });
+    }
+  }
+
+  Future<void> _pauseListing() async {
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    try {
+      final updated = await ref.read(coachesRepositoryProvider).deactivate();
+      if (!mounted) return;
+      setState(() {
+        _saving = false;
+        _isActive = updated.isActive;
+        _userIsCoach = true;
+      });
+      ref.invalidate(profileProvider);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_t('become_coach_paused'))),
+      );
+    } on DioException catch (e) {
+      final detail = e.response?.data is Map
+          ? (e.response!.data['detail']?.toString() ?? '')
+          : '';
+      setState(() {
+        _saving = false;
+        _error = detail.isNotEmpty ? detail : 'become_coach_failed';
+      });
+    } catch (_) {
+      setState(() {
+        _saving = false;
+        _error = 'become_coach_failed';
+      });
+    }
+  }
+
+  Future<void> _resumeListing() async {
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    try {
+      await ref.read(coachesRepositoryProvider).upsertMe(_payload());
+      if (!mounted) return;
+
+      if (!_hasCoachSub && !EnvConfig.skipCoachPayment) {
+        setState(() => _saving = false);
+        final paid = await context.push<bool>(RoutePaths.coachPaywall);
+        if (!mounted) return;
+        if (paid != true) {
+          setState(() => _error = 'become_coach_payment_required');
+          return;
+        }
+        setState(() {
+          _hasCoachSub = true;
+          _saving = true;
+        });
+      }
+
+      final activated = await ref.read(coachesRepositoryProvider).activate();
+      if (!mounted) return;
+      setState(() {
+        _saving = false;
+        _isActive = activated.isActive;
+        _userIsCoach = true;
+        _hasCoachSub = activated.hasActiveCoachSubscription || _hasCoachSub;
+      });
+      ref.invalidate(profileProvider);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_t('become_coach_resumed'))),
+      );
+    } on DioException catch (e) {
+      final status = e.response?.statusCode;
+      final detail = e.response?.data is Map
+          ? (e.response!.data['detail']?.toString() ?? '')
+          : '';
+      setState(() {
+        _saving = false;
+        if (status == 402) {
+          _error = 'become_coach_sub_required';
+        } else if (detail.isNotEmpty) {
+          _error = detail;
+        } else {
+          _error = 'become_coach_failed';
+        }
+      });
+    } catch (_) {
+      setState(() {
+        _saving = false;
+        _error = 'become_coach_failed';
+      });
+    }
   }
 
   Future<void> _submit() async {
@@ -228,6 +349,12 @@ class _BecomeCoachScreenState extends ConsumerState<BecomeCoachScreen> {
       return;
     }
 
+    // Existing coach: save profile only (listing toggled separately).
+    if (_userIsCoach) {
+      await _saveProfileOnly();
+      return;
+    }
+
     setState(() {
       _saving = true;
       _error = null;
@@ -235,19 +362,8 @@ class _BecomeCoachScreenState extends ConsumerState<BecomeCoachScreen> {
 
     try {
       final repo = ref.read(coachesRepositoryProvider);
-      // Save draft profile only — listing requires payment + activate.
       await repo.upsertMe(_payload());
       if (!mounted) return;
-
-      // Already listed: saving profile is enough.
-      if (_userIsCoach && _isActive) {
-        setState(() => _saving = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_t('become_coach_success'))),
-        );
-        context.pop();
-        return;
-      }
 
       if (!_hasCoachSub && !EnvConfig.skipCoachPayment) {
         setState(() => _saving = false);
@@ -317,6 +433,11 @@ class _BecomeCoachScreenState extends ConsumerState<BecomeCoachScreen> {
                 )
               : Column(
                   children: [
+                    if (_userIsCoach)
+                      _ListingStatusBanner(
+                        t: t,
+                        isActive: _isActive,
+                      ),
                     _StepHeader(step: _step, t: t),
                     if (_error != null)
                       Padding(
@@ -383,6 +504,9 @@ class _BecomeCoachScreenState extends ConsumerState<BecomeCoachScreen> {
                             experience: _experienceController.text.trim(),
                             isActive: _isActive,
                             isCoach: _userIsCoach,
+                            saving: _saving,
+                            onPause: _pauseListing,
+                            onResume: _resumeListing,
                           ),
                         ],
                       ),
@@ -431,12 +555,10 @@ class _BecomeCoachScreenState extends ConsumerState<BecomeCoachScreen> {
                                         _step < 2
                                             ? t('become_coach_continue')
                                             : (_userIsCoach
-                                                ? t('become_coach_update')
-                                                : (_hasCoachSub
-                                                    ? t('become_coach_submit')
-                                                    : t(
-                                                        'become_coach_continue_payment',
-                                                      ))),
+                                                ? t('become_coach_save')
+                                                : t(
+                                                    'become_coach_continue_payment',
+                                                  )),
                                       ),
                               ),
                             ),
@@ -446,6 +568,50 @@ class _BecomeCoachScreenState extends ConsumerState<BecomeCoachScreen> {
                     ),
                   ],
                 ),
+    );
+  }
+}
+
+class _ListingStatusBanner extends StatelessWidget {
+  final String Function(String) t;
+  final bool isActive;
+
+  const _ListingStatusBanner({required this.t, required this.isActive});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: isActive ? AppColors.primaryLight : AppColors.surfaceMuted,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            isActive ? LucideIcons.eye : LucideIcons.eyeOff,
+            size: 18,
+            color: isActive ? AppColors.primaryDark : AppColors.textSecondary,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              isActive
+                  ? t('become_coach_status_visible')
+                  : t('become_coach_status_hidden'),
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: isActive
+                    ? AppColors.primaryDark
+                    : AppColors.textSecondary,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -830,6 +996,9 @@ class _ReviewStep extends StatelessWidget {
   final String experience;
   final bool isActive;
   final bool isCoach;
+  final bool saving;
+  final VoidCallback onPause;
+  final VoidCallback onResume;
 
   const _ReviewStep({
     required this.t,
@@ -843,6 +1012,9 @@ class _ReviewStep extends StatelessWidget {
     required this.experience,
     required this.isActive,
     required this.isCoach,
+    required this.saving,
+    required this.onPause,
+    required this.onResume,
   });
 
   @override
@@ -889,7 +1061,16 @@ class _ReviewStep extends StatelessWidget {
                 label: t('become_coach_location'),
                 value: city ?? '-',
               ),
-              if (isCoach) ...[
+            ],
+          ),
+        ),
+        if (isCoach) ...[
+          const SizedBox(height: 12),
+          _Card(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(t('become_coach_listing'), style: _labelStyle),
                 const SizedBox(height: 8),
                 Text(
                   isActive
@@ -897,14 +1078,24 @@ class _ReviewStep extends StatelessWidget {
                       : t('become_coach_already_inactive'),
                   style: const TextStyle(
                     fontSize: 13,
-                    color: AppColors.primaryDark,
-                    fontWeight: FontWeight.w600,
+                    color: AppColors.textSecondary,
                   ),
                 ),
+                const SizedBox(height: 12),
+                if (isActive)
+                  OutlinedButton(
+                    onPressed: saving ? null : onPause,
+                    child: Text(t('become_coach_pause')),
+                  )
+                else
+                  FilledButton(
+                    onPressed: saving ? null : onResume,
+                    child: Text(t('become_coach_resume')),
+                  ),
               ],
-            ],
+            ),
           ),
-        ),
+        ],
       ],
     );
   }

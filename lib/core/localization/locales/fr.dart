@@ -408,6 +408,15 @@ const Map<String, String> fr = {
   'become_coach_continue_payment': 'Continuer vers le paiement',
   'become_coach_payment_required':
       'Le paiement est requis pour devenir coach. Votre profil a été enregistré en brouillon.',
+  'become_coach_save': 'Enregistrer le profil',
+  'become_coach_saved': 'Profil coach enregistré.',
+  'become_coach_listing': 'Visibilité',
+  'become_coach_pause': 'Masquer de la recherche',
+  'become_coach_resume': 'Afficher dans la recherche',
+  'become_coach_paused': 'Vous êtes masqué de la recherche de coachs.',
+  'become_coach_resumed': 'Vous êtes de nouveau visible dans la recherche.',
+  'become_coach_status_visible': 'Visible dans la recherche de coachs',
+  'become_coach_status_hidden': 'Masqué de la recherche de coachs',
   'coach_paywall_title': 'Abonnement coach',
   'coach_paywall_headline': 'Apparaissez comme coach',
   'coach_paywall_body':

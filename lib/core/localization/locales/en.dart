@@ -482,6 +482,15 @@ const Map<String, String> en = {
   'become_coach_continue_payment': 'Continue to payment',
   'become_coach_payment_required':
       'Payment is required to become a coach. Your profile was saved as a draft.',
+  'become_coach_save': 'Save profile',
+  'become_coach_saved': 'Coach profile saved.',
+  'become_coach_listing': 'Listing',
+  'become_coach_pause': 'Hide from search',
+  'become_coach_resume': 'Show in search',
+  'become_coach_paused': 'You are hidden from coach search.',
+  'become_coach_resumed': 'You are visible in coach search again.',
+  'become_coach_status_visible': 'Visible in coach search',
+  'become_coach_status_hidden': 'Hidden from coach search',
   'coach_paywall_title': 'Coach subscription',
   'coach_paywall_headline': 'Get listed as a coach',
   'coach_paywall_body':
