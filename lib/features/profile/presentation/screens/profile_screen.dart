@@ -1124,28 +1124,31 @@ class _SettingsRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return PressScale(
       scale: 0.98,
-      child: ListTile(
-        leading: Icon(icon, size: 22, color: color ?? AppColors.textPrimary),
-        title: Text(
-          label,
-          style: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w500,
-            color: color ?? AppColors.textPrimary,
+      child: Material(
+        color: Colors.transparent,
+        child: ListTile(
+          leading: Icon(icon, size: 22, color: color ?? AppColors.textPrimary),
+          title: Text(
+            label,
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w500,
+              color: color ?? AppColors.textPrimary,
+            ),
           ),
+          trailing: color == null
+              ? Icon(
+                  LucideIcons.chevronRight,
+                  size: 18,
+                  color: AppColors.inactive,
+                )
+              : null,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          onTap: () {
+            HapticFeedback.selectionClick();
+            onTap();
+          },
         ),
-        trailing: color == null
-            ? Icon(
-                LucideIcons.chevronRight,
-                size: 18,
-                color: AppColors.inactive,
-              )
-            : null,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        onTap: () {
-          HapticFeedback.selectionClick();
-          onTap();
-        },
       ),
     );
   }

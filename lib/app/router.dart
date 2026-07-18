@@ -7,6 +7,7 @@ import '../features/home/home_routes.dart';
 import '../features/food/food_routes.dart';
 import '../features/exercise/exercise_routes.dart';
 import '../features/events/events_routes.dart';
+import '../features/coach/coach_routes.dart';
 import '../features/profile/profile_routes.dart';
 import '../features/referrals/referrals_routes.dart';
 import '../features/tasks/tasks_routes.dart';
@@ -27,10 +28,12 @@ final GoRouter appRouter = GoRouter(
         ...homeRoutes,
         ...foodShellRoutes,
         ...eventsShellRoutes,
+        ...coachShellRoutes,
         ...profileShellRoutes,
       ],
     ),
     ...profileRoutes,
+    ...coachRoutes,
     ...eventsRoutes,
     ...exerciseRoutes,
     ...referralRoutes,

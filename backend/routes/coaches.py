@@ -194,7 +194,7 @@ def search_coaches(
     specialty: Optional[str] = Query(None),
     gender: Optional[str] = Query(None),
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=_MAX_PAGE_SIZE),
+    page_size: int = Query(5, ge=1, le=_MAX_PAGE_SIZE),
     user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):

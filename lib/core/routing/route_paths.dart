@@ -30,10 +30,14 @@ abstract final class RoutePaths {
   static const profileReferrals = '/profile/referrals';
   static const profileClan = '/profile/clan';
   static const profileShare = '/profile/share';
+  static const coaches = '/coaches';
+  static const coachDetail = '/coaches/:id';
   static const profileTerms = '/profile/terms';
   static const profilePrivacy = '/profile/privacy';
   static const shareClientDiary = '/share/client/:id';
   static const shareJoin = '/share/join';
+
+  static String coachDetailPath(String id) => '/coaches/$id';
 
   static const logExercise = '/log_exercise';
   static const runIntensity = '/run_intensity';

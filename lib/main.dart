@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'app/app.dart';
+import 'core/config/env_config.dart';
 import 'core/localization/locale_provider.dart';
 
 Future<void> main() async {
@@ -50,6 +51,11 @@ Future<void> main() async {
   } catch (e) {
     debugPrint("Could not load .env file: $e");
   }
+  await EnvConfig.prepare();
+  debugPrint(
+    'APP_ENV=${EnvConfig.appEnv} target=${EnvConfig.runtimeTarget} '
+    'API_URL=${EnvConfig.apiBaseUrl}',
+  );
 
   final container = ProviderContainer();
   await container.read(localeProvider.notifier).loadSaved();

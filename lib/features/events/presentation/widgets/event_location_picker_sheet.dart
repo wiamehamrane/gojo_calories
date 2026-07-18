@@ -24,6 +24,7 @@ class EventLocationPickerSheet extends StatefulWidget {
     return showModalBottomSheet<EventLocationSelection>(
       context: context,
       isScrollControlled: true,
+      useRootNavigator: true,
       backgroundColor: Colors.transparent,
       builder: (_) => EventLocationPickerSheet(initial: initial),
     );
@@ -163,12 +164,44 @@ class _EventLocationPickerSheetState extends State<EventLocationPickerSheet> {
       _isResolvingPin = true;
     });
     try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        setState(() => _error = 'Turn on location services to continue.');
+        return;
+      }
+
       var permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
       }
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
+      if (permission == LocationPermission.deniedForever) {
+        if (!mounted) return;
+        setState(() => _error = 'Location permission is blocked.');
+        final open = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Location permission'),
+            content: const Text(
+              'Location access was denied. Open Settings to allow it, then try again.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('Open Settings'),
+              ),
+            ],
+          ),
+        );
+        if (open == true) {
+          await Geolocator.openAppSettings();
+        }
+        return;
+      }
+      if (permission == LocationPermission.denied) {
         setState(() => _error = 'Location permission is required.');
         return;
       }

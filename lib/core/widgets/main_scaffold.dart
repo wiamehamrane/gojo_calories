@@ -27,7 +27,8 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
     final String location = GoRouterState.of(context).uri.path;
     if (location.startsWith('/home')) return 0;
     if (location.startsWith('/events')) return 1;
-    if (location.startsWith('/profile')) return 2;
+    if (location.startsWith('/coaches')) return 2;
+    if (location.startsWith('/profile')) return 3;
     return -1;
   }
 
@@ -42,13 +43,16 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
     prepareTabSlide(fromIndex: from, toIndex: index);
     switch (index) {
       case 0:
-        context.go('/home');
+        context.go(RoutePaths.home);
         break;
       case 1:
-        context.go('/events');
+        context.go(RoutePaths.events);
         break;
       case 2:
-        context.go('/profile');
+        context.go(RoutePaths.coaches);
+        break;
+      case 3:
+        context.go(RoutePaths.profile);
         break;
     }
   }
@@ -101,7 +105,7 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
     final bottomPadding = MediaQuery.of(context).padding.bottom;
 
     const pillHeight = 56.0;
-    const pillHMargin = 24.0;
+    const pillHMargin = 16.0;
     const fabSize = 60.0;
     final bottomOffset = bottomPadding + 16.0;
     final bool isHome = currentIndex == 0;
@@ -118,7 +122,7 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
                 final velocity = details.primaryVelocity ?? 0.0;
                 final goNext = velocity < -250 || _dragDx < -80;
                 final goPrev = velocity > 250 || _dragDx > 80;
-                if (goNext && currentIndex >= 0 && currentIndex < 2) {
+                if (goNext && currentIndex >= 0 && currentIndex < 3) {
                   _onItemTapped(currentIndex + 1, context);
                 } else if (goPrev && currentIndex > 0) {
                   _onItemTapped(currentIndex - 1, context);
@@ -200,10 +204,18 @@ class _FloatingNavBar extends StatelessWidget {
           ),
           Expanded(
             child: _NavSlot(
-              icon: LucideIcons.user,
-              label: Translations.t(lang, 'nav_profile'),
+              icon: LucideIcons.dumbbell,
+              label: Translations.t(lang, 'nav_coaches'),
               isActive: currentIndex == 2,
               onTap: () => onTap(2),
+            ),
+          ),
+          Expanded(
+            child: _NavSlot(
+              icon: LucideIcons.user,
+              label: Translations.t(lang, 'nav_profile'),
+              isActive: currentIndex == 3,
+              onTap: () => onTap(3),
             ),
           ),
         ],
@@ -234,7 +246,7 @@ class _NavSlotState extends State<_NavSlot> {
 
   @override
   Widget build(BuildContext context) {
-    final scale = widget.isActive ? 1.12 : (_pressed ? 0.92 : 1.0);
+    final scale = widget.isActive ? 1.04 : (_pressed ? 0.94 : 1.0);
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -251,8 +263,8 @@ class _NavSlotState extends State<_NavSlot> {
             duration: const Duration(milliseconds: 260),
             curve: Curves.easeOutCubic,
             padding: EdgeInsets.symmetric(
-              horizontal: widget.isActive ? 16 : 12,
-              vertical: widget.isActive ? 10 : 8,
+              horizontal: widget.isActive ? 8 : 6,
+              vertical: 8,
             ),
             decoration: BoxDecoration(
               color: widget.isActive
@@ -260,9 +272,8 @@ class _NavSlotState extends State<_NavSlot> {
                   : Colors.transparent,
               borderRadius: BorderRadius.circular(999),
             ),
-            child: AnimatedSize(
-              duration: const Duration(milliseconds: 260),
-              curve: Curves.easeOutCubic,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -271,18 +282,21 @@ class _NavSlotState extends State<_NavSlot> {
                     child: Icon(
                       widget.icon,
                       key: ValueKey('${widget.label}_${widget.isActive}'),
-                      size: widget.isActive ? 24 : 22,
+                      size: 22,
                       color: widget.isActive
                           ? AppColors.primaryDark
                           : AppColors.inactive,
                     ),
                   ),
                   if (widget.isActive) ...[
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 6),
                     Text(
                       widget.label,
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.fade,
                       style: const TextStyle(
-                        fontSize: 14,
+                        fontSize: 12,
                         fontWeight: FontWeight.w700,
                         color: AppColors.primaryDark,
                       ),
