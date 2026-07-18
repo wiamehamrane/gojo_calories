@@ -12,6 +12,7 @@ import 'presentation/screens/share_meal_chooser_screen.dart';
 import 'presentation/screens/share_existing_meal_screen.dart';
 import 'presentation/screens/share_meal_screen.dart';
 import 'presentation/screens/starred_meals_screen.dart';
+import 'presentation/screens/public_profile_screen.dart';
 
 List<RouteBase> get eventsShellRoutes => [
       GoRoute(
@@ -89,6 +90,16 @@ List<RouteBase> get eventsRoutes => [
         pageBuilder: (context, state) => smoothPushPage(
           state: state,
           child: const StarredMealsScreen(),
+        ),
+      ),
+      GoRoute(
+        path: RoutePaths.publicProfile,
+        parentNavigatorKey: rootNavigatorKey,
+        pageBuilder: (context, state) => smoothPushPage(
+          state: state,
+          child: PublicProfileScreen(
+            userId: state.pathParameters['id']!,
+          ),
         ),
       ),
     ];

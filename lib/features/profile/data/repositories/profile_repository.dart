@@ -1,3 +1,7 @@
+import 'dart:io';
+
+import 'package:dio/dio.dart';
+
 import '../../../../core/network/api_client.dart';
 
 class ProfileRepository {
@@ -6,6 +10,20 @@ class ProfileRepository {
   Future<Map<String, dynamic>> getMe() async {
     final res = await _dio.get('auth/me');
     return res.data as Map<String, dynamic>;
+  }
+
+  Future<String?> uploadAvatar(File imageFile) async {
+    final fileName = imageFile.path.split('/').last;
+    final formData = FormData.fromMap({
+      'file': await MultipartFile.fromFile(imageFile.path, filename: fileName),
+    });
+    final res = await _dio.post('auth/me/avatar', data: formData);
+    final data = res.data as Map<String, dynamic>?;
+    return data?['avatar_url'] as String?;
+  }
+
+  Future<void> deleteAvatar() async {
+    await _dio.delete('auth/me/avatar');
   }
 
   Future<void> updateProfile(Map<String, dynamic> data) async {

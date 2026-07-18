@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, Date, ForeignKey, Text, Boolean, JSON
+from sqlalchemy import Column, Integer, String, Float, DateTime, Date, ForeignKey, Text, Boolean, JSON, UniqueConstraint
 from sqlalchemy.orm import relationship
 import datetime
 import uuid
@@ -32,6 +32,10 @@ class User(Base):
     activity_level = Column(String, default="sedentary")  # "sedentary" | "light" | "moderate" | "active" | "very_active"
     phone = Column(String, nullable=True)
     share_phone = Column(Boolean, default=False)
+    # S3 key or local /uploads path for the user's profile photo.
+    avatar_url = Column(String, nullable=True)
+    # When True, other users can open a limited public profile from comments/meals.
+    profile_public = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     
     # Manual overrides for nutrition goals
@@ -200,10 +204,17 @@ class SharedMeal(Base):
     protein = Column(Integer, default=0)
     carbs = Column(Integer, default=0)
     fat = Column(Integer, default=0)
+    comments_enabled = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     stars = relationship(
         "SharedMealStar", back_populates="meal", cascade="all, delete-orphan"
+    )
+    likes = relationship(
+        "SharedMealLike", back_populates="meal", cascade="all, delete-orphan"
+    )
+    comments = relationship(
+        "SharedMealComment", back_populates="meal", cascade="all, delete-orphan"
     )
 
 
@@ -219,6 +230,61 @@ class SharedMealStar(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     meal = relationship("SharedMeal", back_populates="stars")
+    user = relationship("User")
+
+
+class SharedMealLike(Base):
+    """A heart/like on a community shared meal."""
+    __tablename__ = "shared_meal_likes"
+    __table_args__ = (
+        UniqueConstraint("user_id", "shared_meal_id", name="uq_shared_meal_likes_user_meal"),
+    )
+
+    id = Column(String(36), primary_key=True, default=generate_uuid, index=True)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    shared_meal_id = Column(
+        String(36), ForeignKey("shared_meals.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    meal = relationship("SharedMeal", back_populates="likes")
+    user = relationship("User")
+
+
+class SharedMealComment(Base):
+    """A top-level comment on a shared meal (no replies)."""
+    __tablename__ = "shared_meal_comments"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid, index=True)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    shared_meal_id = Column(
+        String(36), ForeignKey("shared_meals.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    body = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    meal = relationship("SharedMeal", back_populates="comments")
+    user = relationship("User")
+    likes = relationship(
+        "SharedMealCommentLike", back_populates="comment", cascade="all, delete-orphan"
+    )
+
+
+class SharedMealCommentLike(Base):
+    """A like on a shared-meal comment."""
+    __tablename__ = "shared_meal_comment_likes"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid, index=True)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    comment_id = Column(
+        String(36),
+        ForeignKey("shared_meal_comments.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    comment = relationship("SharedMealComment", back_populates="likes")
     user = relationship("User")
 
 

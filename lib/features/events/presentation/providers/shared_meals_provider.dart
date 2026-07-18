@@ -13,6 +13,13 @@ List<SharedMeal> _parseMeals(List<dynamic> data) {
       .toList();
 }
 
+int _asInt(dynamic value, [int fallback = 0]) {
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  if (value is String) return int.tryParse(value) ?? fallback;
+  return fallback;
+}
+
 class SharedMealsNotifier extends Notifier<AsyncValue<List<SharedMeal>>> {
   @override
   AsyncValue<List<SharedMeal>> build() {
@@ -73,6 +80,134 @@ class SharedMealsNotifier extends Notifier<AsyncValue<List<SharedMeal>>> {
           .map((m) => m.id == mealId ? m.copyWith(isStarred: isStarred) : m)
           .toList(),
     );
+  }
+
+  void applyLikeState(String mealId, {required bool isLiked, required int likesCount}) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncValue.data(
+      current
+          .map(
+            (m) => m.id == mealId
+                ? m.copyWith(isLiked: isLiked, likesCount: likesCount)
+                : m,
+          )
+          .toList(),
+    );
+    ref.read(starredSharedMealsProvider.notifier).applyLikeState(
+          mealId,
+          isLiked: isLiked,
+          likesCount: likesCount,
+        );
+  }
+
+  void bumpCommentsCount(String mealId, int delta) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncValue.data(
+      current
+          .map(
+            (m) => m.id == mealId
+                ? m.copyWith(
+                    commentsCount: (m.commentsCount + delta).clamp(0, 999999),
+                  )
+                : m,
+          )
+          .toList(),
+    );
+  }
+
+  void applyCommentsEnabled(String mealId, bool enabled) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncValue.data(
+      current
+          .map(
+            (m) =>
+                m.id == mealId ? m.copyWith(commentsEnabled: enabled) : m,
+          )
+          .toList(),
+    );
+    ref
+        .read(starredSharedMealsProvider.notifier)
+        .applyCommentsEnabled(mealId, enabled);
+  }
+
+  Future<bool> setCommentsEnabled(String mealId, bool enabled) async {
+    final previous = state.value;
+    applyCommentsEnabled(mealId, enabled);
+    try {
+      final result = await ref
+          .read(sharedMealsRepositoryProvider)
+          .setCommentsEnabled(mealId, enabled);
+      applyCommentsEnabled(mealId, result);
+      return true;
+    } catch (_) {
+      if (previous != null) state = AsyncValue.data(previous);
+      return false;
+    }
+  }
+
+  Future<bool> deleteComment(String mealId, String commentId) async {
+    try {
+      await ref
+          .read(sharedMealsRepositoryProvider)
+          .deleteComment(mealId, commentId);
+      bumpCommentsCount(mealId, -1);
+      ref.invalidate(mealCommentsProvider(mealId));
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  final Set<String> _likeInFlight = {};
+
+  /// Returns the server like state on success, or null on failure.
+  Future<({bool isLiked, int likesCount})?> toggleLike(String mealId) async {
+    if (_likeInFlight.contains(mealId)) return null;
+    _likeInFlight.add(mealId);
+
+    final previous = state.value;
+    SharedMeal? before;
+    if (previous != null) {
+      for (final m in previous) {
+        if (m.id == mealId) {
+          before = m;
+          break;
+        }
+      }
+      if (before != null) {
+        final nextLiked = !before.isLiked;
+        state = AsyncValue.data(
+          previous
+              .map(
+                (m) => m.id == mealId
+                    ? m.copyWith(
+                        isLiked: nextLiked,
+                        likesCount: (m.likesCount + (nextLiked ? 1 : -1))
+                            .clamp(0, 999999),
+                      )
+                    : m,
+              )
+              .toList(),
+        );
+      }
+    }
+
+    try {
+      final data =
+          await ref.read(sharedMealsRepositoryProvider).toggleLike(mealId);
+      final isLiked = data['is_liked'] == true;
+      final likesCount = _asInt(data['likes_count']);
+      applyLikeState(mealId, isLiked: isLiked, likesCount: likesCount);
+      return (isLiked: isLiked, likesCount: likesCount);
+    } catch (_) {
+      if (previous != null) state = AsyncValue.data(previous);
+      return null;
+    } finally {
+      _likeInFlight.remove(mealId);
+    }
   }
 
   Future<bool> toggleStar(String mealId) async {
@@ -143,7 +278,49 @@ class StarredSharedMealsNotifier
       state = AsyncValue.data(previous);
     }
   }
+
+  void applyCommentsEnabled(String mealId, bool enabled) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncValue.data(
+      current
+          .map(
+            (m) =>
+                m.id == mealId ? m.copyWith(commentsEnabled: enabled) : m,
+          )
+          .toList(),
+    );
+  }
+
+  void applyLikeState(
+    String mealId, {
+    required bool isLiked,
+    required int likesCount,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncValue.data(
+      current
+          .map(
+            (m) => m.id == mealId
+                ? m.copyWith(isLiked: isLiked, likesCount: likesCount)
+                : m,
+          )
+          .toList(),
+    );
+  }
 }
 
 final starredSharedMealsProvider = NotifierProvider<StarredSharedMealsNotifier,
     AsyncValue<List<SharedMeal>>>(StarredSharedMealsNotifier.new);
+
+final mealCommentsProvider = FutureProvider.autoDispose
+    .family<List<SharedMealComment>, String>((ref, mealId) async {
+  final data =
+      await ref.read(sharedMealsRepositoryProvider).getComments(mealId);
+  return data
+      .map((e) =>
+          SharedMealComment.fromJson(Map<String, dynamic>.from(e as Map)))
+      .toList();
+});
+

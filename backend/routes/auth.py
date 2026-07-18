@@ -2,7 +2,7 @@ import random
 import string
 import os
 import logging
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, File, UploadFile
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -17,6 +17,7 @@ from google.auth.transport import requests as g_requests
 import jwt
 import httpx
 from services import email_service
+from s3_utils import upload_image_to_s3_key, resolve_media_url, MediaUploadError
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -90,6 +91,7 @@ class UserProfileUpdate(BaseModel):
     fat_target: Optional[int] = None
     phone: Optional[str] = None
     share_phone: Optional[bool] = None
+    profile_public: Optional[bool] = None
 
 class UserLogin(BaseModel):
     email: str
@@ -497,8 +499,56 @@ def get_me(db: Session = Depends(get_db), current_user_id: str = Depends(get_cur
         "is_email_verified": getattr(user, 'is_email_verified', False),
         "phone": user.phone,
         "share_phone": user.share_phone,
+        "profile_public": bool(getattr(user, "profile_public", True)),
+        "avatar_url": resolve_media_url(getattr(user, "avatar_url", None)),
         "created_at": user.created_at.isoformat() if getattr(user, "created_at", None) else None,
     }
+
+
+@router.post("/me/avatar")
+async def upload_avatar(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user_id: str = Depends(get_current_user_id),
+):
+    user = db.query(User).filter(User.id == current_user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    content_type = (file.content_type or "").lower()
+    if content_type and not content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="File must be an image")
+
+    contents = await file.read()
+    if not contents:
+        raise HTTPException(status_code=400, detail="Empty file")
+
+    try:
+        key = upload_image_to_s3_key(contents, content_type or "image/jpeg", prefix="avatars/")
+    except MediaUploadError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+    user.avatar_url = key
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    return {"avatar_url": resolve_media_url(user.avatar_url)}
+
+
+@router.delete("/me/avatar")
+def delete_avatar(
+    db: Session = Depends(get_db),
+    current_user_id: str = Depends(get_current_user_id),
+):
+    user = db.query(User).filter(User.id == current_user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.avatar_url = None
+    db.add(user)
+    db.commit()
+    return {"avatar_url": None}
+
 
 @router.put("/me/profile")
 def update_profile(
@@ -541,6 +591,8 @@ def update_profile(
         user.phone = profile_data.phone
     if profile_data.share_phone is not None:
         user.share_phone = profile_data.share_phone
+    if profile_data.profile_public is not None:
+        user.profile_public = profile_data.profile_public
 
     db.commit()
     db.refresh(user)

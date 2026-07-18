@@ -2,18 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/localization/locale_provider.dart';
 import '../../../../core/localization/translations.dart';
+import '../../../../core/routing/route_paths.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/cached_food_image.dart';
 import '../../../food/domain/meal_share_data.dart';
 import '../../../food/presentation/utils/meal_share_helper.dart';
 import '../../domain/models/shared_meal.dart';
 import '../providers/shared_meals_provider.dart';
+import 'shared_meal_comments_section.dart';
 
 const _starActive = Color(0xFFF5A623);
+const _likeActive = Color(0xFFE11D48);
 
 /// Card used in the horizontal "Shared meals" row on the Events page.
 class SharedMealCard extends ConsumerStatefulWidget {
@@ -230,6 +234,7 @@ class _MacroChip extends StatelessWidget {
 void showSharedMealSheet(BuildContext context, SharedMeal meal) {
   showModalBottomSheet<void>(
     context: context,
+    useRootNavigator: true,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     barrierColor: Colors.black.withValues(alpha: 0.5),
@@ -239,7 +244,13 @@ void showSharedMealSheet(BuildContext context, SharedMeal meal) {
       curve: Curves.easeOutCubic,
       reverseCurve: Curves.easeInCubic,
     ),
-    builder: (_) => _SharedMealSheet(initialMeal: meal),
+    builder: (sheetContext) {
+      final bottomInset = MediaQuery.viewInsetsOf(sheetContext).bottom;
+      return Padding(
+        padding: EdgeInsets.only(bottom: bottomInset),
+        child: _SharedMealSheet(initialMeal: meal),
+      );
+    },
   );
 }
 
@@ -255,7 +266,12 @@ class _SharedMealSheet extends ConsumerStatefulWidget {
 class _SharedMealSheetState extends ConsumerState<_SharedMealSheet> {
   late SharedMeal _meal = widget.initialMeal;
   bool _toggling = false;
+  bool _liking = false;
   bool _entranceDone = false;
+  final _commentsKey = GlobalKey();
+  final _composerKey = GlobalKey();
+  final _commentFocus = FocusNode();
+  final _sheetController = DraggableScrollableController();
 
   @override
   void initState() {
@@ -263,6 +279,68 @@ class _SharedMealSheetState extends ConsumerState<_SharedMealSheet> {
     Future<void>.delayed(const Duration(milliseconds: 750), () {
       if (mounted) setState(() => _entranceDone = true);
     });
+    // Pull fresh like/comment counts so the sheet isn't stuck on a stale feed snapshot.
+    Future<void>.microtask(_refreshMealCounts);
+  }
+
+  Future<void> _refreshMealCounts() async {
+    await ref.read(sharedMealsProvider.notifier).fetchMeals();
+    if (!mounted || _liking) return;
+    final fromFeed = _findMeal(
+      ref.read(sharedMealsProvider).value,
+      widget.initialMeal.id,
+    );
+    if (fromFeed != null) {
+      setState(() => _meal = fromFeed);
+      return;
+    }
+    final fromStarred = _findMeal(
+      ref.read(starredSharedMealsProvider).value,
+      widget.initialMeal.id,
+    );
+    if (fromStarred != null) {
+      setState(() => _meal = fromStarred);
+    }
+  }
+
+  SharedMeal? _findMeal(List<SharedMeal>? meals, String id) {
+    if (meals == null) return null;
+    for (final m in meals) {
+      if (m.id == id) return m;
+    }
+    return null;
+  }
+
+  @override
+  void dispose() {
+    _commentFocus.dispose();
+    _sheetController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _scrollToComments() async {
+    HapticFeedback.selectionClick();
+
+    if (_sheetController.isAttached) {
+      await _sheetController.animateTo(
+        0.95,
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOutCubic,
+      );
+    }
+
+    final commentsContext = _commentsKey.currentContext;
+    if (commentsContext != null && mounted) {
+      await Scrollable.ensureVisible(
+        commentsContext,
+        duration: const Duration(milliseconds: 320),
+        curve: Curves.easeOutCubic,
+        alignment: 0.0,
+      );
+    }
+
+    if (!mounted || !_meal.commentsEnabled) return;
+    _commentFocus.requestFocus();
   }
 
   Widget _enter(
@@ -333,6 +411,52 @@ class _SharedMealSheetState extends ConsumerState<_SharedMealSheet> {
       }
     }
     _toggling = false;
+  }
+
+  Future<void> _toggleLike() async {
+    if (_liking) return;
+    _liking = true;
+    HapticFeedback.lightImpact();
+    final previous = _meal;
+    final nextLiked = !_meal.isLiked;
+    setState(() {
+      _meal = _meal.copyWith(
+        isLiked: nextLiked,
+        likesCount: (_meal.likesCount + (nextLiked ? 1 : -1)).clamp(0, 999999),
+      );
+    });
+    final result =
+        await ref.read(sharedMealsProvider.notifier).toggleLike(previous.id);
+    if (!mounted) {
+      _liking = false;
+      return;
+    }
+    if (result == null) {
+      setState(() => _meal = previous);
+    } else {
+      setState(() {
+        _meal = _meal.copyWith(
+          isLiked: result.isLiked,
+          likesCount: result.likesCount,
+        );
+      });
+    }
+    _liking = false;
+  }
+
+  void _openAuthorProfile() {
+    if (!_meal.authorProfilePublic || _meal.userId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('This profile is private.')),
+      );
+      return;
+    }
+    HapticFeedback.selectionClick();
+    final router = GoRouter.of(context);
+    final path =
+        RoutePaths.publicProfile.replaceFirst(':id', _meal.userId);
+    Navigator.of(context).pop();
+    router.push(path);
   }
 
   @override
@@ -465,14 +589,41 @@ class _SharedMealSheetState extends ConsumerState<_SharedMealSheet> {
     );
 
     final authorBlock = _enter(
-      Text(
-        'Shared by ${meal.authorName}',
-        style: const TextStyle(
-          fontSize: 13,
-          color: AppColors.textSecondary,
+      GestureDetector(
+        onTap: _openAuthorProfile,
+        child: Text(
+          'Shared by ${meal.authorName}',
+          style: const TextStyle(
+            fontSize: 13,
+            color: AppColors.textSecondary,
+          ),
         ),
       ),
       delayMs: 140,
+    );
+
+    final engagementBlock = _enter(
+      Row(
+        children: [
+          _EngagementChip(
+            icon: meal.isLiked ? Icons.favorite : LucideIcons.heart,
+            label: meal.likesCount > 0 ? '${meal.likesCount}' : 'Like',
+            active: meal.isLiked,
+            activeColor: _likeActive,
+            onTap: _toggleLike,
+          ),
+          const SizedBox(width: 10),
+          _EngagementChip(
+            icon: LucideIcons.messageCircle,
+            label: meal.commentsCount > 0
+                ? '${meal.commentsCount}'
+                : 'Comment',
+            active: false,
+            onTap: _scrollToComments,
+          ),
+        ],
+      ),
+      delayMs: 160,
     );
 
     final macrosBlock = Row(
@@ -500,6 +651,8 @@ class _SharedMealSheetState extends ConsumerState<_SharedMealSheet> {
       titleBlock,
       const SizedBox(height: 4),
       authorBlock,
+      const SizedBox(height: 14),
+      engagementBlock,
       const SizedBox(height: 18),
       macrosBlock,
     ];
@@ -581,7 +734,25 @@ class _SharedMealSheetState extends ConsumerState<_SharedMealSheet> {
       ]);
     }
 
+    detailsChildren.addAll([
+      const SizedBox(height: 28),
+      KeyedSubtree(
+        key: _commentsKey,
+        child: SharedMealCommentsSection(
+          mealId: meal.id,
+          mealOwnerId: meal.userId,
+          commentsEnabled: meal.commentsEnabled,
+          onCommentsEnabledChanged: (enabled) {
+            setState(() => _meal = _meal.copyWith(commentsEnabled: enabled));
+          },
+        ),
+      ),
+      // Extra space so last comments aren't hidden behind sticky composer.
+      const SizedBox(height: 16),
+    ]);
+
     return DraggableScrollableSheet(
+      controller: _sheetController,
       initialChildSize: 0.85,
       minChildSize: 0.5,
       maxChildSize: 0.95,
@@ -593,16 +764,32 @@ class _SharedMealSheetState extends ConsumerState<_SharedMealSheet> {
             borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
           ),
           clipBehavior: Clip.antiAlias,
-          child: ListView(
-            controller: scrollController,
-            padding: EdgeInsets.zero,
+          child: Column(
             children: [
-              imageBlock,
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 20, 24, 40),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: detailsChildren,
+              Expanded(
+                child: ListView(
+                  controller: scrollController,
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  padding: EdgeInsets.zero,
+                  children: [
+                    imageBlock,
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: detailsChildren,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              KeyedSubtree(
+                key: _composerKey,
+                child: SharedMealCommentComposer(
+                  mealId: meal.id,
+                  focusNode: _commentFocus,
+                  enabled: meal.commentsEnabled,
                 ),
               ),
             ],
@@ -619,6 +806,55 @@ class _SharedMealSheetState extends ConsumerState<_SharedMealSheet> {
             )
             .fadeIn(duration: 280.ms);
       },
+    );
+  }
+}
+
+class _EngagementChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool active;
+  final Color activeColor;
+  final VoidCallback onTap;
+
+  const _EngagementChip({
+    required this.icon,
+    required this.label,
+    required this.active,
+    required this.onTap,
+    this.activeColor = AppColors.primaryDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = active ? activeColor : AppColors.textSecondary;
+    return Material(
+      color: active
+          ? activeColor.withValues(alpha: 0.12)
+          : AppColors.surfaceMuted,
+      borderRadius: BorderRadius.circular(999),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 16, color: color),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

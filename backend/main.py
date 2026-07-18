@@ -19,7 +19,7 @@ load_dotenv()
 
 os.makedirs("uploads", exist_ok=True)
 
-from routes import vision, auth, stats, groups, referrals, payments, notifications, exercises, recipes, events, apple_iap, google_iap, memories, feed, friends, clan, shares, shared_meals
+from routes import vision, auth, stats, groups, referrals, payments, notifications, exercises, recipes, events, apple_iap, google_iap, memories, feed, friends, clan, shares, shared_meals, users
 from routes.admin import router as admin_router
 
 # Durable media storage check — local /uploads is wiped on every ECS redeploy.
@@ -78,6 +78,9 @@ try:
         # Social & Privacy
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR;"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS share_phone BOOLEAN DEFAULT FALSE;"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_public BOOLEAN DEFAULT TRUE;"))
+        conn.execute(text("UPDATE users SET profile_public = TRUE WHERE profile_public IS NULL;"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url VARCHAR;"))
         # Join date (used by the app to limit calendar history)
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;"))
         # Backfill: accounts that predate the created_at column got stamped
@@ -241,6 +244,7 @@ try:
                 protein INTEGER DEFAULT 0,
                 carbs INTEGER DEFAULT 0,
                 fat INTEGER DEFAULT 0,
+                comments_enabled BOOLEAN DEFAULT TRUE,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """))
@@ -258,6 +262,58 @@ try:
         ))
         conn.execute(text(
             "CREATE INDEX IF NOT EXISTS ix_shared_meal_stars_meal ON shared_meal_stars (shared_meal_id);"
+        ))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS shared_meal_likes (
+                id VARCHAR(36) PRIMARY KEY,
+                user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+                shared_meal_id VARCHAR(36) NOT NULL REFERENCES shared_meals(id) ON DELETE CASCADE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE (user_id, shared_meal_id)
+            );
+        """))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_shared_meal_likes_meal ON shared_meal_likes (shared_meal_id);"
+        ))
+        # Ensure one like per user per meal (table may have been created via
+        # SQLAlchemy create_all without this constraint).
+        conn.execute(text("""
+            DELETE FROM shared_meal_likes a
+            USING shared_meal_likes b
+            WHERE a.id < b.id
+              AND a.user_id = b.user_id
+              AND a.shared_meal_id = b.shared_meal_id
+        """))
+        conn.execute(text(
+            "CREATE UNIQUE INDEX IF NOT EXISTS uq_shared_meal_likes_user_meal "
+            "ON shared_meal_likes (user_id, shared_meal_id);"
+        ))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS shared_meal_comments (
+                id VARCHAR(36) PRIMARY KEY,
+                user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+                shared_meal_id VARCHAR(36) NOT NULL REFERENCES shared_meals(id) ON DELETE CASCADE,
+                body TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_shared_meal_comments_meal ON shared_meal_comments (shared_meal_id);"
+        ))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS shared_meal_comment_likes (
+                id VARCHAR(36) PRIMARY KEY,
+                user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+                comment_id VARCHAR(36) NOT NULL REFERENCES shared_meal_comments(id) ON DELETE CASCADE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE (user_id, comment_id)
+            );
+        """))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_shared_meal_comment_likes_comment ON shared_meal_comment_likes (comment_id);"
+        ))
+        conn.execute(text(
+            "ALTER TABLE shared_meals ADD COLUMN IF NOT EXISTS comments_enabled BOOLEAN DEFAULT TRUE;"
         ))
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS friendships (
@@ -487,6 +543,7 @@ app.include_router(recipes.router, prefix="/api/recipes", tags=["Recipes"])
 app.include_router(events.router, prefix="/api/events", tags=["Events"])
 app.include_router(memories.router, prefix="/api/memories", tags=["Memories"])
 app.include_router(shared_meals.router, prefix="/api/meals", tags=["Shared Meals"])
+app.include_router(users.router, prefix="/api/users", tags=["Users"])
 app.include_router(feed.router, prefix="/api/feed", tags=["Feed"])
 app.include_router(friends.router, prefix="/api/friends", tags=["Friends"])
 app.include_router(admin_router.router, prefix="/api/admin", tags=["Admin"])
