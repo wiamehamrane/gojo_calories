@@ -72,6 +72,7 @@ def _meal_view(
         "is_liked": is_liked,
         "likes_count": likes_count,
         "comments_count": comments_count,
+        "comments_enabled": bool(getattr(meal, "comments_enabled", True)),
         "created_at": meal.created_at.isoformat() if meal.created_at else None,
     }
 
@@ -423,6 +424,8 @@ def create_meal_comment(
     meal = db.query(SharedMeal).filter(SharedMeal.id == meal_id).first()
     if not meal:
         raise HTTPException(status_code=404, detail="Meal not found")
+    if not bool(getattr(meal, "comments_enabled", True)):
+        raise HTTPException(status_code=403, detail="Comments are turned off for this meal")
 
     body = payload.body.strip()
     if not body:
@@ -446,6 +449,35 @@ def create_meal_comment(
         is_liked=False,
         profile_public=bool(getattr(current_user, "profile_public", True)),
     )
+
+
+class CommentsEnabledUpdate(BaseModel):
+    comments_enabled: bool
+
+
+@router.patch("/{meal_id}/comments-enabled")
+def set_meal_comments_enabled(
+    meal_id: str,
+    payload: CommentsEnabledUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    meal = db.query(SharedMeal).filter(SharedMeal.id == meal_id).first()
+    if not meal:
+        raise HTTPException(status_code=404, detail="Meal not found")
+    if meal.user_id != current_user.id and not current_user.is_admin:
+        raise HTTPException(
+            status_code=403,
+            detail="Only the meal owner can change comment settings",
+        )
+
+    meal.comments_enabled = bool(payload.comments_enabled)
+    db.commit()
+    db.refresh(meal)
+    return {
+        "status": "success",
+        "comments_enabled": bool(meal.comments_enabled),
+    }
 
 
 @router.post("/{meal_id}/comments/{comment_id}/like")
@@ -513,8 +545,16 @@ def delete_meal_comment(
     )
     if not comment:
         raise HTTPException(status_code=404, detail="Comment not found")
-    if comment.user_id != current_user.id and not current_user.is_admin:
-        raise HTTPException(status_code=403, detail="You can only delete your own comments")
+
+    meal = db.query(SharedMeal).filter(SharedMeal.id == meal_id).first()
+    is_author = comment.user_id == current_user.id
+    is_meal_owner = meal is not None and meal.user_id == current_user.id
+    if not is_author and not is_meal_owner and not current_user.is_admin:
+        raise HTTPException(
+            status_code=403,
+            detail="You can only delete your own comments",
+        )
+
     db.delete(comment)
     db.commit()
     return {"status": "success"}

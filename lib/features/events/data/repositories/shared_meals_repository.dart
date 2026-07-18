@@ -52,6 +52,15 @@ class SharedMealsRepository {
     await _dio.delete('meals/$mealId/comments/$commentId');
   }
 
+  Future<bool> setCommentsEnabled(String mealId, bool enabled) async {
+    final res = await _dio.patch(
+      'meals/$mealId/comments-enabled',
+      data: {'comments_enabled': enabled},
+    );
+    final data = res.data as Map<String, dynamic>;
+    return data['comments_enabled'] as bool? ?? enabled;
+  }
+
   Future<Map<String, dynamic>> getPublicProfile(String userId) async {
     final res = await _dio.get('users/$userId/profile');
     return res.data as Map<String, dynamic>;

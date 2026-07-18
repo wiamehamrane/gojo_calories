@@ -308,7 +308,7 @@ class _SharedMealSheetState extends ConsumerState<_SharedMealSheet> {
       );
     }
 
-    if (!mounted) return;
+    if (!mounted || !_meal.commentsEnabled) return;
     _commentFocus.requestFocus();
   }
 
@@ -703,7 +703,14 @@ class _SharedMealSheetState extends ConsumerState<_SharedMealSheet> {
       const SizedBox(height: 28),
       KeyedSubtree(
         key: _commentsKey,
-        child: SharedMealCommentsSection(mealId: meal.id),
+        child: SharedMealCommentsSection(
+          mealId: meal.id,
+          mealOwnerId: meal.userId,
+          commentsEnabled: meal.commentsEnabled,
+          onCommentsEnabledChanged: (enabled) {
+            setState(() => _meal = _meal.copyWith(commentsEnabled: enabled));
+          },
+        ),
       ),
       // Extra space so last comments aren't hidden behind sticky composer.
       const SizedBox(height: 16),
@@ -747,6 +754,7 @@ class _SharedMealSheetState extends ConsumerState<_SharedMealSheet> {
                 child: SharedMealCommentComposer(
                   mealId: meal.id,
                   focusNode: _commentFocus,
+                  enabled: meal.commentsEnabled,
                 ),
               ),
             ],

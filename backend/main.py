@@ -244,6 +244,7 @@ try:
                 protein INTEGER DEFAULT 0,
                 carbs INTEGER DEFAULT 0,
                 fat INTEGER DEFAULT 0,
+                comments_enabled BOOLEAN DEFAULT TRUE,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """))
@@ -297,6 +298,9 @@ try:
         """))
         conn.execute(text(
             "CREATE INDEX IF NOT EXISTS ix_shared_meal_comment_likes_comment ON shared_meal_comment_likes (comment_id);"
+        ))
+        conn.execute(text(
+            "ALTER TABLE shared_meals ADD COLUMN IF NOT EXISTS comments_enabled BOOLEAN DEFAULT TRUE;"
         ))
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS friendships (

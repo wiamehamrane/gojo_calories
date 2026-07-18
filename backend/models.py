@@ -204,6 +204,7 @@ class SharedMeal(Base):
     protein = Column(Integer, default=0)
     carbs = Column(Integer, default=0)
     fat = Column(Integer, default=0)
+    comments_enabled = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     stars = relationship(

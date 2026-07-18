@@ -105,6 +105,50 @@ class SharedMealsNotifier extends Notifier<AsyncValue<List<SharedMeal>>> {
     );
   }
 
+  void applyCommentsEnabled(String mealId, bool enabled) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncValue.data(
+      current
+          .map(
+            (m) =>
+                m.id == mealId ? m.copyWith(commentsEnabled: enabled) : m,
+          )
+          .toList(),
+    );
+    ref
+        .read(starredSharedMealsProvider.notifier)
+        .applyCommentsEnabled(mealId, enabled);
+  }
+
+  Future<bool> setCommentsEnabled(String mealId, bool enabled) async {
+    final previous = state.value;
+    applyCommentsEnabled(mealId, enabled);
+    try {
+      final result = await ref
+          .read(sharedMealsRepositoryProvider)
+          .setCommentsEnabled(mealId, enabled);
+      applyCommentsEnabled(mealId, result);
+      return true;
+    } catch (_) {
+      if (previous != null) state = AsyncValue.data(previous);
+      return false;
+    }
+  }
+
+  Future<bool> deleteComment(String mealId, String commentId) async {
+    try {
+      await ref
+          .read(sharedMealsRepositoryProvider)
+          .deleteComment(mealId, commentId);
+      bumpCommentsCount(mealId, -1);
+      ref.invalidate(mealCommentsProvider(mealId));
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<bool> toggleLike(String mealId) async {
     final previous = state.value;
     if (previous != null) {
@@ -202,6 +246,19 @@ class StarredSharedMealsNotifier
     } catch (_) {
       state = AsyncValue.data(previous);
     }
+  }
+
+  void applyCommentsEnabled(String mealId, bool enabled) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncValue.data(
+      current
+          .map(
+            (m) =>
+                m.id == mealId ? m.copyWith(commentsEnabled: enabled) : m,
+          )
+          .toList(),
+    );
   }
 }
 

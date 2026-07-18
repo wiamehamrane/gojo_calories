@@ -14,6 +14,7 @@ class SharedMeal {
   final bool isLiked;
   final int likesCount;
   final int commentsCount;
+  final bool commentsEnabled;
   final bool authorProfilePublic;
   final DateTime? createdAt;
 
@@ -33,6 +34,7 @@ class SharedMeal {
     this.isLiked = false,
     this.likesCount = 0,
     this.commentsCount = 0,
+    this.commentsEnabled = true,
     this.authorProfilePublic = true,
     this.createdAt,
   });
@@ -57,6 +59,7 @@ class SharedMeal {
       isLiked: json['is_liked'] as bool? ?? false,
       likesCount: (json['likes_count'] as num?)?.toInt() ?? 0,
       commentsCount: (json['comments_count'] as num?)?.toInt() ?? 0,
+      commentsEnabled: json['comments_enabled'] as bool? ?? true,
       authorProfilePublic: json['author_profile_public'] as bool? ?? true,
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'] as String)
@@ -69,6 +72,7 @@ class SharedMeal {
     bool? isLiked,
     int? likesCount,
     int? commentsCount,
+    bool? commentsEnabled,
   }) {
     return SharedMeal(
       id: id,
@@ -86,6 +90,7 @@ class SharedMeal {
       isLiked: isLiked ?? this.isLiked,
       likesCount: likesCount ?? this.likesCount,
       commentsCount: commentsCount ?? this.commentsCount,
+      commentsEnabled: commentsEnabled ?? this.commentsEnabled,
       authorProfilePublic: authorProfilePublic,
       createdAt: createdAt,
     );
