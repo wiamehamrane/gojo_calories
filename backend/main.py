@@ -19,7 +19,7 @@ load_dotenv()
 
 os.makedirs("uploads", exist_ok=True)
 
-from routes import vision, auth, stats, groups, referrals, payments, notifications, exercises, recipes, events, apple_iap, google_iap, memories, feed, friends, clan, shares, shared_meals, users
+from routes import vision, auth, stats, groups, referrals, payments, notifications, exercises, recipes, events, apple_iap, google_iap, memories, feed, friends, clan, shares, shared_meals, users, coaches
 from routes.admin import router as admin_router
 
 # Durable media storage check — local /uploads is wiped on every ECS redeploy.
@@ -560,6 +560,7 @@ app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(payments.router, prefix="/api/payments", tags=["Payments"])
 app.include_router(clan.router, prefix="/api/clan", tags=["Clan"])
 app.include_router(shares.router, prefix="/api/shares", tags=["Share Access"])
+app.include_router(coaches.router, prefix="/api/coaches", tags=["Coaches"])
 app.include_router(apple_iap.router, prefix="/api/payments/apple", tags=["Apple IAP"])
 app.include_router(google_iap.router, prefix="/api/payments/google", tags=["Google IAP"])
 
