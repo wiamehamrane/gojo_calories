@@ -57,8 +57,8 @@ class SharedMeal {
       fat: (json['fat'] as num?)?.toInt() ?? 0,
       isStarred: json['is_starred'] as bool? ?? false,
       isLiked: json['is_liked'] as bool? ?? false,
-      likesCount: (json['likes_count'] as num?)?.toInt() ?? 0,
-      commentsCount: (json['comments_count'] as num?)?.toInt() ?? 0,
+      likesCount: _jsonInt(json['likes_count']),
+      commentsCount: _jsonInt(json['comments_count']),
       commentsEnabled: json['comments_enabled'] as bool? ?? true,
       authorProfilePublic: json['author_profile_public'] as bool? ?? true,
       createdAt: json['created_at'] != null
@@ -130,7 +130,7 @@ class SharedMealComment {
       authorName: json['author_name'] as String? ?? 'Gojo member',
       authorAvatarUrl: json['author_avatar_url'] as String?,
       body: json['body'] as String? ?? '',
-      likesCount: (json['likes_count'] as num?)?.toInt() ?? 0,
+      likesCount: _jsonInt(json['likes_count']),
       isLiked: json['is_liked'] as bool? ?? false,
       profilePublic: json['profile_public'] as bool? ?? true,
       createdAt: json['created_at'] != null
@@ -153,4 +153,11 @@ class SharedMealComment {
       createdAt: createdAt,
     );
   }
+}
+
+int _jsonInt(dynamic value, [int fallback = 0]) {
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  if (value is String) return int.tryParse(value) ?? fallback;
+  return fallback;
 }

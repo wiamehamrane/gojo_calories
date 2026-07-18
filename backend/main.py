@@ -275,6 +275,19 @@ try:
         conn.execute(text(
             "CREATE INDEX IF NOT EXISTS ix_shared_meal_likes_meal ON shared_meal_likes (shared_meal_id);"
         ))
+        # Ensure one like per user per meal (table may have been created via
+        # SQLAlchemy create_all without this constraint).
+        conn.execute(text("""
+            DELETE FROM shared_meal_likes a
+            USING shared_meal_likes b
+            WHERE a.id < b.id
+              AND a.user_id = b.user_id
+              AND a.shared_meal_id = b.shared_meal_id
+        """))
+        conn.execute(text(
+            "CREATE UNIQUE INDEX IF NOT EXISTS uq_shared_meal_likes_user_meal "
+            "ON shared_meal_likes (user_id, shared_meal_id);"
+        ))
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS shared_meal_comments (
                 id VARCHAR(36) PRIMARY KEY,

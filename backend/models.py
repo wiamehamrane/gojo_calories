@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, Date, ForeignKey, Text, Boolean, JSON
+from sqlalchemy import Column, Integer, String, Float, DateTime, Date, ForeignKey, Text, Boolean, JSON, UniqueConstraint
 from sqlalchemy.orm import relationship
 import datetime
 import uuid
@@ -236,6 +236,9 @@ class SharedMealStar(Base):
 class SharedMealLike(Base):
     """A heart/like on a community shared meal."""
     __tablename__ = "shared_meal_likes"
+    __table_args__ = (
+        UniqueConstraint("user_id", "shared_meal_id", name="uq_shared_meal_likes_user_meal"),
+    )
 
     id = Column(String(36), primary_key=True, default=generate_uuid, index=True)
     user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)

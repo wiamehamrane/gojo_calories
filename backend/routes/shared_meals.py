@@ -344,6 +344,7 @@ def toggle_like_meal(
     if existing:
         db.delete(existing)
         db.commit()
+        db.expire_all()
         count = (
             db.query(func.count(SharedMealLike.id))
             .filter(SharedMealLike.shared_meal_id == meal_id)
@@ -352,8 +353,24 @@ def toggle_like_meal(
         )
         return {"status": "success", "is_liked": False, "likes_count": int(count)}
 
-    db.add(SharedMealLike(shared_meal_id=meal_id, user_id=current_user.id))
-    db.commit()
+    try:
+        db.add(SharedMealLike(shared_meal_id=meal_id, user_id=current_user.id))
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        # Concurrent duplicate like — treat as already liked.
+        existing = (
+            db.query(SharedMealLike)
+            .filter(
+                SharedMealLike.shared_meal_id == meal_id,
+                SharedMealLike.user_id == current_user.id,
+            )
+            .first()
+        )
+        if not existing:
+            logger.exception("Failed to like shared meal %s: %s", meal_id, exc)
+            raise HTTPException(status_code=500, detail="Could not like meal") from exc
+    db.expire_all()
     count = (
         db.query(func.count(SharedMealLike.id))
         .filter(SharedMealLike.shared_meal_id == meal_id)

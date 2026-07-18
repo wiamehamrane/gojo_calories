@@ -266,6 +266,7 @@ class _SharedMealSheet extends ConsumerStatefulWidget {
 class _SharedMealSheetState extends ConsumerState<_SharedMealSheet> {
   late SharedMeal _meal = widget.initialMeal;
   bool _toggling = false;
+  bool _liking = false;
   bool _entranceDone = false;
   final _commentsKey = GlobalKey();
   final _composerKey = GlobalKey();
@@ -278,6 +279,36 @@ class _SharedMealSheetState extends ConsumerState<_SharedMealSheet> {
     Future<void>.delayed(const Duration(milliseconds: 750), () {
       if (mounted) setState(() => _entranceDone = true);
     });
+    // Pull fresh like/comment counts so the sheet isn't stuck on a stale feed snapshot.
+    Future<void>.microtask(_refreshMealCounts);
+  }
+
+  Future<void> _refreshMealCounts() async {
+    await ref.read(sharedMealsProvider.notifier).fetchMeals();
+    if (!mounted || _liking) return;
+    final fromFeed = _findMeal(
+      ref.read(sharedMealsProvider).value,
+      widget.initialMeal.id,
+    );
+    if (fromFeed != null) {
+      setState(() => _meal = fromFeed);
+      return;
+    }
+    final fromStarred = _findMeal(
+      ref.read(starredSharedMealsProvider).value,
+      widget.initialMeal.id,
+    );
+    if (fromStarred != null) {
+      setState(() => _meal = fromStarred);
+    }
+  }
+
+  SharedMeal? _findMeal(List<SharedMeal>? meals, String id) {
+    if (meals == null) return null;
+    for (final m in meals) {
+      if (m.id == id) return m;
+    }
+    return null;
   }
 
   @override
@@ -383,6 +414,8 @@ class _SharedMealSheetState extends ConsumerState<_SharedMealSheet> {
   }
 
   Future<void> _toggleLike() async {
+    if (_liking) return;
+    _liking = true;
     HapticFeedback.lightImpact();
     final previous = _meal;
     final nextLiked = !_meal.isLiked;
@@ -392,21 +425,23 @@ class _SharedMealSheetState extends ConsumerState<_SharedMealSheet> {
         likesCount: (_meal.likesCount + (nextLiked ? 1 : -1)).clamp(0, 999999),
       );
     });
-    final ok = await ref.read(sharedMealsProvider.notifier).toggleLike(previous.id);
-    if (!mounted) return;
-    if (!ok) {
-      setState(() => _meal = previous);
+    final result =
+        await ref.read(sharedMealsProvider.notifier).toggleLike(previous.id);
+    if (!mounted) {
+      _liking = false;
       return;
     }
-    final fromFeed = ref.read(sharedMealsProvider).value;
-    if (fromFeed != null) {
-      for (final m in fromFeed) {
-        if (m.id == previous.id) {
-          setState(() => _meal = m);
-          break;
-        }
-      }
+    if (result == null) {
+      setState(() => _meal = previous);
+    } else {
+      setState(() {
+        _meal = _meal.copyWith(
+          isLiked: result.isLiked,
+          likesCount: result.likesCount,
+        );
+      });
     }
+    _liking = false;
   }
 
   void _openAuthorProfile() {
