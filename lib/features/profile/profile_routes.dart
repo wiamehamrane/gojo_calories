@@ -12,6 +12,7 @@ import '../clan/presentation/screens/clan_screen.dart';
 import '../share/presentation/screens/share_access_screen.dart';
 import '../share/presentation/screens/share_accept_screen.dart';
 import '../share/presentation/screens/shared_client_diary_screen.dart';
+import '../progress_photos/presentation/screens/progress_photos_screen.dart';
 
 List<RouteBase> get profileShellRoutes => [
       GoRoute(
@@ -85,6 +86,13 @@ List<RouteBase> get profileRoutes => [
         pageBuilder: (context, state) => smoothPushPage(
           state: state,
           child: const ShareAccessScreen(),
+        ),
+      ),
+      GoRoute(
+        path: RoutePaths.progressPhotos,
+        pageBuilder: (context, state) => smoothPushPage(
+          state: state,
+          child: const ProgressPhotosScreen(),
         ),
       ),
       GoRoute(

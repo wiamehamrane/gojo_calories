@@ -19,7 +19,7 @@ load_dotenv()
 
 os.makedirs("uploads", exist_ok=True)
 
-from routes import vision, auth, stats, groups, referrals, payments, notifications, exercises, recipes, events, apple_iap, google_iap, memories, feed, friends, clan, shares, shared_meals, users
+from routes import vision, auth, stats, groups, referrals, payments, notifications, exercises, recipes, events, apple_iap, google_iap, memories, feed, friends, clan, shares, shared_meals, users, progress_photos
 from routes.admin import router as admin_router
 
 # Durable media storage check — local /uploads is wiped on every ECS redeploy.
@@ -215,6 +215,22 @@ try:
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS progress_photos (
+                id VARCHAR(36) PRIMARY KEY,
+                user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+                image_url VARCHAR NOT NULL,
+                note VARCHAR,
+                photo_date DATE NOT NULL DEFAULT CURRENT_DATE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_progress_photos_user ON progress_photos (user_id);"
+        ))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_progress_photos_date ON progress_photos (photo_date);"
+        ))
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS posts (
                 id VARCHAR(36) PRIMARY KEY,
@@ -542,6 +558,7 @@ app.include_router(exercises.router, prefix="/api/exercises", tags=["Exercises"]
 app.include_router(recipes.router, prefix="/api/recipes", tags=["Recipes"])
 app.include_router(events.router, prefix="/api/events", tags=["Events"])
 app.include_router(memories.router, prefix="/api/memories", tags=["Memories"])
+app.include_router(progress_photos.router, prefix="/api/progress-photos", tags=["Progress Photos"])
 app.include_router(shared_meals.router, prefix="/api/meals", tags=["Shared Meals"])
 app.include_router(users.router, prefix="/api/users", tags=["Users"])
 app.include_router(feed.router, prefix="/api/feed", tags=["Feed"])

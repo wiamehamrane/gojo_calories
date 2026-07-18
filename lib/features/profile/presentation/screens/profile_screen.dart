@@ -167,6 +167,19 @@ class ProfileScreen extends ConsumerWidget {
               ),
 
               const SizedBox(height: 20),
+              const _SectionLabel('Progress'),
+
+              _GroupedListCard(
+                rows: [
+                  _SettingsRow(
+                    icon: LucideIcons.camera,
+                    label: 'Progress photos',
+                    onTap: () => context.push(RoutePaths.progressPhotos),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 20),
               _SectionLabel(t('settings')),
 
               _GroupedListCard(
