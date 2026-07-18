@@ -369,6 +369,37 @@ try:
                 joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_coach BOOLEAN DEFAULT FALSE;"))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS coaches (
+                id VARCHAR(36) PRIMARY KEY,
+                user_id VARCHAR(36) NOT NULL UNIQUE REFERENCES users(id),
+                bio TEXT,
+                specialties JSON,
+                gender VARCHAR,
+                experience_years INTEGER,
+                photo_url VARCHAR,
+                phone VARCHAR,
+                latitude FLOAT,
+                longitude FLOAT,
+                city VARCHAR,
+                languages JSON,
+                coaching_mode VARCHAR,
+                is_active BOOLEAN DEFAULT FALSE,
+                subscription_plan VARCHAR,
+                subscription_expires_at TIMESTAMP,
+                subscription_source VARCHAR,
+                apple_original_transaction_id VARCHAR,
+                google_order_id VARCHAR,
+                google_purchase_token VARCHAR,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_coaches_user_id ON coaches (user_id);"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_coaches_is_active ON coaches (is_active);"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_coaches_gender ON coaches (gender);"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_is_coach ON users (is_coach);"))
         # Ensure daily_stats has all expected columns
         conn.execute(text("""
             DO $$ BEGIN

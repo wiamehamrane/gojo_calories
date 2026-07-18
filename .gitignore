@@ -12,6 +12,9 @@
 .swiftpm/
 migrate_working_dir/
 
+# Xcode Swift Package Manager local resolution (machine-specific)
+**/xcshareddata/swiftpm/
+
 # IntelliJ related
 *.iml
 *.ipr
