@@ -97,6 +97,7 @@ class SharedMealComment {
   final String mealId;
   final String userId;
   final String authorName;
+  final String? authorAvatarUrl;
   final String body;
   final int likesCount;
   final bool isLiked;
@@ -108,6 +109,7 @@ class SharedMealComment {
     required this.mealId,
     required this.userId,
     required this.authorName,
+    this.authorAvatarUrl,
     required this.body,
     this.likesCount = 0,
     this.isLiked = false,
@@ -121,6 +123,7 @@ class SharedMealComment {
       mealId: json['meal_id'] as String? ?? '',
       userId: json['user_id'] as String? ?? '',
       authorName: json['author_name'] as String? ?? 'Gojo member',
+      authorAvatarUrl: json['author_avatar_url'] as String?,
       body: json['body'] as String? ?? '',
       likesCount: (json['likes_count'] as num?)?.toInt() ?? 0,
       isLiked: json['is_liked'] as bool? ?? false,
@@ -137,6 +140,7 @@ class SharedMealComment {
       mealId: mealId,
       userId: userId,
       authorName: authorName,
+      authorAvatarUrl: authorAvatarUrl,
       body: body,
       likesCount: likesCount ?? this.likesCount,
       isLiked: isLiked ?? this.isLiked,

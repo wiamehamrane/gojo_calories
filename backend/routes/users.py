@@ -12,6 +12,7 @@ from routes.shared_meals import (
     _starred_ids_for_user,
 )
 from security import get_current_user
+from s3_utils import resolve_media_url
 
 router = APIRouter()
 
@@ -33,6 +34,7 @@ def get_public_profile(
         return {
             "id": user.id,
             "name": user.name or "Gojo member",
+            "avatar_url": resolve_media_url(getattr(user, "avatar_url", None)),
             "is_public": False,
             "is_self": False,
             "meals": [],
@@ -67,6 +69,7 @@ def get_public_profile(
     return {
         "id": user.id,
         "name": user.name or "Gojo member",
+        "avatar_url": resolve_media_url(getattr(user, "avatar_url", None)),
         "is_public": True,
         "is_self": is_self,
         "age": user.age,

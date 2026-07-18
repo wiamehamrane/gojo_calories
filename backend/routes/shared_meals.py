@@ -142,6 +142,7 @@ def _comment_view(
         "meal_id": comment.shared_meal_id,
         "user_id": comment.user_id,
         "author_name": author.name or "Gojo member",
+        "author_avatar_url": resolve_media_url(getattr(author, "avatar_url", None)),
         "body": comment.body,
         "likes_count": likes_count,
         "is_liked": is_liked,

@@ -8,6 +8,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/routing/route_paths.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/error_handler.dart';
+import '../../../../core/widgets/cached_food_image.dart';
 import '../../domain/models/shared_meal.dart';
 import '../providers/shared_meals_provider.dart';
 
@@ -260,6 +261,46 @@ class _SharedMealCommentComposerState
   }
 }
 
+class _CommentAvatar extends StatelessWidget {
+  final String name;
+  final String? avatarUrl;
+
+  const _CommentAvatar({required this.name, required this.avatarUrl});
+
+  @override
+  Widget build(BuildContext context) {
+    final hasPhoto = avatarUrl != null && avatarUrl!.isNotEmpty;
+    if (!hasPhoto) return _initials();
+
+    return CachedFoodImage(
+      imageUrl: avatarUrl,
+      width: 32,
+      height: 32,
+      fit: BoxFit.cover,
+      memCacheWidth: 96,
+      placeholder: _initials(),
+      errorWidget: _initials(),
+    );
+  }
+
+  Widget _initials() {
+    return SizedBox(
+      width: 32,
+      height: 32,
+      child: Center(
+        child: Text(
+          name.isNotEmpty ? name[0].toUpperCase() : '?',
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: AppColors.primaryDark,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _CommentTile extends StatelessWidget {
   final SharedMealComment comment;
   final VoidCallback onLike;
@@ -283,14 +324,10 @@ class _CommentTile extends StatelessWidget {
             child: CircleAvatar(
               radius: 16,
               backgroundColor: AppColors.primaryLight,
-              child: Text(
-                comment.authorName.isNotEmpty
-                    ? comment.authorName[0].toUpperCase()
-                    : '?',
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.primaryDark,
+              child: ClipOval(
+                child: _CommentAvatar(
+                  name: comment.authorName,
+                  avatarUrl: comment.authorAvatarUrl,
                 ),
               ),
             ),

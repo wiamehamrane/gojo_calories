@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import '../../../../core/di/repository_providers.dart';
@@ -16,6 +18,43 @@ class ProfileNotifier extends Notifier<AsyncValue<Map<String, dynamic>>> {
       _syncPushIdentity(data);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
+    }
+  }
+
+  Future<bool> uploadAvatar(File imageFile) async {
+    try {
+      final url =
+          await ref.read(profileRepositoryProvider).uploadAvatar(imageFile);
+      final current = state.asData?.value;
+      if (current != null) {
+        state = AsyncValue.data({
+          ...Map<String, dynamic>.from(current),
+          'avatar_url': url,
+        });
+      } else {
+        await loadProfile();
+      }
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> deleteAvatar() async {
+    try {
+      await ref.read(profileRepositoryProvider).deleteAvatar();
+      final current = state.asData?.value;
+      if (current != null) {
+        state = AsyncValue.data({
+          ...Map<String, dynamic>.from(current),
+          'avatar_url': null,
+        });
+      } else {
+        await loadProfile();
+      }
+      return true;
+    } catch (_) {
+      return false;
     }
   }
 

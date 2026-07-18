@@ -32,6 +32,8 @@ class User(Base):
     activity_level = Column(String, default="sedentary")  # "sedentary" | "light" | "moderate" | "active" | "very_active"
     phone = Column(String, nullable=True)
     share_phone = Column(Boolean, default=False)
+    # S3 key or local /uploads path for the user's profile photo.
+    avatar_url = Column(String, nullable=True)
     # When True, other users can open a limited public profile from comments/meals.
     profile_public = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)

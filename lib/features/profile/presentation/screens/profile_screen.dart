@@ -21,6 +21,7 @@ import '../../../../core/localization/translations.dart';
 import '../../../../core/di/repository_providers.dart';
 import '../../../../core/utils/error_handler.dart';
 import '../../../../core/widgets/app_pressable.dart';
+import '../../../../core/widgets/cached_food_image.dart';
 import '../providers/profile_providers.dart';
 
 
@@ -441,6 +442,8 @@ class ProfileScreen extends ConsumerWidget {
       }
     }
 
+    final avatarUrl = data['avatar_url'] as String?;
+
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -450,10 +453,69 @@ class ProfileScreen extends ConsumerWidget {
       padding: const EdgeInsets.all(16),
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 26,
-            backgroundColor: AppColors.surfaceMuted,
-            child: Icon(LucideIcons.user, size: 28, color: AppColors.inactive),
+          AppPressable(
+            scale: 0.92,
+            onTap: () => _showAvatarOptions(
+              context,
+              ref,
+              avatarUrl: avatarUrl,
+            ),
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                CircleAvatar(
+                  radius: 26,
+                  backgroundColor: AppColors.surfaceMuted,
+                  child: ClipOval(
+                    child: avatarUrl != null && avatarUrl.isNotEmpty
+                        ? CachedFoodImage(
+                            imageUrl: avatarUrl,
+                            width: 52,
+                            height: 52,
+                            fit: BoxFit.cover,
+                            memCacheWidth: 160,
+                            placeholder: const Center(
+                              child: Icon(
+                                LucideIcons.user,
+                                size: 28,
+                                color: AppColors.inactive,
+                              ),
+                            ),
+                            errorWidget: const Center(
+                              child: Icon(
+                                LucideIcons.user,
+                                size: 28,
+                                color: AppColors.inactive,
+                              ),
+                            ),
+                          )
+                        : const Icon(
+                            LucideIcons.user,
+                            size: 28,
+                            color: AppColors.inactive,
+                          ),
+                  ),
+                ),
+                Positioned(
+                  right: -2,
+                  bottom: -2,
+                  child: Container(
+                    width: 20,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppColors.surface, width: 2),
+                    ),
+                    child: const Icon(
+                      LucideIcons.camera,
+                      size: 10,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -462,12 +524,15 @@ class ProfileScreen extends ConsumerWidget {
               children: [
                 Row(
                   children: [
-                    Text(
-                      data['name'] ?? 'User',
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary,
+                    Flexible(
+                      child: Text(
+                        data['name'] ?? 'User',
+                        style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     const SizedBox(width: 6),
@@ -630,6 +695,75 @@ class ProfileScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _showAvatarOptions(
+    BuildContext context,
+    WidgetRef ref, {
+    String? avatarUrl,
+  }) async {
+    HapticFeedback.selectionClick();
+    final action = await showModalBottomSheet<_AvatarSheetAction>(
+      context: context,
+      isScrollControlled: true,
+      useRootNavigator: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withValues(alpha: 0.42),
+      builder: (sheetContext) {
+        return _AvatarPhotoSheet(avatarUrl: avatarUrl);
+      },
+    );
+    if (action == null || !context.mounted) return;
+
+    switch (action) {
+      case _AvatarSheetAction.gallery:
+        await _pickAndUploadAvatar(context, ref, ImageSource.gallery);
+      case _AvatarSheetAction.camera:
+        await _pickAndUploadAvatar(context, ref, ImageSource.camera);
+      case _AvatarSheetAction.remove:
+        final success =
+            await ref.read(profileProvider.notifier).deleteAvatar();
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                success ? 'Profile photo removed' : 'Could not remove photo',
+              ),
+              backgroundColor: success ? Colors.green : AppColors.danger,
+            ),
+          );
+        }
+    }
+  }
+
+  Future<void> _pickAndUploadAvatar(
+    BuildContext context,
+    WidgetRef ref,
+    ImageSource source,
+  ) async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(
+      source: source,
+      imageQuality: 85,
+      maxWidth: 1200,
+      maxHeight: 1200,
+    );
+    if (pickedFile == null) return;
+
+    final success = await ref
+        .read(profileProvider.notifier)
+        .uploadAvatar(File(pickedFile.path));
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            success ? 'Profile photo updated' : 'Upload failed. Try again.',
+          ),
+          backgroundColor: success ? Colors.green : AppColors.danger,
+        ),
+      );
+    }
   }
 
   Future<void> _pickAndUploadMemory(BuildContext context, WidgetRef ref) async {
@@ -1068,6 +1202,403 @@ class _ProfileLoadError extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+enum _AvatarSheetAction { gallery, camera, remove }
+
+class _AvatarPhotoSheet extends StatefulWidget {
+  final String? avatarUrl;
+
+  const _AvatarPhotoSheet({this.avatarUrl});
+
+  @override
+  State<_AvatarPhotoSheet> createState() => _AvatarPhotoSheetState();
+}
+
+class _AvatarPhotoSheetState extends State<_AvatarPhotoSheet>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _fade;
+  late final Animation<Offset> _slide;
+  late final Animation<double> _avatarScale;
+
+  bool get _hasAvatar =>
+      widget.avatarUrl != null && widget.avatarUrl!.isNotEmpty;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 460),
+    );
+    _fade = CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(0.0, 0.7, curve: Curves.easeOut),
+    );
+    _slide = Tween<Offset>(
+      begin: const Offset(0, 0.12),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.85, curve: Curves.easeOutCubic),
+      ),
+    );
+    _avatarScale = Tween<double>(begin: 0.82, end: 1).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.05, 0.75, curve: Curves.easeOutBack),
+      ),
+    );
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _select(_AvatarSheetAction action) async {
+    HapticFeedback.selectionClick();
+    await _controller.reverse();
+    if (!mounted) return;
+    Navigator.of(context).pop(action);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.paddingOf(context).bottom;
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(14, 0, 14, bottom + 20),
+      child: FadeTransition(
+        opacity: _fade,
+        child: SlideTransition(
+          position: _slide,
+          child: Material(
+            color: AppColors.surface,
+            elevation: 0,
+            shadowColor: Colors.black26,
+            borderRadius: BorderRadius.circular(28),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.12),
+                    blurRadius: 28,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.border,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 22),
+                  ScaleTransition(
+                    scale: _avatarScale,
+                    child: _AvatarPreview(avatarUrl: widget.avatarUrl),
+                  ),
+                  const SizedBox(height: 18),
+                  Text(
+                    _hasAvatar ? 'Update profile photo' : 'Add a profile photo',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'This shows on your profile and public page',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 13,
+                      height: 1.35,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 22),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _AvatarActionTile(
+                          icon: LucideIcons.image,
+                          label: 'Gallery',
+                          subtitle: 'Pick a photo',
+                          delayMs: 80,
+                          onTap: () => _select(_AvatarSheetAction.gallery),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _AvatarActionTile(
+                          icon: LucideIcons.camera,
+                          label: 'Camera',
+                          subtitle: 'Take a shot',
+                          delayMs: 140,
+                          onTap: () => _select(_AvatarSheetAction.camera),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (_hasAvatar) ...[
+                    const SizedBox(height: 10),
+                    AppPressable(
+                      onTap: () => _select(_AvatarSheetAction.remove),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        decoration: BoxDecoration(
+                          color: AppColors.danger.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              LucideIcons.trash2,
+                              size: 16,
+                              color: AppColors.danger,
+                            ),
+                            SizedBox(width: 8),
+                            Text(
+                              'Remove photo',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.danger,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AvatarPreview extends StatelessWidget {
+  final String? avatarUrl;
+
+  const _AvatarPreview({this.avatarUrl});
+
+  @override
+  Widget build(BuildContext context) {
+    final hasPhoto = avatarUrl != null && avatarUrl!.isNotEmpty;
+
+    return SizedBox(
+      width: 96,
+      height: 96,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: 96,
+            height: 96,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.primaryLight,
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withValues(alpha: 0.22),
+                  blurRadius: 22,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            width: 84,
+            height: 84,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.surface,
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: hasPhoto
+                ? CachedFoodImage(
+                    imageUrl: avatarUrl,
+                    width: 84,
+                    height: 84,
+                    fit: BoxFit.cover,
+                    memCacheWidth: 252,
+                    placeholder: const Center(
+                      child: Icon(
+                        LucideIcons.user,
+                        size: 34,
+                        color: AppColors.inactive,
+                      ),
+                    ),
+                    errorWidget: const Center(
+                      child: Icon(
+                        LucideIcons.user,
+                        size: 34,
+                        color: AppColors.inactive,
+                      ),
+                    ),
+                  )
+                : const Center(
+                    child: Icon(
+                      LucideIcons.user,
+                      size: 34,
+                      color: AppColors.inactive,
+                    ),
+                  ),
+          ),
+          Positioned(
+            right: 2,
+            bottom: 2,
+            child: Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                shape: BoxShape.circle,
+                border: Border.all(color: AppColors.surface, width: 2.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.35),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                LucideIcons.camera,
+                size: 13,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AvatarActionTile extends StatefulWidget {
+  final IconData icon;
+  final String label;
+  final String subtitle;
+  final int delayMs;
+  final VoidCallback onTap;
+
+  const _AvatarActionTile({
+    required this.icon,
+    required this.label,
+    required this.subtitle,
+    required this.delayMs,
+    required this.onTap,
+  });
+
+  @override
+  State<_AvatarActionTile> createState() => _AvatarActionTileState();
+}
+
+class _AvatarActionTileState extends State<_AvatarActionTile>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _enter;
+  late final Animation<double> _fade;
+  late final Animation<Offset> _slide;
+
+  @override
+  void initState() {
+    super.initState();
+    _enter = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 420),
+    );
+    _fade = CurvedAnimation(parent: _enter, curve: Curves.easeOut);
+    _slide = Tween<Offset>(
+      begin: const Offset(0, 0.18),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _enter, curve: Curves.easeOutCubic));
+    Future<void>.delayed(Duration(milliseconds: widget.delayMs), () {
+      if (mounted) _enter.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _enter.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _fade,
+      child: SlideTransition(
+        position: _slide,
+        child: AppPressable(
+          scale: 0.95,
+          onTap: widget.onTap,
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(14, 18, 14, 16),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceMuted,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Column(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryLight,
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  child: Icon(
+                    widget.icon,
+                    size: 22,
+                    color: AppColors.primaryDark,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  widget.label,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  widget.subtitle,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

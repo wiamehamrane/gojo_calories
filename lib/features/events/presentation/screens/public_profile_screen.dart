@@ -71,6 +71,7 @@ class PublicProfileScreen extends ConsumerWidget {
         data: (profile) {
           final isPublic = profile['is_public'] as bool? ?? false;
           final name = profile['name'] as String? ?? 'Gojo member';
+          final avatarUrl = profile['avatar_url'] as String?;
           if (!isPublic) {
             return Center(
               child: Padding(
@@ -78,18 +79,7 @@ class PublicProfileScreen extends ConsumerWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    CircleAvatar(
-                      radius: 36,
-                      backgroundColor: AppColors.surfaceMuted,
-                      child: Text(
-                        name.isNotEmpty ? name[0].toUpperCase() : '?',
-                        style: const TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ),
+                    _ProfileAvatar(name: name, avatarUrl: avatarUrl, radius: 36),
                     const SizedBox(height: 16),
                     Text(
                       name,
@@ -135,17 +125,10 @@ class PublicProfileScreen extends ConsumerWidget {
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
               children: [
                 Center(
-                  child: CircleAvatar(
+                  child: _ProfileAvatar(
+                    name: name,
+                    avatarUrl: avatarUrl,
                     radius: 42,
-                    backgroundColor: AppColors.primaryLight,
-                    child: Text(
-                      name.isNotEmpty ? name[0].toUpperCase() : '?',
-                      style: const TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.primaryDark,
-                      ),
-                    ),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -221,6 +204,58 @@ class PublicProfileScreen extends ConsumerWidget {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _ProfileAvatar extends StatelessWidget {
+  final String name;
+  final String? avatarUrl;
+  final double radius;
+
+  const _ProfileAvatar({
+    required this.name,
+    required this.avatarUrl,
+    required this.radius,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hasPhoto = avatarUrl != null && avatarUrl!.isNotEmpty;
+    final size = radius * 2;
+    return CircleAvatar(
+      radius: radius,
+      backgroundColor: AppColors.primaryLight,
+      child: ClipOval(
+        child: hasPhoto
+            ? CachedFoodImage(
+                imageUrl: avatarUrl,
+                width: size,
+                height: size,
+                fit: BoxFit.cover,
+                memCacheWidth: (size * 3).round(),
+                placeholder: _initials(),
+                errorWidget: _initials(),
+              )
+            : _initials(),
+      ),
+    );
+  }
+
+  Widget _initials() {
+    return SizedBox(
+      width: radius * 2,
+      height: radius * 2,
+      child: Center(
+        child: Text(
+          name.isNotEmpty ? name[0].toUpperCase() : '?',
+          style: TextStyle(
+            fontSize: radius * 0.75,
+            fontWeight: FontWeight.w800,
+            color: AppColors.primaryDark,
+          ),
+        ),
       ),
     );
   }
