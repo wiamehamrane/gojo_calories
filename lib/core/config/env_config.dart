@@ -27,6 +27,14 @@ class EnvConfig {
   static bool get isDev => appEnv == 'dev';
   static bool get isProd => !isDev;
 
+  /// Explicit bypass for coach IAP only (`SKIP_COACH_PAYMENT=true` in `.env`).
+  /// Independent from [APP_ENV] — real payment is required unless this is set.
+  static bool get skipCoachPayment {
+    final raw =
+        (dotenv.env['SKIP_COACH_PAYMENT'] ?? 'false').trim().toLowerCase();
+    return raw == 'true' || raw == '1' || raw == 'yes';
+  }
+
   static String get runtimeTarget => _runtimeTarget;
 
   static String get apiBaseUrl => _normalize(_resolveRawApiUrl());
@@ -34,7 +42,12 @@ class EnvConfig {
   static String get apiOrigin =>
       apiBaseUrl.replaceAll(RegExp(r'/api/?$'), '');
 
-  /// Call once after dotenv.load so auto-detect is reliable on simulators.
+  /// Call once after dotenv.load so auto-detect is reliable.
+  ///
+  /// Why different hostnames in DEV?
+  /// - iOS Simulator shares the Mac network stack → `127.0.0.1` reaches the API.
+  /// - Android Emulator has its own localhost → use `10.0.2.2` to reach the Mac.
+  /// - Physical device → Mac LAN IP on the same Wi‑Fi.
   static Future<void> prepare() async {
     if (kIsWeb) {
       _runtimeTarget = 'unknown';

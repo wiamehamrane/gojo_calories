@@ -3,6 +3,8 @@ import math
 import re
 from typing import Any, Dict, List, Optional, Tuple
 
+from fastapi import HTTPException
+
 import models
 
 _EARTH_RADIUS_KM = 6371.0
@@ -58,12 +60,99 @@ def as_str_list(value: Any) -> List[str]:
     return []
 
 
-def coach_subscription_active(coach: models.Coach, *, allow_dev: bool) -> bool:
-    if allow_dev:
+def coach_subscription_active(coach: models.Coach, *, allow_skip: bool) -> bool:
+    if allow_skip:
         return True
     if not coach.subscription_expires_at:
         return False
     return coach.subscription_expires_at > datetime.datetime.utcnow()
+
+
+def get_or_create_coach_row(db, user: models.User) -> models.Coach:
+    coach = (
+        db.query(models.Coach)
+        .filter(models.Coach.user_id == user.id)
+        .first()
+    )
+    if coach:
+        return coach
+    coach = models.Coach(user_id=user.id, is_active=False)
+    db.add(coach)
+    db.flush()
+    return coach
+
+
+def apply_coach_subscription(
+    db,
+    user: models.User,
+    *,
+    product_id: str,
+    plan_id: Optional[str],
+    expires_at: datetime.datetime,
+    is_active: bool,
+    source: str,
+    apple_original_transaction_id: Optional[str] = None,
+    google_order_id: Optional[str] = None,
+    google_purchase_token: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Persist coach IAP state. Does not auto-list the coach (activate still required)."""
+    if apple_original_transaction_id:
+        conflict = (
+            db.query(models.Coach)
+            .filter(
+                models.Coach.apple_original_transaction_id
+                == apple_original_transaction_id,
+                models.Coach.user_id != user.id,
+            )
+            .first()
+        )
+        if conflict:
+            raise HTTPException(
+                status_code=400,
+                detail="This subscription is already associated with another account.",
+            )
+
+    if google_order_id:
+        conflict = (
+            db.query(models.Coach)
+            .filter(
+                models.Coach.google_order_id == google_order_id,
+                models.Coach.user_id != user.id,
+            )
+            .first()
+        )
+        if conflict:
+            raise HTTPException(
+                status_code=400,
+                detail="This subscription is already associated with another account.",
+            )
+
+    coach = get_or_create_coach_row(db, user)
+    coach.subscription_plan = plan_id
+    coach.subscription_expires_at = expires_at
+    coach.subscription_source = source
+    if apple_original_transaction_id:
+        coach.apple_original_transaction_id = apple_original_transaction_id
+    if google_order_id:
+        coach.google_order_id = google_order_id
+    if google_purchase_token:
+        coach.google_purchase_token = google_purchase_token
+
+    if not is_active:
+        coach.is_active = False
+        user.is_coach = False
+
+    coach.updated_at = datetime.datetime.utcnow()
+    db.commit()
+    db.refresh(coach)
+
+    return {
+        "status": "success",
+        "subscription_active": is_active,
+        "expires_at": expires_at.isoformat(),
+        "product_id": product_id,
+        "type": "coach",
+    }
 
 
 def serialize_public(

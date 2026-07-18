@@ -14,6 +14,8 @@ from services import coach_service
 router = APIRouter()
 
 DEV_MODE = os.getenv("DEV_MODE", "false").lower() == "true"
+# Explicit only — does NOT follow DEV_MODE. Set true in .env to bypass coach IAP locally.
+SKIP_COACH_PAYMENT = os.getenv("SKIP_COACH_PAYMENT", "false").lower() == "true"
 
 _VALID_GENDERS = {"male", "female"}
 _VALID_COACHING_MODES = {"in_person", "online", "both"}
@@ -172,7 +174,9 @@ def activate_coach(
     if not ready:
         raise HTTPException(status_code=400, detail=reason)
 
-    if not coach_service.coach_subscription_active(coach, allow_dev=DEV_MODE):
+    if not coach_service.coach_subscription_active(
+        coach, allow_skip=SKIP_COACH_PAYMENT
+    ):
         raise HTTPException(
             status_code=402,
             detail="Coach subscription required",

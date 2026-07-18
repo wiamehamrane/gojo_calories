@@ -4,8 +4,10 @@ import '../../app/router_keys.dart';
 import '../../core/routing/app_page_transitions.dart';
 import '../../core/routing/route_paths.dart';
 import '../../core/routing/tab_page_transition.dart';
+import 'presentation/screens/become_coach_screen.dart';
 import 'presentation/screens/coach_detail_screen.dart';
 import 'presentation/screens/coach_discover_screen.dart';
+import 'presentation/screens/coach_paywall_screen.dart';
 
 List<RouteBase> get coachShellRoutes => [
       GoRoute(
@@ -28,5 +30,21 @@ List<RouteBase> get coachRoutes => [
             child: CoachDetailScreen(coachId: id),
           );
         },
+      ),
+      GoRoute(
+        path: RoutePaths.becomeCoach,
+        parentNavigatorKey: rootNavigatorKey,
+        pageBuilder: (context, state) => smoothPushPage(
+          state: state,
+          child: const BecomeCoachScreen(),
+        ),
+      ),
+      GoRoute(
+        path: RoutePaths.coachPaywall,
+        parentNavigatorKey: rootNavigatorKey,
+        pageBuilder: (context, state) => smoothPushPage(
+          state: state,
+          child: const CoachPaywallScreen(),
+        ),
       ),
     ];
