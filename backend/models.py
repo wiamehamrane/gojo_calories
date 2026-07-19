@@ -522,3 +522,24 @@ class Coach(Base):
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
 
     user = relationship("User", foreign_keys=[user_id])
+    works = relationship(
+        "CoachWork",
+        back_populates="coach",
+        cascade="all, delete-orphan",
+        order_by="CoachWork.created_at.desc()",
+    )
+
+
+class CoachWork(Base):
+    __tablename__ = "coach_works"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid, index=True)
+    coach_id = Column(
+        String(36), ForeignKey("coaches.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    before_url = Column(String, nullable=False)
+    after_url = Column(String, nullable=False)
+    caption = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    coach = relationship("Coach", back_populates="works")

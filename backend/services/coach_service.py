@@ -155,18 +155,34 @@ def apply_coach_subscription(
     }
 
 
+def serialize_work(work: models.CoachWork) -> Dict[str, Any]:
+    from s3_utils import resolve_media_url
+
+    return {
+        "id": work.id,
+        "before_url": resolve_media_url(work.before_url),
+        "after_url": resolve_media_url(work.after_url),
+        "caption": work.caption,
+        "created_at": work.created_at.isoformat() if work.created_at else None,
+    }
+
+
 def serialize_public(
     coach: models.Coach,
     user: Optional[models.User] = None,
     *,
     distance_km: Optional[float] = None,
+    include_works: bool = False,
 ) -> Dict[str, Any]:
+    from s3_utils import resolve_media_url
+
     owner = user or coach.user
+    raw_avatar = coach.photo_url or (owner.avatar_url if owner else None)
     payload: Dict[str, Any] = {
         "id": coach.id,
         "user_id": coach.user_id,
         "name": owner.name if owner else None,
-        "avatar_url": coach.photo_url or (owner.avatar_url if owner else None),
+        "avatar_url": resolve_media_url(raw_avatar) if raw_avatar else None,
         "bio": coach.bio,
         "specialties": as_str_list(coach.specialties),
         "gender": coach.gender,
@@ -181,6 +197,9 @@ def serialize_public(
     }
     if distance_km is not None:
         payload["distance_km"] = round(distance_km, 2)
+    if include_works:
+        works = list(getattr(coach, "works", None) or [])
+        payload["works"] = [serialize_work(w) for w in works]
     return payload
 
 

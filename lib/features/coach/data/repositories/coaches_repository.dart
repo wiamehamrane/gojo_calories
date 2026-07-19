@@ -1,3 +1,7 @@
+import 'dart:io';
+
+import 'package:dio/dio.dart';
+
 import '../../../../core/network/api_client.dart';
 import '../../domain/models/coach.dart';
 
@@ -54,6 +58,43 @@ class CoachesRepository {
   Future<CoachOwnerProfile> deactivate() async {
     final res = await ApiClient.instance.post('coaches/deactivate');
     return CoachOwnerProfile.fromJson(Map<String, dynamic>.from(res.data as Map));
+  }
+
+  Future<List<CoachWork>> listMyWorks() async {
+    final res = await ApiClient.instance.get('coaches/me/works');
+    final data = Map<String, dynamic>.from(res.data as Map);
+    final raw = data['items'] as List? ?? const [];
+    return raw
+        .whereType<Map>()
+        .map((e) => CoachWork.fromJson(Map<String, dynamic>.from(e)))
+        .toList();
+  }
+
+  Future<CoachWork> createWork({
+    required File before,
+    required File after,
+    String? caption,
+  }) async {
+    final formData = FormData.fromMap({
+      'before': await MultipartFile.fromFile(
+        before.path,
+        filename: before.path.split('/').last,
+      ),
+      'after': await MultipartFile.fromFile(
+        after.path,
+        filename: after.path.split('/').last,
+      ),
+      if (caption != null && caption.trim().isNotEmpty) 'caption': caption.trim(),
+    });
+    final res = await ApiClient.instance.post(
+      'coaches/me/works',
+      data: formData,
+    );
+    return CoachWork.fromJson(Map<String, dynamic>.from(res.data as Map));
+  }
+
+  Future<void> deleteWork(String workId) async {
+    await ApiClient.instance.delete('coaches/me/works/$workId');
   }
 }
 

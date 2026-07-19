@@ -32,6 +32,8 @@ abstract final class RoutePaths {
   static const profileShare = '/profile/share';
   static const coaches = '/coaches';
   static const coachDetail = '/coaches/:id';
+  static const coachHub = '/profile/coach';
+  static const coachPortfolio = '/profile/coach/portfolio';
   static const becomeCoach = '/profile/become-coach';
   static const coachPaywall = '/profile/become-coach/paywall';
   static const profileTerms = '/profile/terms';

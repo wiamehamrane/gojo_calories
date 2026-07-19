@@ -2,7 +2,7 @@ import datetime
 import os
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session, joinedload
 
@@ -10,6 +10,7 @@ from database import get_db
 import models
 from security import get_current_user
 from services import coach_service
+from s3_utils import MediaUploadError, delete_media, upload_image_to_s3_key
 
 router = APIRouter()
 
@@ -20,6 +21,7 @@ SKIP_COACH_PAYMENT = os.getenv("SKIP_COACH_PAYMENT", "false").lower() == "true"
 _VALID_GENDERS = {"male", "female"}
 _VALID_COACHING_MODES = {"in_person", "online", "both"}
 _MAX_PAGE_SIZE = 50
+_MAX_COACH_WORKS = 12
 
 
 class CoachProfileUpsert(BaseModel):
@@ -217,6 +219,116 @@ def deactivate_coach(
     return coach_service.serialize_owner(coach, user)
 
 
+async def _read_image_upload(file: UploadFile) -> bytes:
+    content_type = (file.content_type or "").lower()
+    if content_type and not content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="File must be an image")
+    contents = await file.read()
+    if not contents:
+        raise HTTPException(status_code=400, detail="Empty file")
+    return contents
+
+
+@router.get("/me/works")
+def list_my_coach_works(
+    user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    coach = _get_own_coach(db, user.id)
+    if not coach:
+        raise HTTPException(status_code=404, detail="Coach profile not found")
+    works = (
+        db.query(models.CoachWork)
+        .filter(models.CoachWork.coach_id == coach.id)
+        .order_by(models.CoachWork.created_at.desc())
+        .all()
+    )
+    return {"items": [coach_service.serialize_work(w) for w in works]}
+
+
+@router.post("/me/works")
+async def create_my_coach_work(
+    before: UploadFile = File(...),
+    after: UploadFile = File(...),
+    caption: Optional[str] = Form(None),
+    user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    coach = _get_own_coach(db, user.id)
+    if not coach:
+        raise HTTPException(status_code=404, detail="Coach profile not found")
+
+    count = (
+        db.query(models.CoachWork)
+        .filter(models.CoachWork.coach_id == coach.id)
+        .count()
+    )
+    if count >= _MAX_COACH_WORKS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Maximum of {_MAX_COACH_WORKS} portfolio items reached",
+        )
+
+    before_bytes = await _read_image_upload(before)
+    after_bytes = await _read_image_upload(after)
+
+    try:
+        before_key = upload_image_to_s3_key(
+            before_bytes,
+            before.content_type or "image/jpeg",
+            prefix="coach_works/",
+        )
+        after_key = upload_image_to_s3_key(
+            after_bytes,
+            after.content_type or "image/jpeg",
+            prefix="coach_works/",
+        )
+    except MediaUploadError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+    clean_caption = (caption or "").strip() or None
+    work = models.CoachWork(
+        coach_id=coach.id,
+        before_url=before_key,
+        after_url=after_key,
+        caption=clean_caption,
+    )
+    db.add(work)
+    db.commit()
+    db.refresh(work)
+    return coach_service.serialize_work(work)
+
+
+@router.delete("/me/works/{work_id}")
+def delete_my_coach_work(
+    work_id: str,
+    user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    coach = _get_own_coach(db, user.id)
+    if not coach:
+        raise HTTPException(status_code=404, detail="Coach profile not found")
+
+    work = (
+        db.query(models.CoachWork)
+        .filter(
+            models.CoachWork.id == work_id,
+            models.CoachWork.coach_id == coach.id,
+        )
+        .first()
+    )
+    if not work:
+        raise HTTPException(status_code=404, detail="Portfolio item not found")
+
+    before_url = work.before_url
+    after_url = work.after_url
+    db.delete(work)
+    db.commit()
+    delete_media(before_url)
+    delete_media(after_url)
+    return {"ok": True}
+
+
 @router.get("/search")
 def search_coaches(
     lat: float = Query(..., ge=-90, le=90),
@@ -286,8 +398,25 @@ def get_coach_public(
     db: Session = Depends(get_db),
 ):
     del user
-    coach = _require_active_listed_coach(db, coach_id)
-    return coach_service.serialize_public(coach, coach.user)
+    coach = (
+        db.query(models.Coach)
+        .options(
+            joinedload(models.Coach.user),
+            joinedload(models.Coach.works),
+        )
+        .filter(models.Coach.id == coach_id)
+        .first()
+    )
+    if (
+        not coach
+        or not coach.is_active
+        or not coach.user
+        or not coach.user.is_coach
+    ):
+        raise HTTPException(status_code=404, detail="Coach not found")
+    return coach_service.serialize_public(
+        coach, coach.user, include_works=True
+    )
 
 
 @router.post("/{coach_id}/contact")

@@ -400,6 +400,17 @@ try:
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_coaches_is_active ON coaches (is_active);"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_coaches_gender ON coaches (gender);"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_is_coach ON users (is_coach);"))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS coach_works (
+                id VARCHAR(36) PRIMARY KEY,
+                coach_id VARCHAR(36) NOT NULL REFERENCES coaches(id) ON DELETE CASCADE,
+                before_url VARCHAR NOT NULL,
+                after_url VARCHAR NOT NULL,
+                caption VARCHAR,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_coach_works_coach_id ON coach_works (coach_id);"))
         # Ensure daily_stats has all expected columns
         conn.execute(text("""
             DO $$ BEGIN

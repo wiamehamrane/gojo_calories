@@ -1,3 +1,36 @@
+import '../../../../core/config/env_config.dart';
+
+class CoachWork {
+  final String id;
+  final String beforeUrl;
+  final String afterUrl;
+  final String? caption;
+  final DateTime? createdAt;
+
+  const CoachWork({
+    required this.id,
+    required this.beforeUrl,
+    required this.afterUrl,
+    this.caption,
+    this.createdAt,
+  });
+
+  factory CoachWork.fromJson(Map<String, dynamic> json) {
+    DateTime? parseDate(dynamic value) {
+      if (value is! String || value.isEmpty) return null;
+      return DateTime.tryParse(value);
+    }
+
+    return CoachWork(
+      id: json['id'] as String,
+      beforeUrl: EnvConfig.resolveMediaUrl(json['before_url'] as String?),
+      afterUrl: EnvConfig.resolveMediaUrl(json['after_url'] as String?),
+      caption: json['caption'] as String?,
+      createdAt: parseDate(json['created_at']),
+    );
+  }
+}
+
 class Coach {
   final String id;
   final String userId;
@@ -14,6 +47,7 @@ class Coach {
   final String? coachingMode;
   final bool isActive;
   final double? distanceKm;
+  final List<CoachWork> works;
 
   const Coach({
     required this.id,
@@ -31,9 +65,11 @@ class Coach {
     this.coachingMode,
     this.isActive = false,
     this.distanceKm,
+    this.works = const [],
   });
 
   factory Coach.fromJson(Map<String, dynamic> json) {
+    final rawWorks = json['works'] as List? ?? const [];
     return Coach(
       id: json['id'] as String,
       userId: json['user_id'] as String,
@@ -50,6 +86,10 @@ class Coach {
       coachingMode: json['coaching_mode'] as String?,
       isActive: json['is_active'] as bool? ?? false,
       distanceKm: (json['distance_km'] as num?)?.toDouble(),
+      works: rawWorks
+          .whereType<Map>()
+          .map((e) => CoachWork.fromJson(Map<String, dynamic>.from(e)))
+          .toList(),
     );
   }
 

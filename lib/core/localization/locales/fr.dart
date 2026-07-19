@@ -427,6 +427,36 @@ const Map<String, String> fr = {
   'coach_paywall_yearly_save': 'Économisez 20 %',
   'coach_paywall_subscribe': 'S’abonner',
   'coach_paywall_success': 'Abonnement coach activé.',
+  'coach_hub_title': 'Mon profil coach',
+  'coach_hub_subtitle':
+      'Gérez votre annonce et montrez vos résultats.',
+  'coach_hub_profile': 'Profil',
+  'coach_hub_profile_body': 'Bio, spécialités, contact et visibilité.',
+  'coach_hub_portfolio': 'Portfolio',
+  'coach_hub_portfolio_body':
+      'Ajoutez des photos avant / après de vos travaux.',
+  'coach_portfolio_title': 'Portfolio',
+  'coach_portfolio_add': 'Ajouter un résultat',
+  'coach_portfolio_add_hint':
+      'Choisissez deux photos. Nous les affichons en Avant et Après.',
+  'coach_portfolio_before': 'Avant',
+  'coach_portfolio_after': 'Après',
+  'coach_portfolio_caption_hint': 'Légende (optionnel)',
+  'coach_portfolio_upload': 'Publier la paire',
+  'coach_portfolio_list': 'Vos résultats',
+  'coach_portfolio_empty':
+      'Aucun résultat pour le moment. Ajoutez votre première paire avant / après.',
+  'coach_portfolio_need_both':
+      'Choisissez une photo Avant et une photo Après.',
+  'coach_portfolio_max': 'Vous pouvez ajouter jusqu’à 12 éléments.',
+  'coach_portfolio_added': 'Résultat ajouté au portfolio.',
+  'coach_portfolio_upload_failed': 'Impossible d’ajouter le résultat.',
+  'coach_portfolio_load_failed': 'Impossible de charger le portfolio.',
+  'coach_portfolio_delete_title': 'Supprimer ce résultat ?',
+  'coach_portfolio_delete_body':
+      'Cette paire avant / après sera supprimée.',
+  'coach_portfolio_delete': 'Supprimer',
+  'coach_portfolio_delete_failed': 'Impossible de supprimer le résultat.',
   'lang_name_en': 'English',
   'lang_name_fr': 'Français',
   'lang_name_ar': 'العربية',

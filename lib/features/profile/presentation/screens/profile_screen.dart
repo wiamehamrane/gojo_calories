@@ -174,12 +174,14 @@ class ProfileScreen extends ConsumerWidget {
                     ? t('become_coach_manage_title')
                     : t('become_coach_title'),
                 subtitle: isCoach
-                    ? t('coach_paywall_body')
+                    ? t('coach_hub_subtitle')
                     : t('coach_paywall_headline'),
                 cta: isCoach
                     ? t('become_coach_continue')
                     : t('become_coach_submit'),
-                onTap: () => context.push(RoutePaths.becomeCoach),
+                onTap: () => context.push(
+                  isCoach ? RoutePaths.coachHub : RoutePaths.becomeCoach,
+                ),
               ),
 
               const SizedBox(height: 20),

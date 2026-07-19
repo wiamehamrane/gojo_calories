@@ -7,7 +7,9 @@ import '../../core/routing/tab_page_transition.dart';
 import 'presentation/screens/become_coach_screen.dart';
 import 'presentation/screens/coach_detail_screen.dart';
 import 'presentation/screens/coach_discover_screen.dart';
+import 'presentation/screens/coach_hub_screen.dart';
 import 'presentation/screens/coach_paywall_screen.dart';
+import 'presentation/screens/coach_portfolio_screen.dart';
 
 List<RouteBase> get coachShellRoutes => [
       GoRoute(
@@ -30,6 +32,22 @@ List<RouteBase> get coachRoutes => [
             child: CoachDetailScreen(coachId: id),
           );
         },
+      ),
+      GoRoute(
+        path: RoutePaths.coachHub,
+        parentNavigatorKey: rootNavigatorKey,
+        pageBuilder: (context, state) => smoothPushPage(
+          state: state,
+          child: const CoachHubScreen(),
+        ),
+      ),
+      GoRoute(
+        path: RoutePaths.coachPortfolio,
+        parentNavigatorKey: rootNavigatorKey,
+        pageBuilder: (context, state) => smoothPushPage(
+          state: state,
+          child: const CoachPortfolioScreen(),
+        ),
       ),
       GoRoute(
         path: RoutePaths.becomeCoach,
