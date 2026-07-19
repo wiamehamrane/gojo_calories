@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -14,9 +15,8 @@ import 'guided_capture_screen.dart';
 
 DateTime _dk(DateTime d) => DateTime(d.year, d.month, d.day);
 
-/// Private body progress journal — a light, editorial experience with a guided
-/// daily 4-angle capture and three ways to travel through time: side-by-side
-/// Compare, a Calendar picker, and a Scrub slider.
+/// Body progress journal — guided daily 4-angle capture with Compare
+/// and Calendar ways to travel through time.
 class ProgressPhotosScreen extends ConsumerStatefulWidget {
   const ProgressPhotosScreen({super.key});
 
@@ -27,7 +27,7 @@ class ProgressPhotosScreen extends ConsumerStatefulWidget {
 
 class _ProgressPhotosScreenState extends ConsumerState<ProgressPhotosScreen> {
   int _tab = 0;
-  static const _tabs = ['Journal', 'Compare', 'Calendar', 'Scrub'];
+  static const _tabs = ['Journal', 'Compare', 'Calendar'];
 
   Future<void> _startGuidedCapture(Set<BodyPose> done) async {
     HapticFeedback.selectionClick();
@@ -42,7 +42,7 @@ class _ProgressPhotosScreenState extends ConsumerState<ProgressPhotosScreen> {
     if (completed == true && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Today\'s photos saved privately.'),
+          content: Text('Photos saved to your journal.'),
           backgroundColor: kAccent,
         ),
       );
@@ -61,25 +61,39 @@ class _ProgressPhotosScreenState extends ConsumerState<ProgressPhotosScreen> {
         bottom: false,
         child: Column(
           children: [
-            _topBar(context),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(22, 10, 22, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Eyebrow('Private to you', color: kAccent),
-                  const SizedBox(height: 8),
-                  Text('Your body journal',
-                      style: serif(
-                          size: 32, weight: FontWeight.w600, height: 1.02, spacing: -0.5)),
-                ],
+            SoftEntrance(child: _topBar(context)),
+            SoftEntrance(
+              delay: 40.ms,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(22, 6, 22, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'My body journal',
+                      style: display(
+                        size: 28,
+                        weight: FontWeight.w700,
+                        height: 1.1,
+                        spacing: -0.6,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Front, sides & back — track how you change.',
+                      style: body(size: 14, color: kInkSoft, height: 1.35),
+                    ),
+                  ],
+                ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(22, 20, 22, 0),
-              child: _tabBar(),
+            SoftEntrance(
+              delay: 80.ms,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(18, 18, 18, 12),
+                child: _tabBar(),
+              ),
             ),
-            const Divider(height: 1, thickness: 1, color: kHair),
             Expanded(
               child: photosAsync.when(
                 loading: () =>
@@ -99,7 +113,25 @@ class _ProgressPhotosScreenState extends ConsumerState<ProgressPhotosScreen> {
                     ),
                   ),
                 ),
-                data: (_) => _body(days, todayDone),
+                data: (_) => AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 280),
+                  switchInCurve: Curves.easeOutCubic,
+                  switchOutCurve: Curves.easeInCubic,
+                  transitionBuilder: (child, anim) {
+                    final offset = Tween<Offset>(
+                      begin: const Offset(0, 0.03),
+                      end: Offset.zero,
+                    ).animate(anim);
+                    return FadeTransition(
+                      opacity: anim,
+                      child: SlideTransition(position: offset, child: child),
+                    );
+                  },
+                  child: KeyedSubtree(
+                    key: ValueKey(_tab),
+                    child: _body(days, todayDone),
+                  ),
+                ),
               ),
             ),
           ],
@@ -114,8 +146,6 @@ class _ProgressPhotosScreenState extends ConsumerState<ProgressPhotosScreen> {
         return _CompareView(days: days);
       case 2:
         return _CalendarView(days: days);
-      case 3:
-        return _ScrubView(days: days);
       default:
         return _JournalView(
           days: days,
@@ -137,11 +167,12 @@ class _ProgressPhotosScreenState extends ConsumerState<ProgressPhotosScreen> {
               context.pop();
             },
           ),
-          const Expanded(
-            child: Text('Progress',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                    fontSize: 15, fontWeight: FontWeight.w600, color: kInk)),
+          Expanded(
+            child: Text(
+              'Progress',
+              textAlign: TextAlign.center,
+              style: body(size: 15, weight: FontWeight.w700, color: kInk),
+            ),
           ),
           const SizedBox(width: 48),
         ],
@@ -150,43 +181,58 @@ class _ProgressPhotosScreenState extends ConsumerState<ProgressPhotosScreen> {
   }
 
   Widget _tabBar() {
-    return Row(
-      children: List.generate(_tabs.length, (i) {
-        final on = i == _tab;
-        return Expanded(
-          child: GestureDetector(
-            onTap: () {
-              HapticFeedback.selectionClick();
-              setState(() => _tab = i);
-            },
-            behavior: HitTestBehavior.opaque,
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: Text(
-                    _tabs[i],
-                    style: TextStyle(
-                      fontSize: 13.5,
-                      fontWeight: on ? FontWeight.w600 : FontWeight.w500,
-                      color: on ? kInk : kMuted,
-                    ),
-                  ),
-                ),
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  height: 2,
-                  width: on ? 26 : 0,
-                  decoration: BoxDecoration(
-                    color: kAccent,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ],
-            ),
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: kSurface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: kHair),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
-        );
-      }),
+        ],
+      ),
+      child: Row(
+        children: List.generate(_tabs.length, (i) {
+          final on = i == _tab;
+          return Expanded(
+            child: ProgressPressable(
+              onTap: () => setState(() => _tab = i),
+              scale: 0.98,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  color: on ? kAccent : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: on
+                      ? [
+                          BoxShadow(
+                            color: kAccent.withValues(alpha: 0.28),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Text(
+                  _tabs[i],
+                  textAlign: TextAlign.center,
+                  style: body(
+                    size: 12.5,
+                    weight: FontWeight.w700,
+                    color: on ? Colors.white : kMuted,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }),
+      ),
     );
   }
 }
@@ -216,17 +262,17 @@ Future<void> _confirmDelete(
     context: context,
     builder: (ctx) => AlertDialog(
       backgroundColor: kSurface,
-      title: Text('Delete photo?', style: serif(size: 19, weight: FontWeight.w600)),
-      content: const Text('This cannot be undone.',
-          style: TextStyle(color: kInkSoft)),
+      title: Text('Delete photo?', style: display(size: 19, weight: FontWeight.w700)),
+      content: Text('This cannot be undone.',
+          style: body(size: 14, color: kInkSoft)),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(ctx, false),
-          child: const Text('Cancel', style: TextStyle(color: kInkSoft)),
+          child: Text('Cancel', style: body(size: 14, color: kInkSoft)),
         ),
         TextButton(
           onPressed: () => Navigator.pop(ctx, true),
-          child: const Text('Delete', style: TextStyle(color: kDanger)),
+          child: Text('Delete', style: body(size: 14, color: kDanger, weight: FontWeight.w700)),
         ),
       ],
     ),
@@ -258,7 +304,7 @@ void _openViewer(BuildContext context, WidgetRef ref,
   );
 }
 
-/// Small compact pose switch used by Compare and Scrub.
+/// Small compact pose switch used by Compare.
 class _PoseSwitch extends StatelessWidget {
   final BodyPose value;
   final ValueChanged<BodyPose> onChanged;
@@ -269,7 +315,7 @@ class _PoseSwitch extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: const Color(0xFFF1EFE9),
+        color: kAccentSoft,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -282,12 +328,17 @@ class _PoseSwitch extends StatelessWidget {
                   : p.label;
           return Expanded(
             child: GestureDetector(
-              onTap: () => onChanged(p),
+              onTap: () {
+                HapticFeedback.selectionClick();
+                onChanged(p);
+              },
               behavior: HitTestBehavior.opaque,
-              child: Container(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 decoration: BoxDecoration(
-                  color: on ? kSurface : null,
+                  color: on ? kSurface : Colors.transparent,
                   borderRadius: BorderRadius.circular(9),
                   boxShadow: on
                       ? [
@@ -298,12 +349,14 @@ class _PoseSwitch extends StatelessWidget {
                         ]
                       : null,
                 ),
-                child: Text(short,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: on ? kInk : kMuted)),
+                child: AnimatedDefaultTextStyle(
+                  duration: const Duration(milliseconds: 200),
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: on ? kInk : kMuted),
+                  child: Text(short, textAlign: TextAlign.center),
+                ),
               ),
             ),
           );
@@ -334,22 +387,35 @@ class _JournalView extends ConsumerWidget {
             parent: AlwaysScrollableScrollPhysics()),
         padding: EdgeInsets.fromLTRB(22, 20, 22, 40 + bottomInset),
         children: [
-          _TodayCard(done: todayDone, onStart: onStart),
+          SoftEntrance(
+            child: _TodayCard(done: todayDone, onStart: onStart),
+          ),
           const SizedBox(height: 30),
-          if (days.isEmpty)
-            const _EmptyState()
+          if (days.where((d) => d.photos.isNotEmpty).isEmpty)
+            SoftEntrance(delay: 120.ms, child: const _EmptyState())
           else ...[
-            const Eyebrow('Timeline'),
+            SoftEntrance(
+              delay: 80.ms,
+              child: const Eyebrow('Timeline', color: kAccent),
+            ),
             const SizedBox(height: 16),
-            ...days.asMap().entries.map((e) => Padding(
-                  padding: EdgeInsets.only(top: e.key == 0 ? 0 : 26),
-                  child: _DaySection(
-                    day: e.value,
-                    onTap: (p) => _openViewer(
-                        context, ref, e.value.photos, e.value.photos.indexOf(p)),
-                    onLongPress: (p) => _confirmDelete(context, ref, p),
-                  ),
-                )),
+            ...days
+                .where((d) => d.photos.isNotEmpty)
+                .toList()
+                .asMap()
+                .entries
+                .map((e) => SoftEntrance(
+                      delay: (100 + e.key * 50).ms,
+                      child: Padding(
+                        padding: EdgeInsets.only(top: e.key == 0 ? 0 : 26),
+                        child: _DaySection(
+                          day: e.value,
+                          onTap: (p) => _openViewer(context, ref, e.value.photos,
+                              e.value.photos.indexOf(p)),
+                          onLongPress: (p) => _confirmDelete(context, ref, p),
+                        ),
+                      ),
+                    )),
           ],
         ],
       ),
@@ -375,21 +441,20 @@ class _TodayCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              _Ring(count: count, total: total),
+              AnimatedProgressRing(count: count, total: total),
               const SizedBox(width: 18),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(complete ? 'Today is complete' : 'Today',
-                        style: serif(size: 22, weight: FontWeight.w600)),
+                        style: display(size: 21, weight: FontWeight.w700)),
                     const SizedBox(height: 4),
                     Text(
                       complete
                           ? 'All four angles captured. See you tomorrow.'
                           : '$count of $total angles done — front, sides & back.',
-                      style: const TextStyle(
-                          color: kInkSoft, fontSize: 13, height: 1.4),
+                      style: body(size: 13, color: kInkSoft, height: 1.4),
                     ),
                   ],
                 ),
@@ -404,68 +469,59 @@ class _TodayCard extends StatelessWidget {
                 .toList(),
           ),
           const SizedBox(height: 22),
-          GestureDetector(
-            onTap: onStart,
-            child: Container(
-              height: 52,
-              decoration: BoxDecoration(
-                color: kInk,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Center(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(complete ? LucideIcons.rotateCw : LucideIcons.camera,
-                        size: 18, color: Colors.white),
-                    const SizedBox(width: 10),
-                    Text(
-                      complete
-                          ? 'Retake today\'s photos'
-                          : count == 0
-                              ? 'Start today\'s photos'
-                              : 'Continue (${total - count} left)',
-                      style: const TextStyle(
+          SoftPulse(
+            enabled: !complete,
+            child: ProgressPressable(
+              onTap: onStart,
+              haptic: false,
+              child: Container(
+                height: 52,
+                decoration: BoxDecoration(
+                  gradient: complete
+                      ? null
+                      : const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [kAccentBright, kAccent],
+                        ),
+                  color: complete ? kInk : null,
+                  borderRadius: BorderRadius.circular(15),
+                  boxShadow: complete
+                      ? null
+                      : [
+                          BoxShadow(
+                            color: kAccent.withValues(alpha: 0.32),
+                            blurRadius: 18,
+                            spreadRadius: -2,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                ),
+                child: Center(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(complete ? LucideIcons.rotateCw : LucideIcons.camera,
+                          size: 18, color: Colors.white),
+                      const SizedBox(width: 10),
+                      Text(
+                        complete
+                            ? 'Retake today\'s photos'
+                            : count == 0
+                                ? 'Start today\'s photos'
+                                : 'Continue (${total - count} left)',
+                        style: body(
+                          size: 15,
+                          weight: FontWeight.w700,
                           color: Colors.white,
-                          fontSize: 15.5,
-                          fontWeight: FontWeight.w600),
-                    ),
-                  ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Ring extends StatelessWidget {
-  final int count;
-  final int total;
-  const _Ring({required this.count, required this.total});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 60,
-      height: 60,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          SizedBox(
-            width: 60,
-            height: 60,
-            child: CircularProgressIndicator(
-              value: total == 0 ? 0 : count / total,
-              strokeWidth: 3,
-              backgroundColor: kHair,
-              valueColor: const AlwaysStoppedAnimation(kAccent),
-            ),
-          ),
-          Text('$count/$total',
-              style: serif(size: 16, weight: FontWeight.w600)),
         ],
       ),
     );
@@ -486,23 +542,50 @@ class _PoseDot extends StatelessWidget {
             : pose.label;
     return Column(
       children: [
-        Container(
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 280),
+          curve: Curves.easeOutCubic,
           width: 42,
           height: 42,
           decoration: BoxDecoration(
             color: done ? kAccent : kSurface,
             shape: BoxShape.circle,
             border: Border.all(color: done ? kAccent : kHair, width: 1.4),
+            boxShadow: done
+                ? [
+                    BoxShadow(
+                      color: kAccent.withValues(alpha: 0.28),
+                      blurRadius: 10,
+                      spreadRadius: -2,
+                      offset: const Offset(0, 3),
+                    ),
+                  ]
+                : null,
           ),
-          child: Icon(done ? LucideIcons.check : pose.icon,
-              size: 18, color: done ? Colors.white : kMuted),
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 260),
+            transitionBuilder: (child, anim) => ScaleTransition(
+              scale: CurvedAnimation(parent: anim, curve: Curves.easeOutBack),
+              child: FadeTransition(opacity: anim, child: child),
+            ),
+            child: Icon(
+              done ? LucideIcons.check : pose.icon,
+              key: ValueKey(done),
+              size: 18,
+              color: done ? Colors.white : kMuted,
+            ),
+          ),
         ),
         const SizedBox(height: 7),
-        Text(short,
-            style: TextStyle(
-                color: done ? kInk : kMuted,
-                fontSize: 11,
-                fontWeight: FontWeight.w500)),
+        AnimatedDefaultTextStyle(
+          duration: const Duration(milliseconds: 200),
+          style: body(
+            size: 11,
+            weight: FontWeight.w600,
+            color: done ? kInk : kMuted,
+          ),
+          child: Text(short),
+        ),
       ],
     );
   }
@@ -520,6 +603,17 @@ class _DaySection extends StatelessWidget {
     final label = _relativeLabel(day.date);
     final isToday = label == 'Today';
     final complete = day.completedCount >= kRequiredPoses.length;
+
+    // Only real photos — never empty "Not taken" placeholders.
+    final taken = <(BodyPose?, ProgressPhoto)>[
+      for (final pose in kRequiredPoses)
+        if (day.photoFor(pose) != null) (pose, day.photoFor(pose)!),
+      // Legacy shots without a pose still appear in the journal.
+      for (final p in day.photos)
+        if (p.pose == null) (null, p),
+    ];
+    if (taken.isEmpty) return const SizedBox.shrink();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -527,19 +621,29 @@ class _DaySection extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Text(label,
-                style: serif(
+                style: display(
                     size: 17,
-                    weight: FontWeight.w600,
+                    weight: FontWeight.w700,
                     color: isToday ? kAccent : kInk)),
             const SizedBox(width: 8),
             Text(DateFormat.MMMd().format(day.date),
-                style: const TextStyle(color: kMuted, fontSize: 12.5)),
+                style: body(size: 12.5, color: kMuted)),
             const Spacer(),
-            Text('${day.completedCount}/${kRequiredPoses.length}',
-                style: TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w600,
-                    color: complete ? kAccent : kMuted)),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+              decoration: BoxDecoration(
+                color: complete ? kAccentSoft : kHair.withValues(alpha: 0.55),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                '${day.completedCount}/${kRequiredPoses.length}',
+                style: body(
+                  size: 12,
+                  weight: FontWeight.w700,
+                  color: complete ? kAccent : kMuted,
+                ),
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 10),
@@ -552,15 +656,18 @@ class _DaySection extends StatelessWidget {
           mainAxisSpacing: 12,
           crossAxisSpacing: 12,
           childAspectRatio: 0.8,
-          children: kRequiredPoses.map((pose) {
-            final photo = day.photoFor(pose);
-            return _PoseTile(
-              pose: pose,
-              photo: photo,
-              onTap: photo != null ? () => onTap(photo) : null,
-              onLongPress: photo != null ? () => onLongPress(photo) : null,
-            );
-          }).toList(),
+          children: [
+            for (var i = 0; i < taken.length; i++)
+              SoftEntrance(
+                delay: (40 * i).ms,
+                child: _PoseTile(
+                  pose: taken[i].$1,
+                  photo: taken[i].$2,
+                  onTap: () => onTap(taken[i].$2),
+                  onLongPress: () => onLongPress(taken[i].$2),
+                ),
+              ),
+          ],
         ),
       ],
     );
@@ -578,33 +685,15 @@ class _PoseTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final label = pose?.label ?? 'Photo';
-    if (photo == null) {
-      return DecoratedBox(
-        decoration: BoxDecoration(
-          color: const Color(0xFFF4F2EC),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: kHair),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(pose?.icon ?? LucideIcons.image, size: 22, color: kMuted),
-            const SizedBox(height: 8),
-            Text(label,
-                style: const TextStyle(
-                    fontSize: 12, fontWeight: FontWeight.w600, color: kInkSoft)),
-            const SizedBox(height: 2),
-            const Text('Not taken',
-                style: TextStyle(fontSize: 11, color: kMuted)),
-          ],
-        ),
-      );
-    }
-    return GestureDetector(
+    if (photo == null) return const SizedBox.shrink();
+
+    return ProgressPressable(
       onTap: onTap,
       onLongPress: onLongPress,
+      scale: 0.96,
+      haptic: false,
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         child: Stack(
           fit: StackFit.expand,
           children: [
@@ -612,22 +701,32 @@ class _PoseTile extends StatelessWidget {
               imageUrl: photo!.imageUrl,
               fit: BoxFit.cover,
               memCacheWidth: 700,
-              placeholder: const ColoredBox(color: Color(0xFFF1EFE9)),
+              placeholder: const ColoredBox(color: kAccentSoft),
             ),
             Positioned(
-              left: 10,
-              bottom: 10,
+              left: 0,
+              right: 0,
+              bottom: 0,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.fromLTRB(10, 20, 10, 10),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.92),
-                  borderRadius: BorderRadius.circular(7),
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.45),
+                    ],
+                  ),
                 ),
-                child: Text(label,
-                    style: const TextStyle(
-                        color: kInk,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600)),
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
             ),
           ],
@@ -646,16 +745,28 @@ class _EmptyState extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 44, horizontal: 24),
       child: Column(
         children: [
-          const Icon(LucideIcons.camera, size: 30, color: kAccent),
+          const Icon(LucideIcons.camera, size: 30, color: kAccent)
+              .animate(onPlay: (c) => c.repeat(reverse: true))
+              .scale(
+                begin: const Offset(1, 1),
+                end: const Offset(1.06, 1.06),
+                duration: 1600.ms,
+                curve: Curves.easeInOut,
+              )
+              .then()
+              .fade(begin: 0.85, end: 1, duration: 1600.ms),
           const SizedBox(height: 16),
           Text('Start your timeline',
-              style: serif(size: 20, weight: FontWeight.w600)),
+                  style: display(size: 20, weight: FontWeight.w700))
+              .animate()
+              .fadeIn(delay: 80.ms, duration: 400.ms)
+              .slideY(begin: 0.08, end: 0, duration: 400.ms),
           const SizedBox(height: 10),
-          const Text(
-            'Take the same four angles each day. Over time you\'ll see the change clearly.',
+          Text(
+            'Capture front, sides & back. Your shots stay in your journal so you can compare over time.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 14, height: 1.5, color: kInkSoft),
-          ),
+            style: body(size: 14, height: 1.5, color: kInkSoft),
+          ).animate().fadeIn(delay: 160.ms, duration: 450.ms),
         ],
       ),
     );
@@ -673,120 +784,301 @@ class _CompareView extends ConsumerStatefulWidget {
 }
 
 class _CompareViewState extends ConsumerState<_CompareView> {
-  static const _ranges = [
-    ('1 week', 7),
-    ('1 month', 30),
-    ('3 months', 90),
-    ('6 months', 180),
-    ('1 year', 365),
-  ];
-  int _range = 2;
   BodyPose _pose = BodyPose.front;
+  DateTime? _leftKey;
+  DateTime? _rightKey;
+
+  List<ProgressDay> get _timeline => _timelineFor(widget.days, _pose);
+
+  ProgressDay? _dayFor(DateTime? key) {
+    if (key == null) return null;
+    for (final d in _timeline) {
+      if (_dk(d.date) == _dk(key)) return d;
+    }
+    return null;
+  }
+
+  void _ensureDefaults() {
+    final timeline = _timeline;
+    if (timeline.isEmpty) {
+      _leftKey = null;
+      _rightKey = null;
+      return;
+    }
+    final keys = timeline.map((d) => _dk(d.date)).toList();
+    if (_leftKey == null || !keys.contains(_dk(_leftKey!))) {
+      _leftKey = keys.first;
+    }
+    if (_rightKey == null || !keys.contains(_dk(_rightKey!))) {
+      _rightKey = keys.length > 1 ? keys.last : keys.first;
+    }
+    // Prefer oldest on the left, newest on the right when first landing.
+    if (_leftKey != null &&
+        _rightKey != null &&
+        _dk(_leftKey!).isAfter(_dk(_rightKey!))) {
+      final tmp = _leftKey;
+      _leftKey = _rightKey;
+      _rightKey = tmp;
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _ensureDefaults();
+  }
+
+  @override
+  void didUpdateWidget(_CompareView old) {
+    super.didUpdateWidget(old);
+    _ensureDefaults();
+  }
+
+  Future<void> _pickDay({required bool isLeft}) async {
+    final timeline = _timeline;
+    if (timeline.isEmpty) return;
+    final current = isLeft ? _leftKey : _rightKey;
+    final picked = await showModalBottomSheet<DateTime>(
+      context: context,
+      backgroundColor: kSurface,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (ctx) {
+        final maxH = MediaQuery.sizeOf(ctx).height * 0.55;
+        return SafeArea(
+          child: SizedBox(
+            height: maxH,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(22, 18, 22, 4),
+                  child: Text(
+                    isLeft ? 'Compare from' : 'Compare to',
+                    style: display(size: 18, weight: FontWeight.w700),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(22, 0, 22, 8),
+                  child: Text(
+                    'Days with a ${_pose.label.toLowerCase()} photo',
+                    style: body(size: 13, color: kInkSoft),
+                  ),
+                ),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: timeline.length,
+                    itemBuilder: (_, i) {
+                      // Newest first in the picker.
+                      final day = timeline[timeline.length - 1 - i];
+                      final key = _dk(day.date);
+                      final on = current != null && _dk(current) == key;
+                      return ListTile(
+                        onTap: () => Navigator.pop(ctx, key),
+                        leading: Icon(
+                          on ? LucideIcons.circleCheck : LucideIcons.calendar,
+                          color: on ? kAccent : kMuted,
+                          size: 20,
+                        ),
+                        title: Text(
+                          DateFormat.yMMMEd().format(day.date),
+                          style: body(
+                            size: 15,
+                            weight: FontWeight.w600,
+                            color: kInk,
+                          ),
+                        ),
+                        subtitle: Text(
+                          _relativeLabel(day.date),
+                          style: body(size: 12.5, color: kMuted),
+                        ),
+                        trailing: on
+                            ? const Icon(LucideIcons.check,
+                                color: kAccent, size: 18)
+                            : null,
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    if (picked == null || !mounted) return;
+    HapticFeedback.selectionClick();
+    setState(() {
+      if (isLeft) {
+        _leftKey = picked;
+      } else {
+        _rightKey = picked;
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final timeline = _timelineFor(widget.days, _pose);
     final weighIns = ref.watch(progressProvider).value ?? const <WeighInEntry>[];
-
-    final ProgressDay? newestDay = timeline.isNotEmpty ? timeline.last : null;
-    ProgressDay? olderCalc;
-    if (newestDay != null) {
-      final target =
-          newestDay.date.subtract(Duration(days: _ranges[_range].$2));
-      Duration bestDiff = const Duration(days: 100000);
-      for (final d in timeline) {
-        if (d.date.isAfter(newestDay.date)) continue;
-        final diff = (d.date.difference(target)).abs();
-        if (diff < bestDiff) {
-          bestDiff = diff;
-          olderCalc = d;
-        }
-      }
-    }
-    final ProgressDay? olderDay = olderCalc;
+    final leftDay = _dayFor(_leftKey);
+    final rightDay = _dayFor(_rightKey);
+    final timeline = _timeline;
 
     return ListView(
       physics: const BouncingScrollPhysics(
           parent: AlwaysScrollableScrollPhysics()),
       padding: const EdgeInsets.fromLTRB(22, 20, 22, 40),
       children: [
-        const Text('See how far you\'ve come — pick a range.',
-            style: TextStyle(color: kInkSoft, fontSize: 14)),
-        const SizedBox(height: 16),
-        SizedBox(
-          height: 36,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: _ranges.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 8),
-            itemBuilder: (_, i) {
-              final on = i == _range;
-              return GestureDetector(
-                onTap: () => setState(() => _range = i),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: on ? kInk : kSurface,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: on ? kInk : kHair),
-                  ),
-                  child: Text(_ranges[i].$1,
-                      style: TextStyle(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w600,
-                          color: on ? Colors.white : kInkSoft)),
-                ),
-              );
-            },
+        SoftEntrance(
+          child: Text(
+            'Pick two days to compare side by side.',
+            style: body(size: 14, color: kInkSoft),
           ),
         ),
-        const SizedBox(height: 20),
-        if (newestDay == null)
-          _hint('Take a few days of ${_pose.label.toLowerCase()} photos to compare.')
-        else
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                  child: _CompareFrame(
-                day: olderDay,
-                pose: _pose,
-                tag: olderDay == null || olderDay == newestDay
-                    ? 'Earliest'
-                    : _relativeLabel(olderDay.date),
-                highlight: false,
-                onTap: olderDay == null
-                    ? null
-                    : () => _openViewer(context, ref, olderDay.photos,
-                        olderDay.photos.indexOf(olderDay.photoFor(_pose)!)),
-              )),
-              const SizedBox(width: 14),
-              Expanded(
-                  child: _CompareFrame(
-                day: newestDay,
-                pose: _pose,
-                tag: 'Now',
-                highlight: true,
-                onTap: () => _openViewer(context, ref, newestDay.photos,
-                    newestDay.photos.indexOf(newestDay.photoFor(_pose)!)),
-              )),
-            ],
+        const SizedBox(height: 16),
+        SoftEntrance(
+          delay: 40.ms,
+          child: _PoseSwitch(
+            value: _pose,
+            onChanged: (p) => setState(() {
+              _pose = p;
+              _leftKey = null;
+              _rightKey = null;
+              _ensureDefaults();
+            }),
           ),
-        const SizedBox(height: 20),
-        _PoseSwitch(value: _pose, onChanged: (p) => setState(() => _pose = p)),
+        ),
         const SizedBox(height: 18),
-        if (newestDay != null && olderDay != null && olderDay != newestDay)
-          _deltaCard(olderDay, newestDay, weighIns),
+        if (timeline.isEmpty)
+          SoftEntrance(
+            delay: 80.ms,
+            child: _hint(
+              'Take ${_pose.label.toLowerCase()} photos on different days to compare them.',
+            ),
+          )
+        else if (timeline.length == 1)
+          SoftEntrance(
+            delay: 80.ms,
+            child: _hint(
+              'Only one day has a ${_pose.label.toLowerCase()} photo so far. Capture another day to compare.',
+            ),
+          )
+        else ...[
+          SoftEntrance(
+            delay: 80.ms,
+            child: Row(
+              children: [
+                Expanded(
+                  child: _DayPickChip(
+                    label: 'From',
+                    date: leftDay?.date,
+                    onTap: () => _pickDay(isLeft: true),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: ProgressPressable(
+                    onTap: () {
+                      setState(() {
+                        final tmp = _leftKey;
+                        _leftKey = _rightKey;
+                        _rightKey = tmp;
+                      });
+                    },
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: kAccentSoft,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(LucideIcons.arrowLeftRight,
+                          size: 18, color: kAccent),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: _DayPickChip(
+                    label: 'To',
+                    date: rightDay?.date,
+                    onTap: () => _pickDay(isLeft: false),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+          SoftEntrance(
+            delay: 120.ms,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: _CompareFrame(
+                    day: leftDay,
+                    pose: _pose,
+                    tag: leftDay == null
+                        ? 'From'
+                        : _relativeLabel(leftDay.date),
+                    highlight: false,
+                    onTap: leftDay == null
+                        ? null
+                        : () => _openViewer(
+                              context,
+                              ref,
+                              leftDay.photos,
+                              leftDay.photos
+                                  .indexOf(leftDay.photoFor(_pose)!),
+                            ),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: _CompareFrame(
+                    day: rightDay,
+                    pose: _pose,
+                    tag: rightDay == null
+                        ? 'To'
+                        : _relativeLabel(rightDay.date),
+                    highlight: true,
+                    onTap: rightDay == null
+                        ? null
+                        : () => _openViewer(
+                              context,
+                              ref,
+                              rightDay.photos,
+                              rightDay.photos
+                                  .indexOf(rightDay.photoFor(_pose)!),
+                            ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (leftDay != null &&
+              rightDay != null &&
+              _dk(leftDay.date) != _dk(rightDay.date)) ...[
+            const SizedBox(height: 18),
+            SoftEntrance(
+              delay: 160.ms,
+              child: _deltaCard(leftDay, rightDay, weighIns),
+            ),
+          ],
+        ],
       ],
     );
   }
 
   Widget _deltaCard(
-      ProgressDay older, ProgressDay newest, List<WeighInEntry> weighIns) {
-    final wOld = _nearestWeight(weighIns, older.date);
-    final wNew = _nearestWeight(weighIns, newest.date);
-    final gapDays = newest.date.difference(older.date).inDays;
+      ProgressDay older, ProgressDay newer, List<WeighInEntry> weighIns) {
+    // Order by date so the gap / weight delta read correctly.
+    final a = older.date.isBefore(newer.date) ? older : newer;
+    final b = older.date.isBefore(newer.date) ? newer : older;
+    final wOld = _nearestWeight(weighIns, a.date);
+    final wNew = _nearestWeight(weighIns, b.date);
+    final gapDays = b.date.difference(a.date).inDays;
 
     String big;
     String lab;
@@ -799,19 +1091,19 @@ class _CompareViewState extends ConsumerState<_CompareView> {
     } else {
       big = _gapLabel(gapDays);
       lab =
-          'Between these two photos. Log weigh-ins to see your weight change here.';
+          'Between these two days. Log weigh-ins to see your weight change here.';
     }
 
     return EditorialCard(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
       child: Row(
         children: [
-          Text(big, style: serif(size: 26, weight: FontWeight.w600, color: kAccent)),
+          Text(big,
+              style: display(size: 26, weight: FontWeight.w700, color: kAccent)),
           const SizedBox(width: 16),
           Expanded(
             child: Text(lab,
-                style: const TextStyle(
-                    color: kInkSoft, fontSize: 13, height: 1.4)),
+                style: body(size: 13, color: kInkSoft, height: 1.4)),
           ),
         ],
       ),
@@ -825,7 +1117,7 @@ class _CompareViewState extends ConsumerState<_CompareView> {
           const SizedBox(height: 14),
           Text(text,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: kInkSoft, height: 1.45)),
+              style: body(size: 14, color: kInkSoft, height: 1.45)),
         ]),
       );
 
@@ -851,6 +1143,53 @@ class _CompareViewState extends ConsumerState<_CompareView> {
   }
 }
 
+class _DayPickChip extends StatelessWidget {
+  final String label;
+  final DateTime? date;
+  final VoidCallback onTap;
+  const _DayPickChip({
+    required this.label,
+    required this.date,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ProgressPressable(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        decoration: BoxDecoration(
+          color: kSurface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: kHair),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: body(size: 11, weight: FontWeight.w700, color: kMuted)),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    date == null
+                        ? 'Choose day'
+                        : DateFormat.MMMd().format(date!),
+                    style: display(size: 15, weight: FontWeight.w700),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const Icon(LucideIcons.chevronDown, size: 16, color: kMuted),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _CompareFrame extends StatelessWidget {
   final ProgressDay? day;
   final BodyPose pose;
@@ -868,67 +1207,84 @@ class _CompareFrame extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final photo = day?.photoFor(pose);
-    return GestureDetector(
+    return ProgressPressable(
       onTap: onTap,
+      scale: 0.97,
+      haptic: false,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           AspectRatio(
             aspectRatio: 3 / 4.3,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  if (photo != null)
-                    CachedFoodImage(
-                      imageUrl: photo.imageUrl,
-                      fit: BoxFit.cover,
-                      memCacheWidth: 800,
-                      placeholder: const ColoredBox(color: Color(0xFFF1EFE9)),
-                    )
-                  else
-                    const ColoredBox(color: Color(0xFFF1EFE9)),
-                  Positioned(
-                    top: 10,
-                    left: 10,
-                    child: Container(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.92),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (highlight) ...[
-                            Container(
-                              width: 6,
-                              height: 6,
-                              decoration: const BoxDecoration(
-                                  color: kAccent, shape: BoxShape.circle),
-                            ),
-                            const SizedBox(width: 5),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 280),
+              curve: Curves.easeOutCubic,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                border: highlight
+                    ? Border.all(
+                        color: kAccent.withValues(alpha: 0.35), width: 1.5)
+                    : null,
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 280),
+                      child: photo != null
+                          ? CachedFoodImage(
+                              key: ValueKey(photo.imageUrl),
+                              imageUrl: photo.imageUrl,
+                              fit: BoxFit.cover,
+                              memCacheWidth: 800,
+                              placeholder:
+                                  const ColoredBox(color: kAccentSoft),
+                            )
+                          : const ColoredBox(
+                              key: ValueKey('empty'), color: kAccentSoft),
+                    ),
+                    Positioned(
+                      top: 10,
+                      left: 10,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 9, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.92),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (highlight) ...[
+                              Container(
+                                width: 6,
+                                height: 6,
+                                decoration: const BoxDecoration(
+                                    color: kAccent, shape: BoxShape.circle),
+                              ),
+                              const SizedBox(width: 5),
+                            ],
+                            Text(tag,
+                                style: const TextStyle(
+                                    color: kInk,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600)),
                           ],
-                          Text(tag,
-                              style: const TextStyle(
-                                  color: kInk,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600)),
-                        ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
           if (day != null) ...[
             const SizedBox(height: 8),
             Text(DateFormat.yMMMd().format(day!.date),
-                style: const TextStyle(
-                    color: kInkSoft, fontSize: 12.5, fontWeight: FontWeight.w500)),
+                style: body(size: 12.5, color: kInkSoft)),
           ],
         ],
       ),
@@ -973,70 +1329,113 @@ class _CalendarViewState extends ConsumerState<_CalendarView> {
           parent: AlwaysScrollableScrollPhysics()),
       padding: const EdgeInsets.fromLTRB(22, 20, 22, 40),
       children: [
-        const Text('Tap any day to view that day\'s photos.',
-            style: TextStyle(color: kInkSoft, fontSize: 14)),
+        SoftEntrance(
+          child: const Text('Tap any day to view that day\'s photos.',
+              style: TextStyle(color: kInkSoft, fontSize: 14)),
+        ),
         const SizedBox(height: 18),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _navBtn(LucideIcons.chevronLeft, () {
-              setState(() => _month = DateTime(_month.year, _month.month - 1));
-            }),
-            Text(DateFormat.yMMMM().format(_month),
-                style: serif(size: 18, weight: FontWeight.w600)),
-            _navBtn(LucideIcons.chevronRight, () {
-              final next = DateTime(_month.year, _month.month + 1);
-              if (!next.isAfter(
-                  DateTime(DateTime.now().year, DateTime.now().month))) {
-                setState(() => _month = next);
-              }
-            }),
-          ],
+        SoftEntrance(
+          delay: 40.ms,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _navBtn(LucideIcons.chevronLeft, () {
+                HapticFeedback.selectionClick();
+                setState(
+                    () => _month = DateTime(_month.year, _month.month - 1));
+              }),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 240),
+                child: Text(
+                  DateFormat.yMMMM().format(_month),
+                  key: ValueKey('${_month.year}-${_month.month}'),
+                  style: display(size: 18, weight: FontWeight.w700),
+                ),
+              ),
+              _navBtn(LucideIcons.chevronRight, () {
+                final next = DateTime(_month.year, _month.month + 1);
+                if (!next.isAfter(
+                    DateTime(DateTime.now().year, DateTime.now().month))) {
+                  HapticFeedback.selectionClick();
+                  setState(() => _month = next);
+                }
+              }),
+            ],
+          ),
         ),
         const SizedBox(height: 16),
-        Row(
-          children: const ['S', 'M', 'T', 'W', 'T', 'F', 'S']
-              .map((d) => Expanded(
-                    child: Center(
-                      child: Text(d,
-                          style: const TextStyle(
-                              color: kMuted,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600)),
-                    ),
-                  ))
-              .toList(),
+        SoftEntrance(
+          delay: 80.ms,
+          child: Row(
+            children: const ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+                .map((d) => Expanded(
+                      child: Center(
+                        child: Text(d,
+                            style: const TextStyle(
+                                color: kMuted,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600)),
+                      ),
+                    ))
+                .toList(),
+          ),
         ),
         const SizedBox(height: 10),
-        GridView.count(
-          crossAxisCount: 7,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: 8,
-          crossAxisSpacing: 8,
-          children: [
-            for (int i = 0; i < leading; i++) const SizedBox.shrink(),
-            for (int d = 1; d <= daysInMonth; d++)
-              _dayCell(DateTime(_month.year, _month.month, d), byDay),
-          ],
+        SoftEntrance(
+          delay: 100.ms,
+          child: GridView.count(
+            crossAxisCount: 7,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            mainAxisSpacing: 8,
+            crossAxisSpacing: 8,
+            children: [
+              for (int i = 0; i < leading; i++) const SizedBox.shrink(),
+              for (int d = 1; d <= daysInMonth; d++)
+                _dayCell(DateTime(_month.year, _month.month, d), byDay),
+            ],
+          ),
         ),
         const SizedBox(height: 24),
         const Divider(height: 1, thickness: 1, color: kHair),
         const SizedBox(height: 20),
-        if (selectedDay != null)
-          _DaySection(
-            day: selectedDay,
-            onTap: (p) => _openViewer(context, ref, selectedDay.photos,
-                selectedDay.photos.indexOf(p)),
-            onLongPress: (p) => _confirmDelete(context, ref, p),
-          )
-        else if (_selected != null)
-          Column(children: [
-            const Icon(LucideIcons.calendarOff, size: 26, color: kMuted),
-            const SizedBox(height: 10),
-            Text('No photos on ${DateFormat.yMMMd().format(_selected!)}.',
-                style: const TextStyle(color: kInkSoft)),
-          ]),
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 280),
+          switchInCurve: Curves.easeOutCubic,
+          transitionBuilder: (child, anim) => FadeTransition(
+            opacity: anim,
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0, 0.04),
+                end: Offset.zero,
+              ).animate(anim),
+              child: child,
+            ),
+          ),
+          child: selectedDay != null
+              ? KeyedSubtree(
+                  key: ValueKey(_key(selectedDay.date)),
+                  child: _DaySection(
+                    day: selectedDay,
+                    onTap: (p) => _openViewer(context, ref, selectedDay.photos,
+                        selectedDay.photos.indexOf(p)),
+                    onLongPress: (p) => _confirmDelete(context, ref, p),
+                  ),
+                )
+              : _selected != null
+                  ? KeyedSubtree(
+                      key: ValueKey('empty-${_key(_selected!)}'),
+                      child: Column(children: [
+                        const Icon(LucideIcons.calendarOff,
+                            size: 26, color: kMuted),
+                        const SizedBox(height: 10),
+                        Text(
+                            'No photos on ${DateFormat.yMMMd().format(_selected!)}.',
+                            style: const TextStyle(color: kInkSoft)),
+                      ]),
+                    )
+                  : const SizedBox.shrink(key: ValueKey('none')),
+        ),
       ],
     );
   }
@@ -1061,9 +1460,16 @@ class _CalendarViewState extends ConsumerState<_CalendarView> {
     final has = entry != null && entry.photos.isNotEmpty;
     final sel = _selected != null && _key(_selected!) == _key(date);
 
-    return GestureDetector(
-      onTap: () => setState(() => _selected = date),
-      child: Container(
+    return ProgressPressable(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        setState(() => _selected = date);
+      },
+      haptic: false,
+      scale: 0.9,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOutCubic,
         decoration: BoxDecoration(
           color: sel
               ? kInk
@@ -1107,162 +1513,6 @@ class _CalendarViewState extends ConsumerState<_CalendarView> {
 
   String _key(DateTime d) =>
       '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
-}
-
-// ─────────────────────────── SCRUB ─────────────────────────────────────────
-
-class _ScrubView extends ConsumerStatefulWidget {
-  final List<ProgressDay> days;
-  const _ScrubView({required this.days});
-
-  @override
-  ConsumerState<_ScrubView> createState() => _ScrubViewState();
-}
-
-class _ScrubViewState extends ConsumerState<_ScrubView> {
-  BodyPose _pose = BodyPose.front;
-  double _value = 1e9; // starts at latest; clamps down to maxIdx
-
-  @override
-  Widget build(BuildContext context) {
-    final timeline = _timelineFor(widget.days, _pose);
-    if (timeline.isEmpty) {
-      return ListView(
-        physics: const BouncingScrollPhysics(
-            parent: AlwaysScrollableScrollPhysics()),
-        padding: const EdgeInsets.fromLTRB(22, 20, 22, 40),
-        children: [
-          const Text('Drag to travel through time.',
-              style: TextStyle(color: kInkSoft, fontSize: 14)),
-          const SizedBox(height: 16),
-          _PoseSwitch(value: _pose, onChanged: _switchPose),
-          const SizedBox(height: 18),
-          EditorialCard(
-            padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
-            child: Column(children: [
-              const Icon(LucideIcons.slidersHorizontal, size: 26, color: kAccent),
-              const SizedBox(height: 14),
-              Text(
-                  'No ${_pose.label.toLowerCase()} photos yet. Capture a few days to scrub through them.',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: kInkSoft, height: 1.45)),
-            ]),
-          ),
-        ],
-      );
-    }
-
-    final maxIdx = timeline.length - 1;
-    final idx = _value.round().clamp(0, maxIdx);
-    final day = timeline[idx];
-    final photo = day.photoFor(_pose)!;
-
-    return ListView(
-      physics: const BouncingScrollPhysics(
-          parent: AlwaysScrollableScrollPhysics()),
-      padding: const EdgeInsets.fromLTRB(22, 20, 22, 40),
-      children: [
-        Text('Drag to travel through time — ${_pose.label.toLowerCase()}.',
-            style: const TextStyle(color: kInkSoft, fontSize: 14)),
-        const SizedBox(height: 16),
-        GestureDetector(
-          onTap: () =>
-              _openViewer(context, ref, day.photos, day.photos.indexOf(photo)),
-          child: AspectRatio(
-            aspectRatio: 3 / 4,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(18),
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  CachedFoodImage(
-                    imageUrl: photo.imageUrl,
-                    fit: BoxFit.cover,
-                    memCacheWidth: 1000,
-                    placeholder: const ColoredBox(color: Color(0xFFF1EFE9)),
-                  ),
-                  Positioned(
-                    top: 14,
-                    left: 14,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.92),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(DateFormat.yMMMd().format(day.date),
-                              style: serif(size: 14, weight: FontWeight.w600)),
-                          Text(_relativeLabel(day.date),
-                              style: const TextStyle(
-                                  color: kAccent,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600)),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        if (maxIdx == 0)
-          const Center(
-            child: Padding(
-              padding: EdgeInsets.symmetric(vertical: 6),
-              child: Text('One photo so far — capture more days to scrub.',
-                  style: TextStyle(color: kMuted, fontSize: 12)),
-            ),
-          )
-        else ...[
-          SliderTheme(
-            data: SliderThemeData(
-              trackHeight: 4,
-              activeTrackColor: kAccent,
-              inactiveTrackColor: kHair,
-              thumbColor: kSurface,
-              overlayColor: kAccent.withValues(alpha: 0.14),
-              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
-            ),
-            child: Slider(
-              min: 0,
-              max: maxIdx.toDouble(),
-              divisions: maxIdx,
-              value: idx.toDouble(),
-              onChanged: (v) {
-                HapticFeedback.selectionClick();
-                setState(() => _value = v);
-              },
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(DateFormat.MMMd().format(timeline.first.date),
-                    style: const TextStyle(color: kMuted, fontSize: 11.5)),
-                Text(DateFormat.MMMd().format(timeline.last.date),
-                    style: const TextStyle(color: kMuted, fontSize: 11.5)),
-              ],
-            ),
-          ),
-        ],
-        const SizedBox(height: 22),
-        _PoseSwitch(value: _pose, onChanged: _switchPose),
-      ],
-    );
-  }
-
-  void _switchPose(BodyPose p) => setState(() {
-        _pose = p;
-        _value = 1e9; // snap to latest for the new pose
-      });
 }
 
 // ─────────────────────────── VIEWER ────────────────────────────────────────

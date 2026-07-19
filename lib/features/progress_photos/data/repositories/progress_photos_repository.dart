@@ -17,16 +17,35 @@ class ProgressPhotosRepository {
     String? pose,
     DateTime? photoDate,
   }) async {
-    final fileName = imageFile.path.split('/').last;
+    if (!await imageFile.exists()) {
+      throw StateError('Photo file is missing — please retake.');
+    }
+    final bytes = await imageFile.length();
+    if (bytes <= 0) {
+      throw StateError('Photo file is empty — please retake.');
+    }
+
+    final date = photoDate ?? DateTime.now();
     final formData = FormData.fromMap({
-      'file': await MultipartFile.fromFile(imageFile.path, filename: fileName),
+      'file': await MultipartFile.fromFile(
+        imageFile.path,
+        filename:
+            'progress_${pose ?? 'shot'}_${date.millisecondsSinceEpoch}.jpg',
+      ),
       if (note != null && note.isNotEmpty) 'note': note,
       if (pose != null && pose.isNotEmpty) 'pose': pose,
-      if (photoDate != null)
-        'photo_date':
-            '${photoDate.year.toString().padLeft(4, '0')}-${photoDate.month.toString().padLeft(2, '0')}-${photoDate.day.toString().padLeft(2, '0')}',
+      'photo_date':
+          '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}',
     });
-    final res = await _dio.post('progress-photos', data: formData);
+
+    final res = await _dio.post(
+      'progress-photos',
+      data: formData,
+      options: Options(
+        sendTimeout: const Duration(seconds: 60),
+        receiveTimeout: const Duration(seconds: 60),
+      ),
+    );
     return Map<String, dynamic>.from(res.data as Map);
   }
 

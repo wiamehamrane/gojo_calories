@@ -2,19 +2,21 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../../domain/models/progress_photo.dart';
 import '../providers/progress_photos_provider.dart';
 import '../widgets/progress_glass.dart';
 
-/// Guided Front → Left → Right → Back capture flow, light editorial styling.
+/// Guided Front → Left → Right → Back capture.
 ///
-/// Steps through the poses that still need to be taken today. For each pose it
-/// shows a silhouette guide + instruction, opens the camera, then lets the user
-/// preview / retake before moving on. All shots upload together at the end.
+/// Each shot is copied into app documents storage immediately (so iOS temp
+/// camera files can't vanish), then uploaded to the API right away so photos
+/// are durable in the database before the user finishes the flow.
 class GuidedCaptureScreen extends ConsumerStatefulWidget {
   final List<BodyPose> poses;
 
@@ -28,8 +30,11 @@ class GuidedCaptureScreen extends ConsumerStatefulWidget {
 class _GuidedCaptureScreenState extends ConsumerState<GuidedCaptureScreen> {
   late final List<BodyPose> _poses;
   final Map<BodyPose, File> _captured = {};
+  final Set<BodyPose> _uploaded = {};
   int _index = 0;
-  bool _uploading = false;
+  bool _busy = false;
+  String? _error;
+  int _celebrateTick = 0;
 
   @override
   void initState() {
@@ -41,8 +46,23 @@ class _GuidedCaptureScreenState extends ConsumerState<GuidedCaptureScreen> {
   bool get _isLast => _index == _poses.length - 1;
   int get _capturedCount => _captured.length;
 
+  Future<File> _persistLocally(XFile picked, BodyPose pose) async {
+    final dir = await getApplicationDocumentsDirectory();
+    final folder = Directory('${dir.path}/progress_captures');
+    if (!await folder.exists()) {
+      await folder.create(recursive: true);
+    }
+    final dest = File(
+      '${folder.path}/${pose.id}_${DateTime.now().millisecondsSinceEpoch}.jpg',
+    );
+    return File(picked.path).copy(dest.path);
+  }
+
   Future<void> _openCamera() async {
+    if (_busy) return;
     HapticFeedback.selectionClick();
+    setState(() => _error = null);
+
     final picked = await ImagePicker().pickImage(
       source: ImageSource.camera,
       imageQuality: 88,
@@ -50,72 +70,150 @@ class _GuidedCaptureScreenState extends ConsumerState<GuidedCaptureScreen> {
       preferredCameraDevice: CameraDevice.rear,
     );
     if (picked == null || !mounted) return;
-    setState(() => _captured[_current] = File(picked.path));
+
+    setState(() => _busy = true);
+    try {
+      final durable = await _persistLocally(picked, _current);
+      if (!mounted) return;
+      setState(() {
+        _captured[_current] = durable;
+        _celebrateTick++;
+      });
+
+      // Upload immediately so the photo is in the DB even if the user leaves.
+      final uploaded = await ref.read(progressPhotosProvider.notifier).uploadPhoto(
+            durable,
+            pose: _current,
+            photoDate: DateTime.now(),
+          );
+      if (!mounted) return;
+      if (uploaded == null) {
+        setState(() {
+          _error = 'Couldn\'t save ${_current.label}. Check your connection and retry.';
+          _busy = false;
+        });
+        return;
+      }
+      setState(() {
+        _uploaded.add(_current);
+        _busy = false;
+      });
+      HapticFeedback.mediumImpact();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _error = 'Couldn\'t save this photo. Please try again.';
+      });
+    }
   }
 
   void _retake() {
+    if (_busy) return;
     HapticFeedback.selectionClick();
-    setState(() => _captured.remove(_current));
+    setState(() {
+      _captured.remove(_current);
+      _uploaded.remove(_current);
+      _error = null;
+    });
   }
 
-  void _next() {
+  Future<void> _next() async {
+    if (_busy) return;
     HapticFeedback.selectionClick();
+    if (!_uploaded.contains(_current)) {
+      // Shot on device but upload failed earlier — retry once.
+      final file = _captured[_current];
+      if (file == null) return;
+      setState(() {
+        _busy = true;
+        _error = null;
+      });
+      final uploaded =
+          await ref.read(progressPhotosProvider.notifier).uploadPhoto(
+                file,
+                pose: _current,
+                photoDate: DateTime.now(),
+              );
+      if (!mounted) return;
+      if (uploaded == null) {
+        setState(() {
+          _busy = false;
+          _error = 'Upload failed. Tap Next to retry.';
+        });
+        return;
+      }
+      setState(() {
+        _uploaded.add(_current);
+        _busy = false;
+      });
+    }
+
     if (_isLast) {
-      _uploadAll();
+      await _finish();
     } else {
       setState(() => _index += 1);
     }
   }
 
+  Future<void> _finish() async {
+    // Ensure every captured pose is on the server.
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    final notifier = ref.read(progressPhotosProvider.notifier);
+    var allOk = true;
+    for (final entry in _captured.entries) {
+      if (_uploaded.contains(entry.key)) continue;
+      final ok = await notifier.uploadPhoto(
+        entry.value,
+        pose: entry.key,
+        photoDate: DateTime.now(),
+      );
+      if (ok == null) {
+        allOk = false;
+      } else {
+        _uploaded.add(entry.key);
+      }
+    }
+    await notifier.fetchPhotos();
+    if (!mounted) return;
+    setState(() => _busy = false);
+
+    if (allOk && _uploaded.length == _poses.length) {
+      HapticFeedback.mediumImpact();
+      Navigator.of(context).pop(true);
+    } else if (_uploaded.isNotEmpty) {
+      HapticFeedback.mediumImpact();
+      Navigator.of(context).pop(true);
+    } else {
+      setState(() => _error = 'Photos couldn\'t be saved. Please try again.');
+    }
+  }
+
   void _back() {
-    if (_index == 0) return;
+    if (_index == 0 || _busy) return;
     HapticFeedback.selectionClick();
     setState(() => _index -= 1);
   }
 
-  Future<void> _uploadAll() async {
-    if (_uploading) return;
-    setState(() => _uploading = true);
-    final now = DateTime.now();
-    final notifier = ref.read(progressPhotosProvider.notifier);
-
-    var allOk = true;
-    for (final entry in _captured.entries) {
-      final ok = await notifier.uploadPhoto(
-        entry.value,
-        pose: entry.key,
-        photoDate: now,
-      );
-      if (!ok) allOk = false;
-    }
-    if (!mounted) return;
-    setState(() => _uploading = false);
-
-    if (allOk) {
-      HapticFeedback.mediumImpact();
-      Navigator.of(context).pop(true);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Some photos failed to upload. Tap Finish to retry.'),
-          backgroundColor: kDanger,
-        ),
-      );
-    }
-  }
-
   Future<void> _confirmClose() async {
+    if (_busy) return;
     if (_capturedCount == 0) {
-      Navigator.of(context).pop(false);
+      Navigator.of(context).pop(_uploaded.isNotEmpty);
       return;
     }
     final leave = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: kSurface,
-        title: Text('Discard photos?', style: serif(size: 19, weight: FontWeight.w600)),
+        title:
+            Text('Leave capture?', style: display(size: 19, weight: FontWeight.w700)),
         content: Text(
-          'You\'ve taken $_capturedCount of ${_poses.length} shots. Leaving now discards them.',
+          _uploaded.isEmpty
+              ? 'You haven\'t saved any shots yet.'
+              : '${_uploaded.length} of ${_poses.length} shots are already saved. You can finish the rest later.',
           style: const TextStyle(color: kInkSoft, height: 1.4),
         ),
         actions: [
@@ -125,17 +223,20 @@ class _GuidedCaptureScreenState extends ConsumerState<GuidedCaptureScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Discard', style: TextStyle(color: kDanger)),
+            child: const Text('Leave', style: TextStyle(color: kDanger)),
           ),
         ],
       ),
     );
-    if (leave == true && mounted) Navigator.of(context).pop(false);
+    if (leave == true && mounted) {
+      Navigator.of(context).pop(_uploaded.isNotEmpty);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final hasShot = _captured.containsKey(_current);
+    final saved = _uploaded.contains(_current);
 
     return PopScope(
       canPop: false,
@@ -150,11 +251,42 @@ class _GuidedCaptureScreenState extends ConsumerState<GuidedCaptureScreen> {
               _header(),
               const SizedBox(height: 6),
               _stepDots(),
+              if (_error != null)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+                  child: Text(
+                    _error!,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: kDanger,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ).animate().fadeIn().shake(hz: 2, duration: 320.ms),
               const SizedBox(height: 6),
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-                  child: hasShot ? _preview() : _guide(),
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 320),
+                    switchInCurve: Curves.easeOutCubic,
+                    switchOutCurve: Curves.easeInCubic,
+                    transitionBuilder: (child, anim) => FadeTransition(
+                      opacity: anim,
+                      child: SlideTransition(
+                        position: Tween<Offset>(
+                          begin: const Offset(0.04, 0),
+                          end: Offset.zero,
+                        ).animate(anim),
+                        child: child,
+                      ),
+                    ),
+                    child: KeyedSubtree(
+                      key: ValueKey('${_current.id}_$hasShot'),
+                      child: hasShot ? _preview(saved: saved) : _guide(),
+                    ),
+                  ),
                 ),
               ),
               _bottomBar(hasShot),
@@ -171,7 +303,7 @@ class _GuidedCaptureScreenState extends ConsumerState<GuidedCaptureScreen> {
       child: Row(
         children: [
           IconButton(
-            onPressed: _uploading ? null : _confirmClose,
+            onPressed: _busy ? null : _confirmClose,
             icon: const Icon(LucideIcons.x, color: kInk),
           ),
           Expanded(
@@ -179,8 +311,14 @@ class _GuidedCaptureScreenState extends ConsumerState<GuidedCaptureScreen> {
               children: [
                 Eyebrow('Step ${_index + 1} of ${_poses.length}'),
                 const SizedBox(height: 3),
-                Text(_current.label,
-                    style: serif(size: 19, weight: FontWeight.w600)),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 220),
+                  child: Text(
+                    _current.label,
+                    key: ValueKey(_current.id),
+                    style: display(size: 19, weight: FontWeight.w700),
+                  ),
+                ),
               ],
             ),
           ),
@@ -194,10 +332,10 @@ class _GuidedCaptureScreenState extends ConsumerState<GuidedCaptureScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(_poses.length, (i) {
-        final done = _captured.containsKey(_poses[i]);
+        final done = _uploaded.contains(_poses[i]);
         final active = i == _index;
         return AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
+          duration: const Duration(milliseconds: 220),
           margin: const EdgeInsets.symmetric(horizontal: 4),
           width: active ? 26 : 8,
           height: 8,
@@ -230,12 +368,19 @@ class _GuidedCaptureScreenState extends ConsumerState<GuidedCaptureScreen> {
                       painter: PoseSilhouettePainter(_current),
                     ),
                   ),
-                ),
+                )
+                    .animate()
+                    .fadeIn(duration: 360.ms)
+                    .scale(
+                      begin: const Offset(0.96, 0.96),
+                      curve: Curves.easeOutCubic,
+                    ),
                 Positioned(
                   left: 16,
                   top: 16,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
                     decoration: BoxDecoration(
                       color: kAccentSoft,
                       borderRadius: BorderRadius.circular(20),
@@ -271,7 +416,7 @@ class _GuidedCaptureScreenState extends ConsumerState<GuidedCaptureScreen> {
     );
   }
 
-  Widget _preview() {
+  Widget _preview({required bool saved}) {
     return Column(
       children: [
         Expanded(
@@ -285,24 +430,40 @@ class _GuidedCaptureScreenState extends ConsumerState<GuidedCaptureScreen> {
                   left: 16,
                   top: 16,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+                    key: ValueKey('badge_$_celebrateTick'),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.92),
+                      color: Colors.white.withValues(alpha: 0.94),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(LucideIcons.check, size: 14, color: kAccent),
+                        Icon(
+                          saved ? LucideIcons.circleCheck : LucideIcons.check,
+                          size: 14,
+                          color: kAccent,
+                        ),
                         const SizedBox(width: 6),
-                        Text('${_current.label} captured',
-                            style: const TextStyle(
-                                color: kInk,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600)),
+                        Text(
+                          saved
+                              ? '${_current.label} saved'
+                              : '${_current.label} captured',
+                          style: const TextStyle(
+                              color: kInk,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600),
+                        ),
                       ],
                     ),
-                  ),
+                  )
+                      .animate()
+                      .fadeIn(duration: 200.ms)
+                      .scale(
+                        begin: const Offset(0.8, 0.8),
+                        curve: Curves.easeOutBack,
+                      ),
                 ),
               ],
             ),
@@ -316,37 +477,57 @@ class _GuidedCaptureScreenState extends ConsumerState<GuidedCaptureScreen> {
   Widget _bottomBar(bool hasShot) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
-      child: _uploading
+      child: _busy
           ? const SizedBox(
               height: 54,
-              child: Center(child: CircularProgressIndicator(color: kAccent, strokeWidth: 2.4)),
+              child: Center(
+                child: CircularProgressIndicator(
+                    color: kAccent, strokeWidth: 2.4),
+              ),
             )
           : !hasShot
-              ? _primaryButton(
-                  icon: LucideIcons.camera, label: 'Open camera', onTap: _openCamera)
+              ? ProgressPressable(
+                  onTap: _openCamera,
+                  child: _primaryButton(
+                    icon: LucideIcons.camera,
+                    label: 'Open camera',
+                  ),
+                )
               : Row(
                   children: [
-                    if (_index > 0) _iconButton(LucideIcons.chevronLeft, _back),
+                    if (_index > 0)
+                      ProgressPressable(
+                        onTap: _back,
+                        child: _iconButton(LucideIcons.chevronLeft),
+                      ),
                     Expanded(
-                      child: OutlinedButton(
-                        onPressed: _retake,
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: kHair),
-                          foregroundColor: kInk,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14)),
+                      child: ProgressPressable(
+                        onTap: _retake,
+                        child: Container(
+                          height: 54,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: kHair),
+                            color: kSurface,
+                          ),
+                          child: const Text('Retake',
+                              style: TextStyle(
+                                  color: kInk, fontWeight: FontWeight.w600)),
                         ),
-                        child: const Text('Retake'),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       flex: 2,
-                      child: _primaryButton(
-                        icon: _isLast ? LucideIcons.check : LucideIcons.arrowRight,
-                        label: _isLast ? 'Finish' : 'Next',
+                      child: ProgressPressable(
                         onTap: _next,
+                        child: _primaryButton(
+                          icon: _isLast
+                              ? LucideIcons.check
+                              : LucideIcons.arrowRight,
+                          label: _isLast ? 'Done' : 'Next',
+                        ),
                       ),
                     ),
                   ],
@@ -354,55 +535,40 @@ class _GuidedCaptureScreenState extends ConsumerState<GuidedCaptureScreen> {
     );
   }
 
-  Widget _primaryButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return Material(
-      color: kInk,
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        onTap: onTap,
+  Widget _primaryButton({required IconData icon, required String label}) {
+    return Container(
+      height: 54,
+      decoration: BoxDecoration(
+        color: kInk,
         borderRadius: BorderRadius.circular(14),
-        child: SizedBox(
-          height: 54,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 18, color: Colors.white),
-              const SizedBox(width: 10),
-              Text(label,
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600)),
-            ],
-          ),
-        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 18, color: Colors.white),
+          const SizedBox(width: 10),
+          Text(label,
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600)),
+        ],
       ),
     );
   }
 
-  Widget _iconButton(IconData icon, VoidCallback onTap) {
+  Widget _iconButton(IconData icon) {
     return Padding(
       padding: const EdgeInsets.only(right: 12),
-      child: Material(
-        color: kSurface,
-        borderRadius: BorderRadius.circular(14),
-        child: InkWell(
-          onTap: onTap,
+      child: Container(
+        width: 52,
+        height: 52,
+        decoration: BoxDecoration(
+          color: kSurface,
           borderRadius: BorderRadius.circular(14),
-          child: Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: kHair),
-            ),
-            child: Icon(icon, color: kInk, size: 20),
-          ),
+          border: Border.all(color: kHair),
         ),
+        child: Icon(icon, color: kInk, size: 20),
       ),
     );
   }

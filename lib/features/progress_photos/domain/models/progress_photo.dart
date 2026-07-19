@@ -104,15 +104,35 @@ class ProgressPhoto {
   factory ProgressPhoto.fromJson(Map<String, dynamic> json) {
     final dateRaw = json['photo_date'] as String?;
     final createdRaw = json['created_at'] as String?;
+    final poseRaw = json['pose'];
     return ProgressPhoto(
       id: json['id'] as String,
       imageUrl: json['image_url'] as String? ?? '',
       note: json['note'] as String?,
-      pose: BodyPoseX.fromId(json['pose'] as String?),
+      pose: BodyPoseX.fromId(poseRaw?.toString()),
       photoDate: dateRaw != null
           ? DateTime.tryParse(dateRaw) ?? DateTime.now()
           : DateTime.now(),
       createdAt: createdRaw != null ? DateTime.tryParse(createdRaw) : null,
+    );
+  }
+
+  ProgressPhoto copyWith({
+    String? id,
+    String? imageUrl,
+    String? note,
+    BodyPose? pose,
+    DateTime? photoDate,
+    DateTime? createdAt,
+    bool clearPose = false,
+  }) {
+    return ProgressPhoto(
+      id: id ?? this.id,
+      imageUrl: imageUrl ?? this.imageUrl,
+      note: note ?? this.note,
+      pose: clearPose ? null : (pose ?? this.pose),
+      photoDate: photoDate ?? this.photoDate,
+      createdAt: createdAt ?? this.createdAt,
     );
   }
 }

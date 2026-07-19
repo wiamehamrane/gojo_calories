@@ -13,13 +13,56 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from models import ProgressPhoto, User
-from s3_utils import upload_image_to_s3_key, resolve_media_url
+from s3_utils import upload_image_to_s3_key, resolve_media_url, MediaUploadError
 from security import get_current_user
 
 router = APIRouter()
 
 # The four standardized capture angles used by the guided flow.
 VALID_POSES = {"front", "left", "right", "back"}
+POSE_ORDER = ("front", "left", "right", "back")
+
+
+def _pose_from_filename(name: Optional[str]) -> Optional[str]:
+    """Recover pose from multipart filename when the form field is missing."""
+    if not name:
+        return None
+    lower = name.lower()
+    for p in POSE_ORDER:
+        token = f"progress_{p}_"
+        if token in lower or lower.startswith(f"{p}_") or f"_{p}_" in lower:
+            return p
+    return None
+
+
+def _backfill_missing_poses(db: Session, photos: List[ProgressPhoto]) -> None:
+    """Assign front/left/right/back to legacy rows that were saved without pose.
+
+    Photos on the same day are filled in capture order (created_at), skipping
+    poses that are already taken that day.
+    """
+    from collections import defaultdict
+
+    by_date: dict = defaultdict(list)
+    for photo in photos:
+        by_date[photo.photo_date].append(photo)
+
+    dirty = False
+    for day_photos in by_date.values():
+        taken = {p.pose for p in day_photos if p.pose in VALID_POSES}
+        missing = [p for p in day_photos if not p.pose]
+        if not missing:
+            continue
+        missing.sort(key=lambda p: p.created_at or datetime.min)
+        available = [pose for pose in POSE_ORDER if pose not in taken]
+        for photo, pose in zip(missing, available):
+            photo.pose = pose
+            dirty = True
+
+    if dirty:
+        db.commit()
+        for photo in photos:
+            db.refresh(photo)
 
 
 class ProgressPhotoResponse(BaseModel):
@@ -57,6 +100,7 @@ def list_my_progress_photos(
         .limit(1500)  # ~1 year of 4 daily poses
         .all()
     )
+    _backfill_missing_poses(db, photos)
     return [_photo_view(p) for p in photos]
 
 
@@ -90,10 +134,18 @@ async def create_progress_photo(
                 status_code=400,
                 detail="pose must be one of: front, left, right, back",
             )
+    if not parsed_pose:
+        # Fallback: client filenames are progress_<pose>_<ts>.jpg
+        parsed_pose = _pose_from_filename(file.filename)
 
-    image_key = upload_image_to_s3_key(
-        contents, file.content_type or "image/jpeg", prefix="progress_photos/"
-    )
+    try:
+        image_key = upload_image_to_s3_key(
+            contents,
+            file.content_type or "image/jpeg",
+            prefix="progress_photos/",
+        )
+    except MediaUploadError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     # Guided capture is one-per-pose-per-day: replace an existing shot for the
     # same day + pose so re-taking overwrites instead of piling up duplicates.

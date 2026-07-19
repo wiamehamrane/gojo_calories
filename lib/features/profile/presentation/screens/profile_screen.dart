@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import '../../../../core/storage/token_storage.dart';
@@ -141,6 +142,11 @@ class ProfileScreen extends ConsumerWidget {
               ),
 
               const SizedBox(height: 20),
+              _ProgressPromoCard(
+                onTap: () => context.push(RoutePaths.progressPhotos),
+              ),
+
+              const SizedBox(height: 20),
               _SectionLabel(t('my_events')),
 
               _GroupedListCard(
@@ -162,19 +168,6 @@ class ProfileScreen extends ConsumerWidget {
                     icon: LucideIcons.star,
                     label: t('view_starred_meals'),
                     onTap: () => context.push(RoutePaths.starredMeals),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 20),
-              const _SectionLabel('Progress'),
-
-              _GroupedListCard(
-                rows: [
-                  _SettingsRow(
-                    icon: LucideIcons.camera,
-                    label: 'Progress photos',
-                    onTap: () => context.push(RoutePaths.progressPhotos),
                   ),
                 ],
               ),
@@ -1117,6 +1110,160 @@ class _GroupedListCard extends StatelessWidget {
         boxShadow: AppShadows.cardShadow,
       ),
       child: Column(children: children),
+    );
+  }
+}
+
+class _ProgressPromoCard extends StatefulWidget {
+  final VoidCallback onTap;
+
+  const _ProgressPromoCard({required this.onTap});
+
+  @override
+  State<_ProgressPromoCard> createState() => _ProgressPromoCardState();
+}
+
+class _ProgressPromoCardState extends State<_ProgressPromoCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1700),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PressScale(
+      scale: 0.98,
+      child: GestureDetector(
+        onTap: () {
+          HapticFeedback.selectionClick();
+          widget.onTap();
+        },
+        child: AnimatedBuilder(
+          animation: _pulse,
+          builder: (context, child) {
+            final t = Curves.easeInOut.transform(_pulse.value);
+            return Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(22),
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFFFFF8F0),
+                    Color(0xFFFFFFFF),
+                    Color(0xFFEAF3F0),
+                  ],
+                ),
+                border: Border.all(
+                  color: const Color(0xFF0B7A6E)
+                      .withValues(alpha: 0.14 + t * 0.1),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF0B7A6E)
+                        .withValues(alpha: 0.08 + t * 0.06),
+                    blurRadius: 18 + t * 6,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: child,
+            );
+          },
+          child: Row(
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFEAF3F0), Color(0xFFFFF0E6)],
+                  ),
+                ),
+                child: const Icon(
+                  LucideIcons.camera,
+                  color: AppColors.primaryDark,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'My body journal',
+                      style: GoogleFonts.sora(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Compare & watch yourself change.',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.dmSans(
+                        fontSize: 12,
+                        height: 1.35,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryDark,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Open journal',
+                            style: GoogleFonts.dmSans(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          const Icon(
+                            LucideIcons.arrowRight,
+                            size: 14,
+                            color: Colors.white,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
