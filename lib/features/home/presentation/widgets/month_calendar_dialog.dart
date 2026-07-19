@@ -123,10 +123,10 @@ class _MonthCalendarDialogState extends ConsumerState<_MonthCalendarDialog> {
                       child: Center(
                         child: Text(
                           label,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFF6B6B6B),
+                            color: AppColors.textSecondary,
                           ),
                         ),
                       ),
@@ -237,13 +237,18 @@ class _NavChevron extends StatelessWidget {
         width: 36,
         height: 36,
         decoration: BoxDecoration(
-          color: enabled ? AppColors.primaryLight : const Color(0xFFF2F2F2),
+          color: enabled ? AppColors.primaryLight : AppColors.surfaceMuted,
           borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: enabled
+                ? AppColors.primary.withValues(alpha: 0.25)
+                : AppColors.border,
+          ),
         ),
         child: Icon(
           icon,
           size: 20,
-          color: enabled ? AppColors.primaryDark : AppColors.inactive,
+          color: enabled ? AppColors.primary : AppColors.inactive,
         ),
       ),
     );
