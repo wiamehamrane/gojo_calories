@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import '../../../../core/storage/token_storage.dart';
@@ -142,6 +141,7 @@ class ProfileScreen extends ConsumerWidget {
               ),
 
               const SizedBox(height: 20),
+              const _SectionLabel('My body journal'),
               _ProgressPromoCard(
                 onTap: () => context.push(RoutePaths.progressPhotos),
               ),
@@ -1197,7 +1197,7 @@ class _ProgressPromoCardState extends State<_ProgressPromoCard>
                   ),
                 ),
                 child: const Icon(
-                  LucideIcons.camera,
+                  LucideIcons.personStanding,
                   color: AppColors.primaryDark,
                   size: 24,
                 ),
@@ -1208,22 +1208,20 @@ class _ProgressPromoCardState extends State<_ProgressPromoCard>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'My body journal',
-                      style: GoogleFonts.sora(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
+                      'Front, sides & back',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
                         color: AppColors.textPrimary,
-                        letterSpacing: -0.2,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2),
                     Text(
-                      'Compare & watch yourself change.',
+                      'Compare days and watch yourself change.',
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.dmSans(
-                        fontSize: 12,
-                        height: 1.35,
+                      style: TextStyle(
+                        fontSize: 13,
                         color: AppColors.textSecondary,
                       ),
                     ),
@@ -1237,19 +1235,19 @@ class _ProgressPromoCardState extends State<_ProgressPromoCard>
                         color: AppColors.primaryDark,
                         borderRadius: BorderRadius.circular(999),
                       ),
-                      child: Row(
+                      child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            'Open journal',
-                            style: GoogleFonts.dmSans(
+                            'View progress',
+                            style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
                               color: Colors.white,
                             ),
                           ),
-                          const SizedBox(width: 4),
-                          const Icon(
+                          SizedBox(width: 4),
+                          Icon(
                             LucideIcons.arrowRight,
                             size: 14,
                             color: Colors.white,
