@@ -168,6 +168,21 @@ class ProfileScreen extends ConsumerWidget {
               ),
 
               const SizedBox(height: 20),
+              _CoachPromoCard(
+                isCoach: isCoach,
+                title: isCoach
+                    ? t('become_coach_manage_title')
+                    : t('become_coach_title'),
+                subtitle: isCoach
+                    ? t('coach_paywall_body')
+                    : t('coach_paywall_headline'),
+                cta: isCoach
+                    ? t('become_coach_continue')
+                    : t('become_coach_submit'),
+                onTap: () => context.push(RoutePaths.becomeCoach),
+              ),
+
+              const SizedBox(height: 20),
               _SectionLabel(t('settings')),
 
               _GroupedListCard(
@@ -196,13 +211,6 @@ class ProfileScreen extends ConsumerWidget {
                     icon: LucideIcons.share2,
                     label: t('share_access_title'),
                     onTap: () => context.push(RoutePaths.profileShare),
-                  ),
-                  _SettingsRow(
-                    icon: LucideIcons.dumbbell,
-                    label: isCoach
-                        ? t('become_coach_manage_title')
-                        : t('become_coach_title'),
-                    onTap: () => context.push(RoutePaths.becomeCoach),
                   ),
                   _SettingsRow(
                     icon: LucideIcons.creditCard,
@@ -1112,6 +1120,171 @@ class _GroupedListCard extends StatelessWidget {
         boxShadow: AppShadows.cardShadow,
       ),
       child: Column(children: children),
+    );
+  }
+}
+
+class _CoachPromoCard extends StatefulWidget {
+  final bool isCoach;
+  final String title;
+  final String subtitle;
+  final String cta;
+  final VoidCallback onTap;
+
+  const _CoachPromoCard({
+    required this.isCoach,
+    required this.title,
+    required this.subtitle,
+    required this.cta,
+    required this.onTap,
+  });
+
+  @override
+  State<_CoachPromoCard> createState() => _CoachPromoCardState();
+}
+
+class _CoachPromoCardState extends State<_CoachPromoCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1600),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PressScale(
+      scale: 0.98,
+      child: GestureDetector(
+        onTap: () {
+          HapticFeedback.selectionClick();
+          widget.onTap();
+        },
+        child: AnimatedBuilder(
+          animation: _pulse,
+          builder: (context, child) {
+            final t = Curves.easeInOut.transform(_pulse.value);
+            return Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(22),
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFFE8FBFE),
+                    Color(0xFFFFFFFF),
+                    Color(0xFFFFF4EC),
+                  ],
+                ),
+                border: Border.all(
+                  color: AppColors.primary.withValues(alpha: 0.18 + t * 0.12),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.10 + t * 0.08),
+                    blurRadius: 18 + t * 6,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: child,
+            );
+          },
+          child: Row(
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.primary.withValues(alpha: 0.25),
+                      AppColors.primaryLight,
+                    ],
+                  ),
+                ),
+                child: Icon(
+                  widget.isCoach ? LucideIcons.badgeCheck : LucideIcons.sparkles,
+                  color: AppColors.primaryDark,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.title,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      widget.subtitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        height: 1.35,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryDark,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            widget.cta,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          const Icon(
+                            LucideIcons.arrowRight,
+                            size: 14,
+                            color: Colors.white,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

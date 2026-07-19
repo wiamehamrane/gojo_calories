@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -8,12 +9,11 @@ import '../../../../core/localization/locale_provider.dart';
 import '../../../../core/localization/translations.dart';
 import '../../../../core/routing/route_paths.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_radius.dart';
-import '../../../../core/theme/app_shadows.dart';
 import '../../../events/domain/models/event_location_selection.dart';
 import '../../../events/presentation/widgets/event_location_picker_sheet.dart';
 import '../../domain/models/coach.dart';
 import '../providers/coach_discover_provider.dart';
+import '../widgets/coach_ui.dart';
 
 const _specialtyOptions = [
   'nutrition',
@@ -161,37 +161,14 @@ class _CoachDiscoverScreenState extends ConsumerState<CoachDiscoverScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 18, 20, 8),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          t('coaches_title'),
-                          style: const TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.textPrimary,
-                            letterSpacing: -0.5,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          t('coaches_subtitle'),
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            CoachGradientHeader(
+              title: t('coaches_title'),
+              subtitle: t('coaches_subtitle'),
+              icon: LucideIcons.users,
+            )
+                .animate()
+                .fadeIn(duration: 420.ms, curve: Curves.easeOut)
+                .slideY(begin: -0.06, curve: Curves.easeOutCubic),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: _FilterBar(
@@ -213,9 +190,12 @@ class _CoachDiscoverScreenState extends ConsumerState<CoachDiscoverScreen> {
                 onGenderChanged: (v) =>
                     ref.read(coachDiscoverProvider.notifier).setGender(v),
                 onApply: _applyFilters,
-              ),
+              )
+                  .animate()
+                  .fadeIn(delay: 80.ms, duration: 400.ms)
+                  .slideY(begin: 0.04, curve: Curves.easeOutCubic),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             Expanded(child: _buildBody(state, t, bottomInset)),
           ],
         ),
@@ -229,7 +209,7 @@ class _CoachDiscoverScreenState extends ConsumerState<CoachDiscoverScreen> {
     double bottomInset,
   ) {
     if (state.loading && state.items.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return const _CoachLoadingList();
     }
 
     if (state.error != null && state.items.isEmpty) {
@@ -290,6 +270,7 @@ class _CoachDiscoverScreenState extends ConsumerState<CoachDiscoverScreen> {
           return _CoachCard(
             coach: coach,
             t: t,
+            index: index,
             onTap: () {
               HapticFeedback.selectionClick();
               context.push(RoutePaths.coachDetailPath(coach.id));
@@ -297,6 +278,34 @@ class _CoachDiscoverScreenState extends ConsumerState<CoachDiscoverScreen> {
           );
         },
       ),
+    );
+  }
+}
+
+class _CoachLoadingList extends StatelessWidget {
+  const _CoachLoadingList();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
+      itemCount: 4,
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
+      itemBuilder: (context, index) {
+        return Container(
+          height: 118,
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(22),
+          ),
+        )
+            .animate(onPlay: (c) => c.repeat())
+            .shimmer(
+              duration: 1200.ms,
+              color: AppColors.primaryLight.withValues(alpha: 0.55),
+            )
+            .fadeIn(delay: (index * 60).ms);
+      },
     );
   }
 }
@@ -343,8 +352,15 @@ class _FilterBar extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: AppShadows.cardShadow,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.8)),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.05),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -359,11 +375,13 @@ class _FilterBar extends StatelessWidget {
                 child: Row(
                   children: [
                     Container(
-                      width: 34,
-                      height: 34,
+                      width: 38,
+                      height: 38,
                       decoration: BoxDecoration(
-                        color: AppColors.primaryLight,
-                        borderRadius: BorderRadius.circular(11),
+                        gradient: const LinearGradient(
+                          colors: [AppColors.primaryLight, Color(0xFFFFF0E6)],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(
                         LucideIcons.slidersHorizontal,
@@ -380,7 +398,7 @@ class _FilterBar extends StatelessWidget {
                             t('coaches_filters'),
                             style: const TextStyle(
                               fontSize: 14,
-                              fontWeight: FontWeight.w700,
+                              fontWeight: FontWeight.w800,
                               color: AppColors.textPrimary,
                             ),
                           ),
@@ -400,8 +418,8 @@ class _FilterBar extends StatelessWidget {
                       Container(
                         margin: const EdgeInsets.only(right: 8),
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 7,
-                          vertical: 3,
+                          horizontal: 8,
+                          vertical: 4,
                         ),
                         decoration: BoxDecoration(
                           color: AppColors.primaryDark,
@@ -431,7 +449,7 @@ class _FilterBar extends StatelessWidget {
             ),
           ),
           AnimatedSize(
-            duration: const Duration(milliseconds: 240),
+            duration: const Duration(milliseconds: 260),
             curve: Curves.easeOutCubic,
             alignment: Alignment.topCenter,
             child: expanded
@@ -458,9 +476,14 @@ class _FilterBar extends StatelessWidget {
                         padding: const EdgeInsets.fromLTRB(14, 8, 14, 14),
                         child: SizedBox(
                           width: double.infinity,
-                          height: 46,
+                          height: 48,
                           child: FilledButton(
                             onPressed: state.hasLocation ? onApply : null,
+                            style: FilledButton.styleFrom(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
                             child: Text(t('coaches_apply_filters')),
                           ),
                         ),
@@ -502,16 +525,16 @@ class _FilterDetails extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Divider(height: 1, color: AppColors.border),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           Text(
             t('coaches_location'),
             style: const TextStyle(
               fontSize: 12,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w700,
               color: AppColors.textSecondary,
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Row(
             children: [
               Expanded(
@@ -531,24 +554,28 @@ class _FilterDetails extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           Row(
             children: [
               Text(
                 t('coaches_distance_label'),
                 style: const TextStyle(
                   fontSize: 12,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w700,
                   color: AppColors.textSecondary,
                 ),
               ),
               const Spacer(),
-              Text(
-                '${state.radiusKm.round()} km',
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.primaryDark,
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 180),
+                child: Text(
+                  '${state.radiusKm.round()} km',
+                  key: ValueKey(state.radiusKm.round()),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.primaryDark,
+                  ),
                 ),
               ),
             ],
@@ -573,54 +600,60 @@ class _FilterDetails extends StatelessWidget {
             t('coaches_specialty'),
             style: const TextStyle(
               fontSize: 12,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w700,
               color: AppColors.textSecondary,
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Wrap(
             spacing: 8,
             runSpacing: 8,
             children: [
-              _FilterChip(
+              CoachSelectTile(
+                icon: LucideIcons.sparkles,
                 label: t('coaches_any'),
                 selected: state.specialty == null,
                 onTap: () => onSpecialtyChanged(null),
               ),
               ..._specialtyOptions.map(
-                (value) => _FilterChip(
+                (value) => CoachSelectTile(
+                  icon: coachSpecialtyIcon(value),
                   label: t('coach_specialty_$value'),
                   selected: state.specialty == value,
+                  accent: coachSpecialtyTint(value),
                   onTap: () => onSpecialtyChanged(value),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           Text(
             t('coaches_gender'),
             style: const TextStyle(
               fontSize: 12,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w700,
               color: AppColors.textSecondary,
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Wrap(
             spacing: 8,
             runSpacing: 8,
             children: [
-              _FilterChip(
+              CoachSelectTile(
+                icon: LucideIcons.users,
                 label: t('coaches_any'),
                 selected: state.gender == null,
                 onTap: () => onGenderChanged(null),
               ),
-              _FilterChip(
+              CoachSelectTile(
+                icon: LucideIcons.user,
                 label: t('gender_male'),
                 selected: state.gender == 'male',
                 onTap: () => onGenderChanged('male'),
               ),
-              _FilterChip(
+              CoachSelectTile(
+                icon: LucideIcons.user,
                 label: t('gender_female'),
                 selected: state.gender == 'female',
                 onTap: () => onGenderChanged('female'),
@@ -646,75 +679,33 @@ class _OutlineAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: AppColors.surfaceMuted,
+    return CoachPressable(
+      onTap: onTap,
       borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 15, color: AppColors.primaryDark),
-              const SizedBox(width: 6),
-              Flexible(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
-                  ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceMuted,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 15, color: AppColors.primaryDark),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
                 ),
               ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _FilterChip extends StatelessWidget {
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _FilterChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadius.chip),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: selected ? AppColors.primaryLight : AppColors.surfaceMuted,
-            borderRadius: BorderRadius.circular(AppRadius.chip),
-            border: Border.all(
-              color: selected ? AppColors.primary : Colors.transparent,
             ),
-          ),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: selected ? AppColors.primaryDark : AppColors.textPrimary,
-            ),
-          ),
+          ],
         ),
       ),
     );
@@ -724,11 +715,13 @@ class _FilterChip extends StatelessWidget {
 class _CoachCard extends StatelessWidget {
   final Coach coach;
   final String Function(String) t;
+  final int index;
   final VoidCallback onTap;
 
   const _CoachCard({
     required this.coach,
     required this.t,
+    required this.index,
     required this.onTap,
   });
 
@@ -738,118 +731,207 @@ class _CoachCard extends StatelessWidget {
         ? coach.name!
         : t('coaches_unnamed');
     final initial = name.characters.first.toUpperCase();
+    final accent = coach.specialties.isNotEmpty
+        ? coachSpecialtyTint(coach.specialties.first)
+        : AppColors.primaryDark;
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Ink(
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: AppShadows.cardShadow,
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 30,
-                  backgroundColor: AppColors.primaryLight,
-                  backgroundImage:
-                      coach.avatarUrl != null && coach.avatarUrl!.isNotEmpty
-                          ? NetworkImage(coach.avatarUrl!)
-                          : null,
-                  child: coach.avatarUrl == null || coach.avatarUrl!.isEmpty
-                      ? Text(
-                          initial,
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.primaryDark,
-                          ),
-                        )
-                      : null,
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        [
-                          if (coach.city != null && coach.city!.isNotEmpty)
-                            coach.city!,
-                          if (coach.distanceKm != null)
-                            t('coaches_km_away').replaceAll(
-                              '{km}',
-                              coach.distanceKm!.toStringAsFixed(
-                                coach.distanceKm! < 10 ? 1 : 0,
-                              ),
-                            ),
-                        ].join(' · '),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      if (coach.specialties.isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 6,
-                          runSpacing: 6,
-                          children: coach.specialties.take(3).map((s) {
-                            final key = 'coach_specialty_$s';
-                            final label = t(key);
-                            return Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.primaryLight,
-                                borderRadius: BorderRadius.circular(999),
-                              ),
-                              child: Text(
-                                label == key ? s : label,
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.primaryDark,
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                      ],
-                    ],
+    return CoachPressable(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(22),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: AppColors.border.withValues(alpha: 0.75)),
+          boxShadow: [
+            BoxShadow(
+              color: accent.withValues(alpha: 0.08),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(22),
+          child: Stack(
+            children: [
+              Positioned(
+                right: -20,
+                top: -24,
+                child: Container(
+                  width: 90,
+                  height: 90,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: accent.withValues(alpha: 0.08),
                   ),
                 ),
-                const Icon(
-                  LucideIcons.chevronRight,
-                  size: 18,
-                  color: AppColors.inactive,
+              ),
+              Padding(
+                padding: const EdgeInsets.all(14),
+                child: Row(
+                  children: [
+                    Hero(
+                      tag: 'coach-avatar-${coach.id}',
+                      child: Container(
+                        width: 68,
+                        height: 68,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(
+                            colors: [
+                              accent.withValues(alpha: 0.35),
+                              AppColors.primaryLight,
+                            ],
+                          ),
+                        ),
+                        padding: const EdgeInsets.all(3),
+                        child: CircleAvatar(
+                          backgroundColor: AppColors.surface,
+                          backgroundImage: coach.avatarUrl != null &&
+                                  coach.avatarUrl!.isNotEmpty
+                              ? NetworkImage(coach.avatarUrl!)
+                              : null,
+                          child: coach.avatarUrl == null ||
+                                  coach.avatarUrl!.isEmpty
+                              ? Text(
+                                  initial,
+                                  style: TextStyle(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w800,
+                                    color: accent,
+                                  ),
+                                )
+                              : null,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.textPrimary,
+                              letterSpacing: -0.2,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Icon(
+                                coachModeIcon(coach.coachingMode),
+                                size: 13,
+                                color: AppColors.textSecondary,
+                              ),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  [
+                                    if (coach.city != null &&
+                                        coach.city!.isNotEmpty)
+                                      coach.city!,
+                                    if (coach.distanceKm != null)
+                                      t('coaches_km_away').replaceAll(
+                                        '{km}',
+                                        coach.distanceKm!.toStringAsFixed(
+                                          coach.distanceKm! < 10 ? 1 : 0,
+                                        ),
+                                      ),
+                                  ].join(' · '),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (coach.specialties.isNotEmpty) ...[
+                            const SizedBox(height: 10),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 6,
+                              children: coach.specialties.take(3).map((s) {
+                                final key = 'coach_specialty_$s';
+                                final label = t(key);
+                                final tint = coachSpecialtyTint(s);
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 5,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: tint.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(999),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        coachSpecialtyIcon(s),
+                                        size: 11,
+                                        color: tint,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        label == key ? s : label,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                          color: tint,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceMuted,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        LucideIcons.chevronRight,
+                        size: 16,
+                        color: AppColors.inactive,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
-    );
+    )
+        .animate()
+        .fadeIn(
+          delay: (40 + index * 55).ms,
+          duration: 380.ms,
+          curve: Curves.easeOut,
+        )
+        .slideY(begin: 0.08, curve: Curves.easeOutCubic)
+        .scale(
+          begin: const Offset(0.98, 0.98),
+          curve: Curves.easeOutCubic,
+        );
   }
 }
 
@@ -882,34 +964,65 @@ class _EmptyState extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
-                    width: 72,
-                    height: 72,
+                    width: 88,
+                    height: 88,
                     decoration: BoxDecoration(
-                      color: AppColors.primaryLight,
-                      borderRadius: BorderRadius.circular(22),
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [AppColors.primaryLight, Color(0xFFFFF0E6)],
+                      ),
+                      borderRadius: BorderRadius.circular(28),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primary.withValues(alpha: 0.18),
+                          blurRadius: 20,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
                     ),
                     child: const Icon(
                       LucideIcons.mapPin,
                       color: AppColors.primaryDark,
-                      size: 30,
+                      size: 34,
                     ),
-                  ),
-                  const SizedBox(height: 16),
+                  )
+                      .animate(onPlay: (c) => c.repeat(reverse: true))
+                      .scale(
+                        begin: const Offset(1, 1),
+                        end: const Offset(1.04, 1.04),
+                        duration: 1400.ms,
+                        curve: Curves.easeInOut,
+                      ),
+                  const SizedBox(height: 18),
                   Text(
                     message,
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       fontSize: 15,
-                      height: 1.4,
+                      height: 1.45,
+                      fontWeight: FontWeight.w500,
                       color: AppColors.textSecondary,
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  FilledButton(onPressed: onPrimary, child: Text(primaryLabel)),
+                  ).animate().fadeIn(delay: 80.ms).slideY(begin: 0.05),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: FilledButton(
+                      onPressed: onPrimary,
+                      style: FilledButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: Text(primaryLabel),
+                    ),
+                  ).animate().fadeIn(delay: 140.ms).slideY(begin: 0.08),
                   TextButton(
                     onPressed: onSecondary,
                     child: Text(secondaryLabel),
-                  ),
+                  ).animate().fadeIn(delay: 200.ms),
                 ],
               ),
             ),

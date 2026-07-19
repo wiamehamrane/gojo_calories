@@ -1,5 +1,8 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -8,10 +11,10 @@ import '../../../../core/di/repository_providers.dart';
 import '../../../../core/localization/locale_provider.dart';
 import '../../../../core/localization/translations.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_shadows.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../data/repositories/coaches_repository.dart';
 import '../../domain/models/coach.dart';
+import '../widgets/coach_ui.dart';
 
 class CoachDetailScreen extends ConsumerStatefulWidget {
   final String coachId;
@@ -96,6 +99,9 @@ class _CoachDetailScreenState extends ConsumerState<CoachDetailScreen> {
               ? coach.name!
               : t('coaches_unnamed');
           final initial = name.characters.first.toUpperCase();
+          final accent = coach.specialties.isNotEmpty
+              ? coachSpecialtyTint(coach.specialties.first)
+              : AppColors.primaryDark;
 
           return Column(
             children: [
@@ -104,19 +110,21 @@ class _CoachDetailScreenState extends ConsumerState<CoachDetailScreen> {
                   slivers: [
                     SliverAppBar(
                       pinned: true,
-                      expandedHeight: 220,
+                      expandedHeight: 260,
                       backgroundColor: AppColors.surface,
                       surfaceTintColor: Colors.transparent,
                       flexibleSpace: FlexibleSpaceBar(
                         background: Container(
                           decoration: const BoxDecoration(
                             gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
                               colors: [
-                                AppColors.primaryLight,
-                                AppColors.background,
+                                Color(0xFFE8FBFE),
+                                Color(0xFFF2F2F7),
+                                Color(0xFFFFF6EE),
                               ],
+                              stops: [0, 0.55, 1],
                             ),
                           ),
                           child: SafeArea(
@@ -124,37 +132,66 @@ class _CoachDetailScreenState extends ConsumerState<CoachDetailScreen> {
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.end,
                               children: [
-                                CircleAvatar(
-                                  radius: 48,
-                                  backgroundColor: AppColors.surface,
-                                  backgroundImage: coach.avatarUrl != null &&
-                                          coach.avatarUrl!.isNotEmpty
-                                      ? NetworkImage(coach.avatarUrl!)
-                                      : null,
-                                  child: coach.avatarUrl == null ||
-                                          coach.avatarUrl!.isEmpty
-                                      ? Text(
-                                          initial,
-                                          style: const TextStyle(
-                                            fontSize: 34,
-                                            fontWeight: FontWeight.w700,
-                                            color: AppColors.primaryDark,
-                                          ),
-                                        )
-                                      : null,
+                                Hero(
+                                  tag: 'coach-avatar-${coach.id}',
+                                  child: Container(
+                                    width: 104,
+                                    height: 104,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      gradient: LinearGradient(
+                                        colors: [
+                                          accent.withValues(alpha: 0.35),
+                                          AppColors.primaryLight,
+                                        ],
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: accent.withValues(alpha: 0.25),
+                                          blurRadius: 20,
+                                          offset: const Offset(0, 8),
+                                        ),
+                                      ],
+                                    ),
+                                    padding: const EdgeInsets.all(4),
+                                    child: CircleAvatar(
+                                      radius: 48,
+                                      backgroundColor: AppColors.surface,
+                                      backgroundImage: coach.avatarUrl !=
+                                                  null &&
+                                              coach.avatarUrl!.isNotEmpty
+                                          ? NetworkImage(coach.avatarUrl!)
+                                          : null,
+                                      child: coach.avatarUrl == null ||
+                                              coach.avatarUrl!.isEmpty
+                                          ? Text(
+                                              initial,
+                                              style: TextStyle(
+                                                fontSize: 34,
+                                                fontWeight: FontWeight.w700,
+                                                color: accent,
+                                              ),
+                                            )
+                                          : null,
+                                    ),
+                                  ),
                                 ),
-                                const SizedBox(height: 12),
+                                const SizedBox(height: 14),
                                 Text(
                                   name,
                                   style: const TextStyle(
                                     fontSize: 24,
                                     fontWeight: FontWeight.w800,
                                     color: AppColors.textPrimary,
+                                    letterSpacing: -0.4,
                                   ),
-                                ),
+                                ).animate().fadeIn(delay: 60.ms).slideY(
+                                      begin: 0.08,
+                                      curve: Curves.easeOutCubic,
+                                    ),
                                 if (coach.city != null &&
                                     coach.city!.isNotEmpty) ...[
-                                  const SizedBox(height: 4),
+                                  const SizedBox(height: 6),
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
@@ -169,12 +206,13 @@ class _CoachDetailScreenState extends ConsumerState<CoachDetailScreen> {
                                         style: const TextStyle(
                                           color: AppColors.textSecondary,
                                           fontSize: 14,
+                                          fontWeight: FontWeight.w500,
                                         ),
                                       ),
                                     ],
-                                  ),
+                                  ).animate().fadeIn(delay: 100.ms),
                                 ],
-                                const SizedBox(height: 16),
+                                const SizedBox(height: 20),
                               ],
                             ),
                           ),
@@ -187,8 +225,9 @@ class _CoachDetailScreenState extends ConsumerState<CoachDetailScreen> {
                         delegate: SliverChildListDelegate([
                           if (coach.bio != null &&
                               coach.bio!.trim().isNotEmpty)
-                            _SectionCard(
+                            CoachSectionCard(
                               title: t('coaches_about'),
+                              icon: LucideIcons.fileText,
                               child: Text(
                                 coach.bio!,
                                 style: const TextStyle(
@@ -197,42 +236,71 @@ class _CoachDetailScreenState extends ConsumerState<CoachDetailScreen> {
                                   color: AppColors.textPrimary,
                                 ),
                               ),
-                            ),
+                            )
+                                .animate()
+                                .fadeIn(delay: 80.ms, duration: 360.ms)
+                                .slideY(
+                                  begin: 0.05,
+                                  curve: Curves.easeOutCubic,
+                                ),
                           if (coach.specialties.isNotEmpty) ...[
                             const SizedBox(height: 12),
-                            _SectionCard(
+                            CoachSectionCard(
                               title: t('coaches_specialty'),
+                              icon: LucideIcons.sparkles,
                               child: Wrap(
                                 spacing: 8,
                                 runSpacing: 8,
                                 children: coach.specialties.map((s) {
                                   final key = 'coach_specialty_$s';
                                   final label = t(key);
+                                  final tint = coachSpecialtyTint(s);
                                   return Container(
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 12,
                                       vertical: 8,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: AppColors.primaryLight,
+                                      color: tint.withValues(alpha: 0.12),
                                       borderRadius: BorderRadius.circular(999),
-                                    ),
-                                    child: Text(
-                                      label == key ? s : label,
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                        color: AppColors.primaryDark,
+                                      border: Border.all(
+                                        color: tint.withValues(alpha: 0.28),
                                       ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          coachSpecialtyIcon(s),
+                                          size: 14,
+                                          color: tint,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          label == key ? s : label,
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w700,
+                                            color: tint,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   );
                                 }).toList(),
                               ),
-                            ),
+                            )
+                                .animate()
+                                .fadeIn(delay: 140.ms, duration: 360.ms)
+                                .slideY(
+                                  begin: 0.05,
+                                  curve: Curves.easeOutCubic,
+                                ),
                           ],
                           const SizedBox(height: 12),
-                          _SectionCard(
+                          CoachSectionCard(
                             title: t('coaches_info'),
+                            icon: LucideIcons.info,
                             child: Column(
                               children: [
                                 if (coach.experienceYears != null)
@@ -247,7 +315,7 @@ class _CoachDetailScreenState extends ConsumerState<CoachDetailScreen> {
                                   if (coach.experienceYears != null)
                                     const SizedBox(height: 10),
                                   _InfoRow(
-                                    icon: LucideIcons.video,
+                                    icon: coachModeIcon(coach.coachingMode),
                                     label: t(
                                       'coach_mode_${coach.coachingMode}',
                                     ),
@@ -273,38 +341,71 @@ class _CoachDetailScreenState extends ConsumerState<CoachDetailScreen> {
                                 ],
                               ],
                             ),
-                          ),
+                          )
+                              .animate()
+                              .fadeIn(delay: 200.ms, duration: 360.ms)
+                              .slideY(
+                                begin: 0.05,
+                                curve: Curves.easeOutCubic,
+                              ),
                         ]),
                       ),
                     ),
                   ],
                 ),
               ),
-              SafeArea(
-                top: false,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                  child: SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: FilledButton.icon(
-                      onPressed: _contactLoading
-                          ? null
-                          : () {
-                              HapticFeedback.selectionClick();
-                              _showContactSheet(t);
-                            },
-                      icon: _contactLoading
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
+              ClipRect(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.surface.withValues(alpha: 0.88),
+                      border: Border(
+                        top: BorderSide(
+                          color: AppColors.border.withValues(alpha: 0.8),
+                        ),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.06),
+                          blurRadius: 20,
+                          offset: const Offset(0, -4),
+                        ),
+                      ],
+                    ),
+                    child: SafeArea(
+                      top: false,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                        child: SizedBox(
+                          width: double.infinity,
+                          height: 52,
+                          child: FilledButton.icon(
+                            onPressed: _contactLoading
+                                ? null
+                                : () {
+                                    HapticFeedback.selectionClick();
+                                    _showContactSheet(t);
+                                  },
+                            style: FilledButton.styleFrom(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
                               ),
-                            )
-                          : const Icon(LucideIcons.messageCircle),
-                      label: Text(t('coaches_contact')),
+                            ),
+                            icon: _contactLoading
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Icon(LucideIcons.messageCircle),
+                            label: Text(t('coaches_contact')),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -312,41 +413,6 @@ class _CoachDetailScreenState extends ConsumerState<CoachDetailScreen> {
             ],
           );
         },
-      ),
-    );
-  }
-}
-
-class _SectionCard extends StatelessWidget {
-  final String title;
-  final Widget child;
-
-  const _SectionCard({required this.title, required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: AppShadows.cardShadow,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 10),
-          child,
-        ],
       ),
     );
   }
@@ -366,7 +432,7 @@ class _InfoRow extends StatelessWidget {
           width: 34,
           height: 34,
           decoration: BoxDecoration(
-            color: AppColors.surfaceMuted,
+            color: AppColors.primaryLight,
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(icon, size: 16, color: AppColors.primaryDark),
