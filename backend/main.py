@@ -19,7 +19,7 @@ load_dotenv()
 
 os.makedirs("uploads", exist_ok=True)
 
-from routes import vision, auth, stats, groups, referrals, payments, notifications, exercises, recipes, events, apple_iap, google_iap, memories, feed, friends, clan, shares, shared_meals, users
+from routes import vision, auth, stats, groups, referrals, payments, notifications, exercises, recipes, events, apple_iap, google_iap, memories, feed, friends, clan, shares, shared_meals, users, progress_photos
 from routes.admin import router as admin_router
 
 # Durable media storage check — local /uploads is wiped on every ECS redeploy.
@@ -215,6 +215,30 @@ try:
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS progress_photos (
+                id VARCHAR(36) PRIMARY KEY,
+                user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+                image_url VARCHAR NOT NULL,
+                note VARCHAR,
+                pose VARCHAR(10),
+                photo_date DATE NOT NULL DEFAULT CURRENT_DATE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """))
+        # Add pose column for databases created before guided 4-angle capture.
+        conn.execute(text(
+            "ALTER TABLE progress_photos ADD COLUMN IF NOT EXISTS pose VARCHAR(10);"
+        ))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_progress_photos_user ON progress_photos (user_id);"
+        ))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_progress_photos_date ON progress_photos (photo_date);"
+        ))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_progress_photos_pose ON progress_photos (pose);"
+        ))
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS posts (
                 id VARCHAR(36) PRIMARY KEY,
@@ -542,6 +566,7 @@ app.include_router(exercises.router, prefix="/api/exercises", tags=["Exercises"]
 app.include_router(recipes.router, prefix="/api/recipes", tags=["Recipes"])
 app.include_router(events.router, prefix="/api/events", tags=["Events"])
 app.include_router(memories.router, prefix="/api/memories", tags=["Memories"])
+app.include_router(progress_photos.router, prefix="/api/progress-photos", tags=["Progress Photos"])
 app.include_router(shared_meals.router, prefix="/api/meals", tags=["Shared Meals"])
 app.include_router(users.router, prefix="/api/users", tags=["Users"])
 app.include_router(feed.router, prefix="/api/feed", tags=["Feed"])
@@ -568,6 +593,11 @@ async def apple_callback(request: Request):
 # The check itself enforces quiet hours and per-user daily caps.
 SMART_NOTIF_ENABLED = os.getenv("SMART_NOTIF_ENABLED", "true").lower() in ("1", "true", "yes")
 SMART_NOTIF_LOCAL_HOURS = os.getenv("SMART_NOTIF_LOCAL_HOURS", "10,12,14,16,18,20")
+# Evening reminder to finish the day's 4 guided body photos (local hour).
+PROGRESS_PHOTO_REMINDER_ENABLED = os.getenv(
+    "PROGRESS_PHOTO_REMINDER_ENABLED", "true"
+).lower() in ("1", "true", "yes")
+PROGRESS_PHOTO_REMINDER_HOUR = int(os.getenv("PROGRESS_PHOTO_REMINDER_HOUR", "20"))
 
 _scheduler = None
 
@@ -603,6 +633,29 @@ def _start_smart_notification_scheduler():
                 max_instances=1,
                 coalesce=True,
             )
+
+        # Evening body-photo reminder: one nudge if today's 4 poses aren't done.
+        if PROGRESS_PHOTO_REMINDER_ENABLED:
+            from services.progress_reminder_service import (
+                TZ_OFFSET_MIN as PROGRESS_TZ_OFFSET_MIN,
+                run_progress_photo_reminder_job,
+            )
+
+            total = (PROGRESS_PHOTO_REMINDER_HOUR * 60 - PROGRESS_TZ_OFFSET_MIN) % (24 * 60)
+            _scheduler.add_job(
+                run_progress_photo_reminder_job,
+                "cron",
+                hour=total // 60,
+                minute=total % 60,
+                id="progress_photo_reminder",
+                max_instances=1,
+                coalesce=True,
+            )
+            logger.info(
+                "Progress photo reminder scheduled (local %02d:00, tz offset %d min)",
+                PROGRESS_PHOTO_REMINDER_HOUR, PROGRESS_TZ_OFFSET_MIN,
+            )
+
         _scheduler.start()
         logger.info(
             "Smart nutrition scheduler started (local hours %s, tz offset %d min)",

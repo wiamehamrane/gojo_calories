@@ -87,3 +87,41 @@ Response includes `checked`, `sent`, and a per-rule `breakdown`.
 Note: pushes are sent one API call per user (content is personalized). Fine up
 to tens of thousands of users per run. A future upgrade: store each user's
 `tz_offset` from the app instead of the global `SMART_NOTIF_TZ_OFFSET_MIN`.
+
+---
+
+# Body Photo Evening Reminder
+
+`backend/services/progress_reminder_service.py` runs once each evening (default
+20:00 local; scheduled alongside the nutrition scheduler in `main.py`). For each
+recently-active user it checks whether all four guided body-photo angles
+(front, left, right, back) have been captured for TODAY. If any are missing it
+sends a single OneSignal nudge addressed by first name, e.g.:
+
+  "Mohamed, you still have 3 of today's 4 body shots to take. Snap them before
+   bed so your timeline stays consistent!"
+
+## Behaviour
+- Fires at most once per user per day (Redis dedup key `progressphoto:reminder:*`,
+  in-memory fallback).
+- Skips users who already completed all four poses today.
+- Audience: users with `DailyStats` activity in the last 7 days (never spams
+  dormant accounts).
+
+## Config (env)
+```
+PROGRESS_PHOTO_REMINDER_ENABLED=true   # set false to disable
+PROGRESS_PHOTO_REMINDER_HOUR=20        # local hour to send the nudge
+PROGRESS_TZ_OFFSET_MIN=60              # optional; defaults to SMART_NOTIF_TZ_OFFSET_MIN
+```
+Requires `ONESIGNAL_REST_API_KEY` (same key as the other reminders).
+
+## Manual trigger (testing)
+```
+POST /api/notifications/progress-photo-check
+{ "admin_key": "<ADMIN_API_KEY>" }
+```
+Response includes `checked`, `sent`, `already_complete`, and a failures sample.
+
+The pose is stored per photo (`progress_photos.pose` = front|left|right|back).
+Re-taking a pose the same day overwrites the previous shot, so counts stay clean.

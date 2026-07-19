@@ -23,6 +23,11 @@ class ApiClient {
           if (token != null) {
             options.headers['Authorization'] = 'Bearer $token';
           }
+          // Default BaseOptions Content-Type is application/json — that breaks
+          // multipart uploads (pose / photo_date form fields never arrive).
+          if (options.data is FormData) {
+            options.headers.remove(Headers.contentTypeHeader);
+          }
           return handler.next(options);
         },
         onError: (error, handler) async {
