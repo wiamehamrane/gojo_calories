@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_shadows.dart';
 import '../../../../core/widgets/cached_food_image.dart';
 import '../../../stats/presentation/providers/progress_provider.dart';
 import '../../domain/models/progress_photo.dart';
@@ -56,7 +58,7 @@ class _ProgressPhotosScreenState extends ConsumerState<ProgressPhotosScreen> {
     final todayDone = ref.watch(todayCompletedPosesProvider);
 
     return Scaffold(
-      backgroundColor: kPaper,
+      backgroundColor: AppColors.background,
       body: SafeArea(
         bottom: false,
         child: Column(
@@ -65,23 +67,19 @@ class _ProgressPhotosScreenState extends ConsumerState<ProgressPhotosScreen> {
             SoftEntrance(
               delay: 40.ms,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(22, 6, 22, 0),
+                padding: const EdgeInsets.fromLTRB(22, 8, 22, 0),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'My body journal',
-                      style: display(
-                        size: 28,
-                        weight: FontWeight.w700,
-                        height: 1.1,
-                        spacing: -0.6,
-                      ),
+                      textAlign: TextAlign.center,
+                      style: display(size: 22, weight: FontWeight.w700),
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Front, sides & back — track how you change.',
-                      style: body(size: 14, color: kInkSoft, height: 1.35),
+                      'Capture front, sides & back — then compare days.',
+                      textAlign: TextAlign.center,
+                      style: body(size: 13, color: kInkSoft, height: 1.35),
                     ),
                   ],
                 ),
@@ -90,7 +88,7 @@ class _ProgressPhotosScreenState extends ConsumerState<ProgressPhotosScreen> {
             SoftEntrance(
               delay: 80.ms,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(18, 18, 18, 12),
+                padding: const EdgeInsets.fromLTRB(16, 18, 16, 8),
                 child: _tabBar(),
               ),
             ),
@@ -157,7 +155,7 @@ class _ProgressPhotosScreenState extends ConsumerState<ProgressPhotosScreen> {
 
   Widget _topBar(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(10, 4, 16, 0),
+      padding: const EdgeInsets.fromLTRB(6, 2, 12, 0),
       child: Row(
         children: [
           IconButton(
@@ -171,7 +169,7 @@ class _ProgressPhotosScreenState extends ConsumerState<ProgressPhotosScreen> {
             child: Text(
               'Progress',
               textAlign: TextAlign.center,
-              style: body(size: 15, weight: FontWeight.w700, color: kInk),
+              style: body(size: 16, weight: FontWeight.w600, color: kInk),
             ),
           ),
           const SizedBox(width: 48),
@@ -184,16 +182,9 @@ class _ProgressPhotosScreenState extends ConsumerState<ProgressPhotosScreen> {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: kSurface,
+        color: AppColors.surfaceMuted,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: kHair),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        border: Border.all(color: AppColors.border),
       ),
       child: Row(
         children: List.generate(_tabs.length, (i) {
@@ -201,32 +192,32 @@ class _ProgressPhotosScreenState extends ConsumerState<ProgressPhotosScreen> {
           return Expanded(
             child: ProgressPressable(
               onTap: () => setState(() => _tab = i),
-              scale: 0.98,
+              scale: 0.97,
               child: AnimatedContainer(
-                duration: const Duration(milliseconds: 220),
+                duration: const Duration(milliseconds: 240),
                 curve: Curves.easeOutCubic,
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
-                  color: on ? kAccent : Colors.transparent,
+                  color: on ? kSurface : Colors.transparent,
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: on
-                      ? [
+                      ? const [
                           BoxShadow(
-                            color: kAccent.withValues(alpha: 0.28),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
+                            color: Color(0x14000000),
+                            blurRadius: 6,
+                            offset: Offset(0, 2),
                           ),
                         ]
                       : null,
                 ),
-                child: Text(
-                  _tabs[i],
-                  textAlign: TextAlign.center,
-                  style: body(
-                    size: 12.5,
-                    weight: FontWeight.w700,
-                    color: on ? Colors.white : kMuted,
+                child: AnimatedDefaultTextStyle(
+                  duration: const Duration(milliseconds: 200),
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: on ? FontWeight.w700 : FontWeight.w500,
+                    color: on ? kInk : kMuted,
                   ),
+                  child: Text(_tabs[i], textAlign: TextAlign.center),
                 ),
               ),
             ),
@@ -315,8 +306,9 @@ class _PoseSwitch extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: kAccentSoft,
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.surfaceMuted,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
       ),
       child: Row(
         children: kRequiredPoses.map((p) {
@@ -336,25 +328,27 @@ class _PoseSwitch extends StatelessWidget {
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 220),
                 curve: Curves.easeOutCubic,
-                padding: const EdgeInsets.symmetric(vertical: 8),
+                padding: const EdgeInsets.symmetric(vertical: 9),
                 decoration: BoxDecoration(
                   color: on ? kSurface : Colors.transparent,
-                  borderRadius: BorderRadius.circular(9),
+                  borderRadius: BorderRadius.circular(12),
                   boxShadow: on
-                      ? [
+                      ? const [
                           BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.06),
-                              blurRadius: 6,
-                              offset: const Offset(0, 2))
+                            color: Color(0x14000000),
+                            blurRadius: 6,
+                            offset: Offset(0, 2),
+                          ),
                         ]
                       : null,
                 ),
                 child: AnimatedDefaultTextStyle(
                   duration: const Duration(milliseconds: 200),
                   style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: on ? kInk : kMuted),
+                    fontSize: 12.5,
+                    fontWeight: on ? FontWeight.w700 : FontWeight.w500,
+                    color: on ? kInk : kMuted,
+                  ),
                   child: Text(short, textAlign: TextAlign.center),
                 ),
               ),
@@ -396,7 +390,7 @@ class _JournalView extends ConsumerWidget {
           else ...[
             SoftEntrance(
               delay: 80.ms,
-              child: const Eyebrow('Timeline', color: kAccent),
+              child: const Eyebrow('Timeline'),
             ),
             const SizedBox(height: 16),
             ...days
@@ -435,89 +429,83 @@ class _TodayCard extends StatelessWidget {
     final complete = count >= total;
 
     return EditorialCard(
-      padding: const EdgeInsets.all(22),
+      padding: const EdgeInsets.fromLTRB(18, 20, 18, 18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              AnimatedProgressRing(count: count, total: total),
-              const SizedBox(width: 18),
+              AnimatedProgressRing(count: count, total: total, size: 58),
+              const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(complete ? 'Today is complete' : 'Today',
-                        style: display(size: 21, weight: FontWeight.w700)),
+                    Text(
+                      complete ? 'Today is complete' : 'Today\'s photos',
+                      style: display(size: 17, weight: FontWeight.w700),
+                    ),
                     const SizedBox(height: 4),
                     Text(
                       complete
                           ? 'All four angles captured. See you tomorrow.'
                           : '$count of $total angles done — front, sides & back.',
-                      style: body(size: 13, color: kInkSoft, height: 1.4),
+                      style: body(size: 13, color: kInkSoft, height: 1.35),
                     ),
                   ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 22),
+          const SizedBox(height: 18),
           Row(
-            children: kRequiredPoses
-                .map((p) => Expanded(
-                    child: _PoseDot(pose: p, done: done.contains(p))))
-                .toList(),
+            children: [
+              for (var i = 0; i < kRequiredPoses.length; i++) ...[
+                if (i > 0) const SizedBox(width: 10),
+                Expanded(
+                  child: _PoseStatusTile(
+                    pose: kRequiredPoses[i],
+                    done: done.contains(kRequiredPoses[i]),
+                  ),
+                ),
+              ],
+            ],
           ),
-          const SizedBox(height: 22),
+          const SizedBox(height: 16),
           SoftPulse(
             enabled: !complete,
             child: ProgressPressable(
               onTap: onStart,
               haptic: false,
               child: Container(
-                height: 52,
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 15),
                 decoration: BoxDecoration(
-                  gradient: complete
-                      ? null
-                      : const LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [kAccentBright, kAccent],
-                        ),
-                  color: complete ? kInk : null,
-                  borderRadius: BorderRadius.circular(15),
-                  boxShadow: complete
-                      ? null
-                      : [
-                          BoxShadow(
-                            color: kAccent.withValues(alpha: 0.32),
-                            blurRadius: 18,
-                            spreadRadius: -2,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
+                  color: complete ? AppColors.surfaceMuted : AppColors.primaryDark,
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                child: Center(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(complete ? LucideIcons.rotateCw : LucideIcons.camera,
-                          size: 18, color: Colors.white),
-                      const SizedBox(width: 10),
-                      Text(
-                        complete
-                            ? 'Retake today\'s photos'
-                            : count == 0
-                                ? 'Start today\'s photos'
-                                : 'Continue (${total - count} left)',
-                        style: body(
-                          size: 15,
-                          weight: FontWeight.w700,
-                          color: Colors.white,
-                        ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      complete ? LucideIcons.rotateCw : LucideIcons.camera,
+                      size: 18,
+                      color: complete ? kInk : Colors.white,
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      complete
+                          ? 'Retake today\'s photos'
+                          : count == 0
+                              ? 'Start today\'s photos'
+                              : 'Continue (${total - count} left)',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: complete ? kInk : Colors.white,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -528,10 +516,11 @@ class _TodayCard extends StatelessWidget {
   }
 }
 
-class _PoseDot extends StatelessWidget {
+/// Soft status tile — same language as Gallery / Camera on the avatar sheet.
+class _PoseStatusTile extends StatelessWidget {
   final BodyPose pose;
   final bool done;
-  const _PoseDot({required this.pose, required this.done});
+  const _PoseStatusTile({required this.pose, required this.done});
 
   @override
   Widget build(BuildContext context) {
@@ -540,53 +529,55 @@ class _PoseDot extends StatelessWidget {
         : pose == BodyPose.right
             ? 'Right'
             : pose.label;
-    return Column(
-      children: [
-        AnimatedContainer(
-          duration: const Duration(milliseconds: 280),
-          curve: Curves.easeOutCubic,
-          width: 42,
-          height: 42,
-          decoration: BoxDecoration(
-            color: done ? kAccent : kSurface,
-            shape: BoxShape.circle,
-            border: Border.all(color: done ? kAccent : kHair, width: 1.4),
-            boxShadow: done
-                ? [
-                    BoxShadow(
-                      color: kAccent.withValues(alpha: 0.28),
-                      blurRadius: 10,
-                      spreadRadius: -2,
-                      offset: const Offset(0, 3),
-                    ),
-                  ]
-                : null,
-          ),
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 260),
-            transitionBuilder: (child, anim) => ScaleTransition(
-              scale: CurvedAnimation(parent: anim, curve: Curves.easeOutBack),
-              child: FadeTransition(opacity: anim, child: child),
-            ),
-            child: Icon(
-              done ? LucideIcons.check : pose.icon,
-              key: ValueKey(done),
-              size: 18,
-              color: done ? Colors.white : kMuted,
-            ),
-          ),
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 280),
+      curve: Curves.easeOutCubic,
+      padding: const EdgeInsets.fromLTRB(8, 12, 8, 10),
+      decoration: BoxDecoration(
+        color: done ? AppColors.primaryLight : AppColors.surfaceMuted,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: done
+              ? AppColors.primary.withValues(alpha: 0.35)
+              : AppColors.border,
         ),
-        const SizedBox(height: 7),
-        AnimatedDefaultTextStyle(
-          duration: const Duration(milliseconds: 200),
-          style: body(
-            size: 11,
-            weight: FontWeight.w600,
-            color: done ? kInk : kMuted,
+      ),
+      child: Column(
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 280),
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: done ? AppColors.primaryDark : AppColors.primaryLight,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 260),
+              transitionBuilder: (child, anim) => ScaleTransition(
+                scale: CurvedAnimation(parent: anim, curve: Curves.easeOutBack),
+                child: FadeTransition(opacity: anim, child: child),
+              ),
+              child: Icon(
+                done ? LucideIcons.check : pose.icon,
+                key: ValueKey(done),
+                size: 18,
+                color: done ? Colors.white : AppColors.primaryDark,
+              ),
+            ),
           ),
-          child: Text(short),
-        ),
-      ],
+          const SizedBox(height: 8),
+          AnimatedDefaultTextStyle(
+            duration: const Duration(milliseconds: 200),
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: done ? kInk : kMuted,
+            ),
+            child: Text(short, textAlign: TextAlign.center),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -601,7 +592,6 @@ class _DaySection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final label = _relativeLabel(day.date);
-    final isToday = label == 'Today';
     final complete = day.completedCount >= kRequiredPoses.length;
 
     // Only real photos — never empty "Not taken" placeholders.
@@ -621,33 +611,33 @@ class _DaySection extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Text(label,
-                style: display(
-                    size: 17,
-                    weight: FontWeight.w700,
-                    color: isToday ? kAccent : kInk)),
+                style: display(size: 16, weight: FontWeight.w700)),
             const SizedBox(width: 8),
             Text(DateFormat.MMMd().format(day.date),
-                style: body(size: 12.5, color: kMuted)),
+                style: body(size: 13, color: kMuted)),
             const Spacer(),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
-                color: complete ? kAccentSoft : kHair.withValues(alpha: 0.55),
-                borderRadius: BorderRadius.circular(8),
+                color: complete ? AppColors.primaryLight : AppColors.surfaceMuted,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: complete
+                      ? AppColors.primary.withValues(alpha: 0.28)
+                      : AppColors.border,
+                ),
               ),
               child: Text(
                 '${day.completedCount}/${kRequiredPoses.length}',
                 style: body(
                   size: 12,
                   weight: FontWeight.w700,
-                  color: complete ? kAccent : kMuted,
+                  color: complete ? AppColors.primaryDark : kMuted,
                 ),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 10),
-        const Divider(height: 1, thickness: 1, color: kHair),
         const SizedBox(height: 14),
         GridView.count(
           crossAxisCount: 2,
@@ -660,7 +650,7 @@ class _DaySection extends StatelessWidget {
             for (var i = 0; i < taken.length; i++)
               SoftEntrance(
                 delay: (40 * i).ms,
-                child: _PoseTile(
+                child: _PhotoTile(
                   pose: taken[i].$1,
                   photo: taken[i].$2,
                   onTap: () => onTap(taken[i].$2),
@@ -674,12 +664,12 @@ class _DaySection extends StatelessWidget {
   }
 }
 
-class _PoseTile extends StatelessWidget {
+class _PhotoTile extends StatelessWidget {
   final BodyPose? pose;
   final ProgressPhoto? photo;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
-  const _PoseTile(
+  const _PhotoTile(
       {required this.pose, required this.photo, this.onTap, this.onLongPress});
 
   @override
@@ -692,44 +682,51 @@ class _PoseTile extends StatelessWidget {
       onLongPress: onLongPress,
       scale: 0.96,
       haptic: false,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            CachedFoodImage(
-              imageUrl: photo!.imageUrl,
-              fit: BoxFit.cover,
-              memCacheWidth: 700,
-              placeholder: const ColoredBox(color: kAccentSoft),
-            ),
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: Container(
-                padding: const EdgeInsets.fromLTRB(10, 20, 10, 10),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.transparent,
-                      Colors.black.withValues(alpha: 0.45),
-                    ],
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.border),
+          boxShadow: AppShadows.cardShadow,
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              CachedFoodImage(
+                imageUrl: photo!.imageUrl,
+                fit: BoxFit.cover,
+                memCacheWidth: 700,
+                placeholder: const ColoredBox(color: kAccentSoft),
+              ),
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(12, 22, 12, 12),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withValues(alpha: 0.5),
+                      ],
+                    ),
                   ),
-                ),
-                child: Text(
-                  label,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
+                  child: Text(
+                    label,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -742,30 +739,42 @@ class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return EditorialCard(
-      padding: const EdgeInsets.symmetric(vertical: 44, horizontal: 24),
+      padding: const EdgeInsets.fromLTRB(24, 36, 24, 36),
       child: Column(
         children: [
-          const Icon(LucideIcons.camera, size: 30, color: kAccent)
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: AppColors.primaryLight,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: const Icon(
+              LucideIcons.camera,
+              size: 26,
+              color: AppColors.primaryDark,
+            ),
+          )
               .animate(onPlay: (c) => c.repeat(reverse: true))
               .scale(
                 begin: const Offset(1, 1),
-                end: const Offset(1.06, 1.06),
+                end: const Offset(1.05, 1.05),
                 duration: 1600.ms,
                 curve: Curves.easeInOut,
-              )
-              .then()
-              .fade(begin: 0.85, end: 1, duration: 1600.ms),
-          const SizedBox(height: 16),
-          Text('Start your timeline',
-                  style: display(size: 20, weight: FontWeight.w700))
+              ),
+          const SizedBox(height: 18),
+          Text(
+            'Start your journal',
+            style: display(size: 18, weight: FontWeight.w700),
+          )
               .animate()
               .fadeIn(delay: 80.ms, duration: 400.ms)
               .slideY(begin: 0.08, end: 0, duration: 400.ms),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           Text(
-            'Capture front, sides & back. Your shots stay in your journal so you can compare over time.',
+            'Capture front, sides & back. Your shots stay private so you can compare over time.',
             textAlign: TextAlign.center,
-            style: body(size: 14, height: 1.5, color: kInkSoft),
+            style: body(size: 13, height: 1.4, color: kInkSoft),
           ).animate().fadeIn(delay: 160.ms, duration: 450.ms),
         ],
       ),
@@ -1160,14 +1169,14 @@ class _DayPickChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         decoration: BoxDecoration(
-          color: kSurface,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: kHair),
+          color: AppColors.surfaceMuted,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.border),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: body(size: 11, weight: FontWeight.w700, color: kMuted)),
+            Text(label, style: body(size: 11, weight: FontWeight.w600, color: kMuted)),
             const SizedBox(height: 4),
             Row(
               children: [
@@ -1220,14 +1229,16 @@ class _CompareFrame extends StatelessWidget {
               duration: const Duration(milliseconds: 280),
               curve: Curves.easeOutCubic,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                border: highlight
-                    ? Border.all(
-                        color: kAccent.withValues(alpha: 0.35), width: 1.5)
-                    : null,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: highlight
+                      ? AppColors.primary.withValues(alpha: 0.4)
+                      : AppColors.border,
+                  width: highlight ? 1.5 : 1,
+                ),
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(20),
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
