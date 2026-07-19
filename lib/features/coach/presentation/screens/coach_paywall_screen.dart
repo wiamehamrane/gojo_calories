@@ -10,6 +10,7 @@ import '../../../../core/localization/locale_provider.dart';
 import '../../../../core/localization/translations.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
+import '../../../../core/widgets/app_message.dart';
 import '../../../auth/data/services/iap_service.dart';
 import '../../../auth/presentation/providers/iap_provider.dart';
 
@@ -47,9 +48,7 @@ class _CoachPaywallScreenState extends ConsumerState<CoachPaywallScreen> {
     switch (status.state) {
       case IAPState.success:
       case IAPState.restored:
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_t('coach_paywall_success'))),
-        );
+        AppMessage.success(context, _t('coach_paywall_success'));
         context.pop(true);
         break;
       case IAPState.error:
@@ -57,12 +56,7 @@ class _CoachPaywallScreenState extends ConsumerState<CoachPaywallScreen> {
         if (msg != null &&
             !msg.toLowerCase().contains('cancel') &&
             !(kDebugMode && msg.toLowerCase().contains('storekit'))) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(msg),
-              backgroundColor: AppColors.danger,
-            ),
-          );
+          AppMessage.error(context, msg);
         }
         setState(() {});
         break;
@@ -138,7 +132,7 @@ class _CoachPaywallScreenState extends ConsumerState<CoachPaywallScreen> {
                         Text(
                           _loadError!,
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: AppColors.textSecondary,
                             fontSize: 14,
                           ),
@@ -173,7 +167,7 @@ class _CoachPaywallScreenState extends ConsumerState<CoachPaywallScreen> {
                                     color: AppColors.primaryLight,
                                     borderRadius: BorderRadius.circular(20),
                                   ),
-                                  child: const Icon(
+                                  child: Icon(
                                     LucideIcons.dumbbell,
                                     color: AppColors.primaryDark,
                                     size: 28,
@@ -183,7 +177,7 @@ class _CoachPaywallScreenState extends ConsumerState<CoachPaywallScreen> {
                                 Text(
                                   t('coach_paywall_headline'),
                                   textAlign: TextAlign.center,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 22,
                                     fontWeight: FontWeight.w800,
                                     color: AppColors.textPrimary,
@@ -193,7 +187,7 @@ class _CoachPaywallScreenState extends ConsumerState<CoachPaywallScreen> {
                                 Text(
                                   t('coach_paywall_body'),
                                   textAlign: TextAlign.center,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 14,
                                     height: 1.4,
                                     color: AppColors.textSecondary,
@@ -254,7 +248,7 @@ class _CoachPaywallScreenState extends ConsumerState<CoachPaywallScreen> {
                                                     : t(
                                                         'coach_paywall_monthly',
                                                       ),
-                                                style: const TextStyle(
+                                                style: TextStyle(
                                                   fontSize: 16,
                                                   fontWeight: FontWeight.w700,
                                                   color: AppColors.textPrimary,
@@ -263,7 +257,7 @@ class _CoachPaywallScreenState extends ConsumerState<CoachPaywallScreen> {
                                               if (isYearly)
                                                 Text(
                                                   t('coach_paywall_yearly_save'),
-                                                  style: const TextStyle(
+                                                  style: TextStyle(
                                                     fontSize: 12,
                                                     color:
                                                         AppColors.primaryDark,
@@ -275,7 +269,7 @@ class _CoachPaywallScreenState extends ConsumerState<CoachPaywallScreen> {
                                         ),
                                         Text(
                                           product.price,
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontSize: 16,
                                             fontWeight: FontWeight.w800,
                                             color: AppColors.textPrimary,

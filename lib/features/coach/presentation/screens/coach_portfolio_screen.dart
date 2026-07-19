@@ -11,6 +11,9 @@ import '../../../../core/di/repository_providers.dart';
 import '../../../../core/localization/locale_provider.dart';
 import '../../../../core/localization/translations.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_confirm_dialog.dart';
+import '../../../../core/widgets/app_message.dart';
+import '../../../../core/widgets/keyboard_dismiss_scope.dart';
 import '../../domain/models/coach.dart';
 import '../widgets/coach_ui.dart';
 
@@ -88,15 +91,11 @@ class _CoachPortfolioScreenState extends ConsumerState<CoachPortfolioScreen> {
 
   Future<void> _upload() async {
     if (_before == null || _after == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_t('coach_portfolio_need_both'))),
-      );
+      AppMessage.show(context, _t('coach_portfolio_need_both'));
       return;
     }
     if (_works.length >= 12) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_t('coach_portfolio_max'))),
-      );
+      AppMessage.show(context, _t('coach_portfolio_max'));
       return;
     }
 
@@ -115,9 +114,7 @@ class _CoachPortfolioScreenState extends ConsumerState<CoachPortfolioScreen> {
         _captionController.clear();
         _uploading = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_t('coach_portfolio_added'))),
-      );
+      AppMessage.success(context, _t('coach_portfolio_added'));
     } on DioException catch (e) {
       if (!mounted) return;
       setState(() => _uploading = false);
@@ -125,35 +122,22 @@ class _CoachPortfolioScreenState extends ConsumerState<CoachPortfolioScreen> {
       final message = detail is Map && detail['detail'] != null
           ? detail['detail'].toString()
           : _t('coach_portfolio_upload_failed');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
+      AppMessage.error(context, message);
     } catch (_) {
       if (!mounted) return;
       setState(() => _uploading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_t('coach_portfolio_upload_failed'))),
-      );
+      AppMessage.error(context, _t('coach_portfolio_upload_failed'));
     }
   }
 
   Future<void> _delete(CoachWork work) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(_t('coach_portfolio_delete_title')),
-        content: Text(_t('coach_portfolio_delete_body')),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(_t('become_coach_back')),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(_t('coach_portfolio_delete')),
-          ),
-        ],
-      ),
+    final confirmed = await AppConfirmDialog.show(
+      context,
+      title: _t('coach_portfolio_delete_title'),
+      message: _t('coach_portfolio_delete_body'),
+      cancelLabel: _t('become_coach_back'),
+      confirmLabel: _t('coach_portfolio_delete'),
+      destructive: true,
     );
     if (confirmed != true) return;
 
@@ -165,9 +149,7 @@ class _CoachPortfolioScreenState extends ConsumerState<CoachPortfolioScreen> {
       });
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_t('coach_portfolio_delete_failed'))),
-      );
+      AppMessage.error(context, _t('coach_portfolio_delete_failed'));
     }
   }
 
@@ -180,139 +162,151 @@ class _CoachPortfolioScreenState extends ConsumerState<CoachPortfolioScreen> {
         elevation: 0,
         title: Text(
           _t('coach_portfolio_title'),
-          style: const TextStyle(
+          style: TextStyle(
             fontWeight: FontWeight.w800,
             color: AppColors.textPrimary,
           ),
         ),
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: _load,
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-                children: [
-                  if (_error != null) ...[
-                    Text(
-                      _error!,
-                      style: const TextStyle(color: AppColors.danger),
-                    ),
-                    const SizedBox(height: 12),
-                  ],
-                  CoachSectionCard(
-                    title: _t('coach_portfolio_add'),
-                    icon: LucideIcons.plus,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Text(
-                          _t('coach_portfolio_add_hint'),
-                          style: const TextStyle(
-                            fontSize: 13,
-                            height: 1.4,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _ImageSlot(
-                                label: _t('coach_portfolio_before'),
-                                file: _before,
-                                onTap: () => _pickSlot(isBefore: true),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: _ImageSlot(
-                                label: _t('coach_portfolio_after'),
-                                file: _after,
-                                onTap: () => _pickSlot(isBefore: false),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        TextField(
-                          controller: _captionController,
-                          decoration: InputDecoration(
-                            hintText: _t('coach_portfolio_caption_hint'),
-                            filled: true,
-                            fillColor: AppColors.surfaceMuted,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(14),
-                              borderSide: BorderSide.none,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        FilledButton(
-                          onPressed: _uploading ? null : _upload,
-                          style: FilledButton.styleFrom(
-                            backgroundColor: AppColors.primaryDark,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                          ),
-                          child: _uploading
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : Text(_t('coach_portfolio_upload')),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    _t('coach_portfolio_list'),
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  if (_works.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 24),
-                      child: Text(
-                        _t('coach_portfolio_empty'),
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: AppColors.textSecondary,
-                          height: 1.4,
-                        ),
+      body: KeyboardDismissScope(
+        child: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : RefreshIndicator(
+                onRefresh: _load,
+                child: ListView(
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+                  children: [
+                    if (_error != null) ...[
+                      Text(
+                        _error!,
+                        style: const TextStyle(color: AppColors.danger),
                       ),
-                    )
-                  else
-                    ..._works.asMap().entries.map((entry) {
-                      final i = entry.key;
-                      final work = entry.value;
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: _WorkCard(
-                          work: work,
-                          beforeLabel: _t('coach_portfolio_before'),
-                          afterLabel: _t('coach_portfolio_after'),
-                          onDelete: () => _delete(work),
-                        )
-                            .animate()
-                            .fadeIn(delay: (40 * i).ms, duration: 280.ms)
-                            .slideY(begin: 0.04, curve: Curves.easeOutCubic),
-                      );
-                    }),
-                ],
+                      const SizedBox(height: 12),
+                    ],
+                    CoachSectionCard(
+                      title: _t('coach_portfolio_add'),
+                      icon: LucideIcons.plus,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            _t('coach_portfolio_add_hint'),
+                            style: TextStyle(
+                              fontSize: 13,
+                              height: 1.4,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _ImageSlot(
+                                  label: _t('coach_portfolio_before'),
+                                  file: _before,
+                                  onTap: () => _pickSlot(isBefore: true),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: _ImageSlot(
+                                  label: _t('coach_portfolio_after'),
+                                  file: _after,
+                                  onTap: () => _pickSlot(isBefore: false),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: _captionController,
+                            textInputAction: TextInputAction.done,
+                            onSubmitted: (_) =>
+                                FocusScope.of(context).unfocus(),
+                            onTapOutside: (_) =>
+                                FocusScope.of(context).unfocus(),
+                            decoration: InputDecoration(
+                              hintText: _t('coach_portfolio_caption_hint'),
+                              filled: true,
+                              fillColor: AppColors.surfaceMuted,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(14),
+                                borderSide: BorderSide.none,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          FilledButton(
+                            onPressed: _uploading ? null : _upload,
+                            style: FilledButton.styleFrom(
+                              backgroundColor: AppColors.primaryDark,
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
+                            child: _uploading
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : Text(_t('coach_portfolio_upload')),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      _t('coach_portfolio_list'),
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    if (_works.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 24),
+                        child: Text(
+                          _t('coach_portfolio_empty'),
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: AppColors.textSecondary,
+                            height: 1.4,
+                          ),
+                        ),
+                      )
+                    else
+                      ..._works.asMap().entries.map((entry) {
+                        final i = entry.key;
+                        final work = entry.value;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _WorkCard(
+                            work: work,
+                            beforeLabel: _t('coach_portfolio_before'),
+                            afterLabel: _t('coach_portfolio_after'),
+                            onDelete: () => _delete(work),
+                          )
+                              .animate()
+                              .fadeIn(
+                                  delay: (40 * i).ms, duration: 280.ms)
+                              .slideY(
+                                  begin: 0.04, curve: Curves.easeOutCubic),
+                        );
+                      }),
+                  ],
+                ),
               ),
-            ),
+      ),
     );
   }
 }
@@ -351,14 +345,14 @@ class _ImageSlot extends StatelessWidget {
               ? Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(
+                    Icon(
                       LucideIcons.imagePlus,
                       color: AppColors.textSecondary,
                     ),
                     const SizedBox(height: 8),
                     Text(
                       label,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
                         color: AppColors.textSecondary,
@@ -435,7 +429,7 @@ class _WorkCard extends StatelessWidget {
             const SizedBox(height: 10),
             Text(
               work.caption!,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
                 height: 1.35,
                 color: AppColors.textPrimary,

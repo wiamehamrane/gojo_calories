@@ -295,7 +295,7 @@ class _NavSlotState extends State<_NavSlot> {
                       maxLines: 1,
                       softWrap: false,
                       overflow: TextOverflow.fade,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
                         color: AppColors.primaryDark,
@@ -389,7 +389,7 @@ class _CenterFabState extends State<_CenterFab>
   }
 }
 
-BoxDecoration get _pillDecoration => const BoxDecoration(
+BoxDecoration get _pillDecoration => BoxDecoration(
       color: AppColors.surface,
       borderRadius: BorderRadius.all(Radius.circular(999)),
       boxShadow: [
@@ -573,7 +573,7 @@ class _ActionCell extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                   color: AppColors.textPrimary,

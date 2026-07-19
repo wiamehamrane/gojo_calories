@@ -25,7 +25,7 @@ class CoachHubScreen extends ConsumerWidget {
         elevation: 0,
         title: Text(
           t('coach_hub_title'),
-          style: const TextStyle(
+          style: TextStyle(
             fontWeight: FontWeight.w800,
             color: AppColors.textPrimary,
           ),
@@ -36,7 +36,7 @@ class CoachHubScreen extends ConsumerWidget {
         children: [
           Text(
             t('coach_hub_subtitle'),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 15,
               height: 1.4,
               color: AppColors.textSecondary,
@@ -106,7 +106,7 @@ class _HubCard extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.w800,
                       color: AppColors.textPrimary,
@@ -116,7 +116,7 @@ class _HubCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     subtitle,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       height: 1.35,
                       color: AppColors.textSecondary,
@@ -125,7 +125,7 @@ class _HubCard extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(
+            Icon(
               LucideIcons.chevronRight,
               size: 20,
               color: AppColors.textSecondary,

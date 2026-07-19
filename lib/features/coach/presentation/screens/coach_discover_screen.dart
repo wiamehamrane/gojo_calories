@@ -9,6 +9,7 @@ import '../../../../core/localization/locale_provider.dart';
 import '../../../../core/localization/translations.dart';
 import '../../../../core/routing/route_paths.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_confirm_dialog.dart';
 import '../../../events/domain/models/event_location_selection.dart';
 import '../../../events/presentation/widgets/event_location_picker_sheet.dart';
 import '../../domain/models/coach.dart';
@@ -86,22 +87,12 @@ class _CoachDiscoverScreenState extends ConsumerState<CoachDiscoverScreen> {
   Future<void> _showOpenSettingsDialog() async {
     final lang = ref.read(localeProvider);
     String t(String k) => Translations.t(lang, k);
-    final open = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(t('location_permission_title')),
-        content: Text(t('location_permission_denied_forever')),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text(t('cancel')),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: Text(t('location_open_settings')),
-          ),
-        ],
-      ),
+    final open = await AppConfirmDialog.show(
+      context,
+      title: t('location_permission_title'),
+      message: t('location_permission_denied_forever'),
+      cancelLabel: t('cancel'),
+      confirmLabel: t('location_open_settings'),
     );
     if (open == true) {
       await ref.read(coachDiscoverProvider.notifier).openLocationSettings();
@@ -378,12 +369,12 @@ class _FilterBar extends StatelessWidget {
                       width: 38,
                       height: 38,
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [AppColors.primaryLight, Color(0xFFFFF0E6)],
+                        gradient: LinearGradient(
+                          colors: AppColors.chipGradient,
                         ),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         LucideIcons.slidersHorizontal,
                         size: 16,
                         color: AppColors.primaryDark,
@@ -396,7 +387,7 @@ class _FilterBar extends StatelessWidget {
                         children: [
                           Text(
                             t('coaches_filters'),
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w800,
                               color: AppColors.textPrimary,
@@ -406,7 +397,7 @@ class _FilterBar extends StatelessWidget {
                             '$_summaryLocation · ${state.radiusKm.round()} km',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
                               color: AppColors.textSecondary,
                             ),
@@ -437,7 +428,7 @@ class _FilterBar extends StatelessWidget {
                     AnimatedRotation(
                       turns: expanded ? 0.5 : 0,
                       duration: const Duration(milliseconds: 220),
-                      child: const Icon(
+                      child: Icon(
                         LucideIcons.chevronDown,
                         size: 18,
                         color: AppColors.inactive,
@@ -524,11 +515,11 @@ class _FilterDetails extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Divider(height: 1, color: AppColors.border),
+          Divider(height: 1, color: AppColors.border),
           const SizedBox(height: 12),
           Text(
             t('coaches_location'),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w700,
               color: AppColors.textSecondary,
@@ -559,7 +550,7 @@ class _FilterDetails extends StatelessWidget {
             children: [
               Text(
                 t('coaches_distance_label'),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                   color: AppColors.textSecondary,
@@ -571,7 +562,7 @@ class _FilterDetails extends StatelessWidget {
                 child: Text(
                   '${state.radiusKm.round()} km',
                   key: ValueKey(state.radiusKm.round()),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
                     color: AppColors.primaryDark,
@@ -598,7 +589,7 @@ class _FilterDetails extends StatelessWidget {
           ),
           Text(
             t('coaches_specialty'),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w700,
               color: AppColors.textSecondary,
@@ -629,7 +620,7 @@ class _FilterDetails extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             t('coaches_gender'),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w700,
               color: AppColors.textSecondary,
@@ -698,7 +689,7 @@ class _OutlineAction extends StatelessWidget {
                 label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                   color: AppColors.textPrimary,
@@ -815,7 +806,7 @@ class _CoachCard extends StatelessWidget {
                             name,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w800,
                               color: AppColors.textPrimary,
@@ -847,7 +838,7 @@ class _CoachCard extends StatelessWidget {
                                   ].join(' · '),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 12,
                                     color: AppColors.textSecondary,
                                   ),
@@ -907,7 +898,7 @@ class _CoachCard extends StatelessWidget {
                         color: AppColors.surfaceMuted,
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         LucideIcons.chevronRight,
                         size: 16,
                         color: AppColors.inactive,
@@ -967,10 +958,10 @@ class _EmptyState extends StatelessWidget {
                     width: 88,
                     height: 88,
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
+                      gradient: LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
-                        colors: [AppColors.primaryLight, Color(0xFFFFF0E6)],
+                        colors: AppColors.chipGradient,
                       ),
                       borderRadius: BorderRadius.circular(28),
                       boxShadow: [
@@ -981,7 +972,7 @@ class _EmptyState extends StatelessWidget {
                         ),
                       ],
                     ),
-                    child: const Icon(
+                    child: Icon(
                       LucideIcons.mapPin,
                       color: AppColors.primaryDark,
                       size: 34,
@@ -998,7 +989,7 @@ class _EmptyState extends StatelessWidget {
                   Text(
                     message,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
                       height: 1.45,
                       fontWeight: FontWeight.w500,

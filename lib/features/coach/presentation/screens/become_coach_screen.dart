@@ -14,6 +14,8 @@ import '../../../../core/localization/locale_provider.dart';
 import '../../../../core/localization/translations.dart';
 import '../../../../core/routing/route_paths.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_message.dart';
+import '../../../../core/widgets/keyboard_dismiss_scope.dart';
 import '../../../events/domain/models/event_location_selection.dart';
 import '../../../events/presentation/widgets/event_location_picker_sheet.dart';
 import '../../../profile/presentation/providers/profile_providers.dart';
@@ -228,9 +230,7 @@ class _BecomeCoachScreenState extends ConsumerState<BecomeCoachScreen> {
       _hasCoachSub = activated.hasActiveCoachSubscription || _hasCoachSub;
     });
     ref.invalidate(profileProvider);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(_t('become_coach_success'))),
-    );
+    AppMessage.success(context, _t('become_coach_success'));
     context.pop();
   }
 
@@ -243,9 +243,7 @@ class _BecomeCoachScreenState extends ConsumerState<BecomeCoachScreen> {
       await ref.read(coachesRepositoryProvider).upsertMe(_payload());
       if (!mounted) return;
       setState(() => _saving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_t('become_coach_saved'))),
-      );
+      AppMessage.success(context, _t('become_coach_saved'));
     } on DioException catch (e) {
       final detail = e.response?.data is Map
           ? (e.response!.data['detail']?.toString() ?? '')
@@ -276,9 +274,7 @@ class _BecomeCoachScreenState extends ConsumerState<BecomeCoachScreen> {
         _userIsCoach = true;
       });
       ref.invalidate(profileProvider);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_t('become_coach_paused'))),
-      );
+      AppMessage.show(context, _t('become_coach_paused'));
     } on DioException catch (e) {
       final detail = e.response?.data is Map
           ? (e.response!.data['detail']?.toString() ?? '')
@@ -327,9 +323,7 @@ class _BecomeCoachScreenState extends ConsumerState<BecomeCoachScreen> {
         _hasCoachSub = activated.hasActiveCoachSubscription || _hasCoachSub;
       });
       ref.invalidate(profileProvider);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_t('become_coach_resumed'))),
-      );
+      AppMessage.success(context, _t('become_coach_resumed'));
     } on DioException catch (e) {
       final status = e.response?.statusCode;
       final detail = e.response?.data is Map
@@ -439,7 +433,8 @@ class _BecomeCoachScreenState extends ConsumerState<BecomeCoachScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: _loading
+      body: KeyboardDismissScope(
+        child: _loading
           ? const Center(child: CircularProgressIndicator())
           : !_userHasPaid
               ? Column(
@@ -469,16 +464,12 @@ class _BecomeCoachScreenState extends ConsumerState<BecomeCoachScreen> {
                   children: [
                     Container(
                       width: double.infinity,
-                      decoration: const BoxDecoration(
+                      decoration: BoxDecoration(
                         gradient: LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
-                          colors: [
-                            Color(0xFFE8FBFE),
-                            Color(0xFFF2F2F7),
-                            Color(0xFFFFF6EE),
-                          ],
-                          stops: [0, 0.55, 1],
+                          colors: AppColors.heroGradient,
+                          stops: const [0, 0.55, 1],
                         ),
                       ),
                       child: SafeArea(
@@ -618,6 +609,7 @@ class _BecomeCoachScreenState extends ConsumerState<BecomeCoachScreen> {
                     ),
                   ],
                 ),
+      ),
     );
   }
 }
@@ -1015,7 +1007,7 @@ class _ProRequired extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: const Icon(
+                child: Icon(
                   LucideIcons.badgeCheck,
                   color: AppColors.primaryDark,
                   size: 36,
@@ -1032,7 +1024,7 @@ class _ProRequired extends StatelessWidget {
               Text(
                 t('become_coach_pro_title'),
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w800,
                   color: AppColors.textPrimary,
@@ -1043,7 +1035,7 @@ class _ProRequired extends StatelessWidget {
               Text(
                 t('become_coach_pro_body'),
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   height: 1.45,
                   color: AppColors.textSecondary,
@@ -1088,7 +1080,7 @@ InputDecoration _fieldDecoration({required String hint, Widget? prefixIcon}) {
     ),
     focusedBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(16),
-      borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+      borderSide: BorderSide(color: AppColors.primary, width: 1.5),
     ),
   );
 }
@@ -1123,6 +1115,7 @@ class _AboutStep extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       children: [
         CoachSectionCard(
@@ -1134,6 +1127,8 @@ class _AboutStep extends StatelessWidget {
               TextField(
                 controller: bioController,
                 maxLines: 4,
+                textInputAction: TextInputAction.newline,
+                onTapOutside: (_) => FocusScope.of(context).unfocus(),
                 decoration: _fieldDecoration(
                   hint: t('become_coach_bio_hint'),
                 ),
@@ -1141,7 +1136,7 @@ class _AboutStep extends StatelessWidget {
               const SizedBox(height: 14),
               Text(
                 t('become_coach_experience'),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
                   color: AppColors.textSecondary,
@@ -1151,10 +1146,13 @@ class _AboutStep extends StatelessWidget {
               TextField(
                 controller: experienceController,
                 keyboardType: TextInputType.number,
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => FocusScope.of(context).unfocus(),
+                onTapOutside: (_) => FocusScope.of(context).unfocus(),
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 decoration: _fieldDecoration(
                   hint: t('become_coach_experience_hint'),
-                  prefixIcon: const Icon(
+                  prefixIcon: Icon(
                     LucideIcons.award,
                     size: 18,
                     color: AppColors.primaryDark,
@@ -1274,6 +1272,7 @@ class _ContactStep extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       children: [
         CoachSectionCard(
@@ -1285,9 +1284,12 @@ class _ContactStep extends StatelessWidget {
               TextField(
                 controller: phoneController,
                 keyboardType: TextInputType.phone,
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => FocusScope.of(context).unfocus(),
+                onTapOutside: (_) => FocusScope.of(context).unfocus(),
                 decoration: _fieldDecoration(
                   hint: t('become_coach_phone_hint'),
-                  prefixIcon: const Icon(
+                  prefixIcon: Icon(
                     LucideIcons.phone,
                     size: 18,
                     color: AppColors.primaryDark,
@@ -1297,7 +1299,7 @@ class _ContactStep extends StatelessWidget {
               const SizedBox(height: 10),
               Text(
                 t('become_coach_phone_privacy'),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
                   height: 1.35,
                   color: AppColors.textSecondary,
@@ -1361,7 +1363,7 @@ class _ContactStep extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const Icon(
+                  Icon(
                     LucideIcons.chevronRight,
                     color: AppColors.inactive,
                     size: 18,
@@ -1521,7 +1523,7 @@ class _ReviewIconRow extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     color: AppColors.textSecondary,
                     fontWeight: FontWeight.w600,
@@ -1530,7 +1532,7 @@ class _ReviewIconRow extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   value.isEmpty ? '-' : value,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     color: AppColors.textPrimary,
                     fontWeight: FontWeight.w600,

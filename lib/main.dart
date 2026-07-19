@@ -5,6 +5,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'app/app.dart';
 import 'core/config/env_config.dart';
+import 'core/theme/theme_mode_provider.dart';
 import 'core/localization/locale_provider.dart';
 
 Future<void> main() async {
@@ -59,6 +60,7 @@ Future<void> main() async {
 
   final container = ProviderContainer();
   await container.read(localeProvider.notifier).loadSaved();
+  await container.read(themeModeProvider.notifier).loadSaved();
 
   runApp(
     UncontrolledProviderScope(

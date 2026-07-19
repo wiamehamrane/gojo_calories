@@ -112,16 +112,12 @@ class CoachGradientHeader extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFFE8FBFE),
-            Color(0xFFF2F2F7),
-            Color(0xFFFFF6EE),
-          ],
-          stops: [0, 0.55, 1],
+          colors: AppColors.heroGradient,
+          stops: const [0, 0.55, 1],
         ),
       ),
       child: Row(
@@ -135,7 +131,7 @@ class CoachGradientHeader extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.w800,
                     color: AppColors.textPrimary,
@@ -146,7 +142,7 @@ class CoachGradientHeader extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   subtitle,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     height: 1.35,
                     color: AppColors.textSecondary,
@@ -285,7 +281,7 @@ class CoachSectionCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     title!,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w800,
                       color: AppColors.textPrimary,

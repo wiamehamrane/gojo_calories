@@ -32,7 +32,7 @@ class StarredMealsScreen extends ConsumerWidget {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(
+          icon: Icon(
             LucideIcons.chevronLeft,
             size: 24,
             color: AppColors.textPrimary,
@@ -44,7 +44,7 @@ class StarredMealsScreen extends ConsumerWidget {
         ),
         title: Text(
           t('starred_meals'),
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w600,
             color: AppColors.textPrimary,
@@ -129,7 +129,7 @@ class _StarredMealTile extends ConsumerWidget {
                         fit: BoxFit.cover,
                         memCacheWidth: 216,
                         placeholder:
-                            const ColoredBox(color: Color(0xFFF2F2F7)),
+                            ColoredBox(color: AppColors.background),
                         errorWidget: _imageFallback(),
                       )
                     : _imageFallback(),
@@ -144,7 +144,7 @@ class _StarredMealTile extends ConsumerWidget {
                     meal.name,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
                       color: AppColors.textPrimary,
@@ -155,7 +155,7 @@ class _StarredMealTile extends ConsumerWidget {
                     'by ${meal.authorName}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
                       color: AppColors.textSecondary,
                     ),
@@ -163,7 +163,7 @@ class _StarredMealTile extends ConsumerWidget {
                   const SizedBox(height: 6),
                   Text(
                     '${meal.calories} kcal · ${meal.protein}g P · ${meal.carbs}g C · ${meal.fat}g F',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11,
                       color: AppColors.textSecondary,
                     ),
@@ -193,7 +193,7 @@ class _StarredMealTile extends ConsumerWidget {
   Widget _imageFallback() {
     return Container(
       color: AppColors.primaryLight,
-      child: const Center(
+      child: Center(
         child: Icon(LucideIcons.utensils, size: 24, color: AppColors.primaryDark),
       ),
     );
@@ -226,7 +226,7 @@ class _MessageState extends StatelessWidget {
         Text(
           title,
           textAlign: TextAlign.center,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w700,
             color: AppColors.textPrimary,
@@ -238,7 +238,7 @@ class _MessageState extends StatelessWidget {
           child: Text(
             message,
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               height: 1.4,
               color: AppColors.textSecondary,

@@ -12,6 +12,7 @@ import '../../../../core/localization/locale_provider.dart';
 import '../../../../core/localization/translations.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/widgets/app_message.dart';
 import '../../data/repositories/coaches_repository.dart';
 import '../../domain/models/coach.dart';
 import '../widgets/coach_ui.dart';
@@ -51,9 +52,7 @@ class _CoachDetailScreenState extends ConsumerState<CoachDetailScreen> {
       );
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(t('coaches_contact_failed'))),
-      );
+      AppMessage.error(context, t('coaches_contact_failed'));
     } finally {
       if (mounted) setState(() => _contactLoading = false);
     }
@@ -81,7 +80,7 @@ class _CoachDetailScreenState extends ConsumerState<CoachDetailScreen> {
                   children: [
                     Text(
                       t('coaches_detail_failed'),
-                      style: const TextStyle(color: AppColors.textSecondary),
+                      style: TextStyle(color: AppColors.textSecondary),
                     ),
                     const SizedBox(height: AppSpacing.md),
                     FilledButton(
@@ -115,16 +114,12 @@ class _CoachDetailScreenState extends ConsumerState<CoachDetailScreen> {
                       surfaceTintColor: Colors.transparent,
                       flexibleSpace: FlexibleSpaceBar(
                         background: Container(
-                          decoration: const BoxDecoration(
+                          decoration: BoxDecoration(
                             gradient: LinearGradient(
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
-                              colors: [
-                                Color(0xFFE8FBFE),
-                                Color(0xFFF2F2F7),
-                                Color(0xFFFFF6EE),
-                              ],
-                              stops: [0, 0.55, 1],
+                              colors: AppColors.heroGradient,
+                              stops: const [0, 0.55, 1],
                             ),
                           ),
                           child: SafeArea(
@@ -179,7 +174,7 @@ class _CoachDetailScreenState extends ConsumerState<CoachDetailScreen> {
                                 const SizedBox(height: 14),
                                 Text(
                                   name,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 24,
                                     fontWeight: FontWeight.w800,
                                     color: AppColors.textPrimary,
@@ -195,7 +190,7 @@ class _CoachDetailScreenState extends ConsumerState<CoachDetailScreen> {
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      const Icon(
+                                      Icon(
                                         LucideIcons.mapPin,
                                         size: 14,
                                         color: AppColors.textSecondary,
@@ -203,7 +198,7 @@ class _CoachDetailScreenState extends ConsumerState<CoachDetailScreen> {
                                       const SizedBox(width: 4),
                                       Text(
                                         coach.city!,
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           color: AppColors.textSecondary,
                                           fontSize: 14,
                                           fontWeight: FontWeight.w500,
@@ -230,7 +225,7 @@ class _CoachDetailScreenState extends ConsumerState<CoachDetailScreen> {
                               icon: LucideIcons.fileText,
                               child: Text(
                                 coach.bio!,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 15,
                                   height: 1.45,
                                   color: AppColors.textPrimary,
@@ -482,7 +477,7 @@ class _BeforeAfterPair extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             work.caption!,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
               height: 1.35,
               color: AppColors.textSecondary,
@@ -568,7 +563,7 @@ class _InfoRow extends StatelessWidget {
         Expanded(
           child: Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w500,
               color: AppColors.textPrimary,
@@ -595,7 +590,7 @@ class _ContactSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -619,7 +614,7 @@ class _ContactSheet extends StatelessWidget {
           const SizedBox(height: 16),
           Text(
             t('coaches_contact_title'),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w800,
               color: AppColors.textPrimary,
@@ -629,7 +624,7 @@ class _ContactSheet extends StatelessWidget {
           Text(
             t('coaches_contact_subtitle'),
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
               color: AppColors.textSecondary,
             ),

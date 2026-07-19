@@ -19,7 +19,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.light);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Future.delayed(const Duration(milliseconds: 800), _bootstrap);
     });
@@ -78,20 +77,23 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   }
 
   @override
-  void dispose() {
-    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.dark);
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.surface,
-      body: Center(
-        child: Image.asset(
-          ImageAsset.logoHeader,
-          width: 120,
-          height: 120,
+    final brightness = Theme.of(context).brightness;
+    AppColors.applyBrightness(brightness);
+    final overlay = brightness == Brightness.dark
+        ? SystemUiOverlayStyle.light
+        : SystemUiOverlayStyle.dark;
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: overlay.copyWith(statusBarColor: Colors.transparent),
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        body: Center(
+          child: Image.asset(
+            ImageAsset.logoHeader,
+            width: 120,
+            height: 120,
+          ),
         ),
       ),
     );

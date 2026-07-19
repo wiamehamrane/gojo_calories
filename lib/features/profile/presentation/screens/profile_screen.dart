@@ -492,14 +492,14 @@ class ProfileScreen extends ConsumerWidget {
                             height: 52,
                             fit: BoxFit.cover,
                             memCacheWidth: 160,
-                            placeholder: const Center(
+                            placeholder: Center(
                               child: Icon(
                                 LucideIcons.user,
                                 size: 28,
                                 color: AppColors.inactive,
                               ),
                             ),
-                            errorWidget: const Center(
+                            errorWidget: Center(
                               child: Icon(
                                 LucideIcons.user,
                                 size: 28,
@@ -507,7 +507,7 @@ class ProfileScreen extends ConsumerWidget {
                               ),
                             ),
                           )
-                        : const Icon(
+                        : Icon(
                             LucideIcons.user,
                             size: 28,
                             color: AppColors.inactive,
@@ -545,7 +545,7 @@ class ProfileScreen extends ConsumerWidget {
                     Flexible(
                       child: Text(
                         data['name'] ?? 'User',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 17,
                           fontWeight: FontWeight.w600,
                           color: AppColors.textPrimary,
@@ -1182,14 +1182,10 @@ class _CoachPromoCardState extends State<_CoachPromoCard>
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(22),
-                gradient: const LinearGradient(
+                gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFFE8FBFE),
-                    Color(0xFFFFFFFF),
-                    Color(0xFFFFF4EC),
-                  ],
+                  colors: AppColors.heroGradientWarm,
                 ),
                 border: Border.all(
                   color: AppColors.primary.withValues(alpha: 0.18 + t * 0.12),
@@ -1232,7 +1228,7 @@ class _CoachPromoCardState extends State<_CoachPromoCard>
                   children: [
                     Text(
                       widget.title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
                         color: AppColors.textPrimary,
@@ -1244,7 +1240,7 @@ class _CoachPromoCardState extends State<_CoachPromoCard>
                       widget.subtitle,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         height: 1.35,
                         color: AppColors.textSecondary,
@@ -1502,14 +1498,14 @@ class _AvatarPhotoSheetState extends State<_AvatarPhotoSheet>
                   const SizedBox(height: 18),
                   Text(
                     _hasAvatar ? 'Update profile photo' : 'Add a profile photo',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
                       color: AppColors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 6),
-                  const Text(
+                  Text(
                     'This shows on your profile and public page',
                     textAlign: TextAlign.center,
                     style: TextStyle(
@@ -1618,7 +1614,7 @@ class _AvatarPreview extends StatelessWidget {
           Container(
             width: 84,
             height: 84,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: AppColors.surface,
             ),
@@ -1630,14 +1626,14 @@ class _AvatarPreview extends StatelessWidget {
                     height: 84,
                     fit: BoxFit.cover,
                     memCacheWidth: 252,
-                    placeholder: const Center(
+                    placeholder: Center(
                       child: Icon(
                         LucideIcons.user,
                         size: 34,
                         color: AppColors.inactive,
                       ),
                     ),
-                    errorWidget: const Center(
+                    errorWidget: Center(
                       child: Icon(
                         LucideIcons.user,
                         size: 34,
@@ -1645,7 +1641,7 @@ class _AvatarPreview extends StatelessWidget {
                       ),
                     ),
                   )
-                : const Center(
+                : Center(
                     child: Icon(
                       LucideIcons.user,
                       size: 34,
@@ -1767,7 +1763,7 @@ class _AvatarActionTileState extends State<_AvatarActionTile>
                 const SizedBox(height: 12),
                 Text(
                   widget.label,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
                     color: AppColors.textPrimary,
@@ -1776,7 +1772,7 @@ class _AvatarActionTileState extends State<_AvatarActionTile>
                 const SizedBox(height: 4),
                 Text(
                   widget.subtitle,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     color: AppColors.textSecondary,
                   ),
