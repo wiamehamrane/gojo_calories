@@ -160,7 +160,13 @@ class _ClanScreenState extends ConsumerState<ClanScreen> {
       body: _loading
           ? Center(child: CircularProgressIndicator(color: AppColors.primary))
           : _error != null
-              ? Center(child: Text(_error!))
+              ? Center(
+                  child: Text(
+                    _error!,
+                    style: TextStyle(color: AppColors.textSecondary),
+                    textAlign: TextAlign.center,
+                  ),
+                )
               : RefreshIndicator(
                   onRefresh: _load,
                   child: ListView(
@@ -217,13 +223,25 @@ class _ClanScreenState extends ConsumerState<ClanScreen> {
             )),
         if (invites.isNotEmpty) ...[
           const SizedBox(height: 16),
-          Text(t('clan_pending_invites'), style: const TextStyle(fontWeight: FontWeight.w600)),
+          Text(
+            t('clan_pending_invites'),
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
+          ),
           const SizedBox(height: 8),
           ...invites.map(
             (i) => ListTile(
               contentPadding: EdgeInsets.zero,
-              title: Text(i['email'] as String? ?? ''),
-              subtitle: Text(t('clan_waiting_accept')),
+              title: Text(
+                i['email'] as String? ?? '',
+                style: TextStyle(color: AppColors.textPrimary),
+              ),
+              subtitle: Text(
+                t('clan_waiting_accept'),
+                style: TextStyle(color: AppColors.textSecondary),
+              ),
             ),
           ),
         ],
@@ -232,9 +250,23 @@ class _ClanScreenState extends ConsumerState<ClanScreen> {
           TextField(
             controller: _emailController,
             keyboardType: TextInputType.emailAddress,
+            style: TextStyle(color: AppColors.textPrimary),
             decoration: InputDecoration(
               labelText: t('clan_invite_email'),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+              labelStyle: TextStyle(color: AppColors.textSecondary),
+              filled: true,
+              fillColor: AppColors.surface,
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(color: AppColors.border),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(color: AppColors.primary, width: 1.5),
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
             ),
           ),
           const SizedBox(height: 12),
@@ -244,7 +276,9 @@ class _ClanScreenState extends ConsumerState<ClanScreen> {
               backgroundColor: AppColors.primaryDark,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
             ),
             child: Text(t('clan_send_invite')),
           ),
@@ -256,7 +290,16 @@ class _ClanScreenState extends ConsumerState<ClanScreen> {
             ),
             const SizedBox(height: 12),
             OutlinedButton(
-              onPressed: _submitting ? null : () => _purchaseAddon(addonProductId),
+              onPressed:
+                  _submitting ? null : () => _purchaseAddon(addonProductId),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.primaryDark,
+                side: BorderSide(color: AppColors.border),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
               child: Text(t('clan_purchase_addon')),
             ),
           ],
@@ -276,15 +319,24 @@ class _InfoCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE8E8E8)),
+        border: Border.all(color: AppColors.border),
       ),
       child: Row(
         children: [
           Icon(icon, color: AppColors.primaryDark, size: 20),
           const SizedBox(width: 12),
-          Expanded(child: Text(text, style: const TextStyle(fontSize: 14, height: 1.4))),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 14,
+                height: 1.4,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -310,32 +362,54 @@ class _MemberTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.7)),
       ),
       child: Row(
         children: [
           CircleAvatar(
             radius: 18,
             backgroundColor: AppColors.primary.withValues(alpha: 0.15),
-            child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?'),
+            child: Text(
+              name.isNotEmpty ? name[0].toUpperCase() : '?',
+              style: TextStyle(
+                color: AppColors.primaryDark,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name, style: const TextStyle(fontWeight: FontWeight.w600)),
                 Text(
-                  role == 'owner' ? 'Owner' : (active ? 'Active' : 'Pending payment'),
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  name,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                Text(
+                  role == 'owner'
+                      ? 'Owner'
+                      : (active ? 'Active' : 'Pending payment'),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ],
             ),
           ),
           if (onRemove != null)
             IconButton(
-              icon: const Icon(LucideIcons.userMinus, size: 18),
+              icon: Icon(
+                LucideIcons.userMinus,
+                size: 18,
+                color: AppColors.textSecondary,
+              ),
               onPressed: onRemove,
             ),
         ],

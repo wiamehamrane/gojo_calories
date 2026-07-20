@@ -33,8 +33,10 @@ import base64
 from services.pricing_catalog import (
     ALL_PRODUCT_IDS,
     CLAN_ADDON_PRODUCT_IDS,
+    COACH_PRODUCT_IDS,
     REFERRAL_DURATION_PERIODS,
     REFERRAL_PAY_PERCENT,
+    coach_plan_id_from_product,
     plan_id_from_product,
 )
 from services.clan_service import (
@@ -43,6 +45,7 @@ from services.clan_service import (
     sync_clan_member_access,
 )
 from services.subscription_service import apply_referral_iap_credit
+from services import coach_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -166,6 +169,18 @@ def _unlock_subscription_for_user(
             "product_id": product_id,
             "type": "clan_addon",
         }
+
+    if product_id in COACH_PRODUCT_IDS:
+        return coach_service.apply_coach_subscription(
+            db,
+            current_user,
+            product_id=product_id,
+            plan_id=coach_plan_id_from_product(product_id),
+            expires_at=expires_at,
+            is_active=is_active,
+            source="apple",
+            apple_original_transaction_id=original_transaction_id,
+        )
 
     current_user.has_paid = is_active
     current_user.subscription_source = "apple"
@@ -396,6 +411,45 @@ async def apple_webhook(request: Request, db: Session = Depends(get_db)):
                 expires_date_ms = txn_info.get("expiresDate", 0)
 
                 if original_transaction_id:
+                    coach = db.query(models.Coach).filter(
+                        models.Coach.apple_original_transaction_id
+                        == original_transaction_id
+                    ).first()
+                    if coach and product_id in COACH_PRODUCT_IDS:
+                        user = db.query(models.User).filter(
+                            models.User.id == coach.user_id
+                        ).first()
+                        if user:
+                            expires_at = (
+                                datetime.datetime.utcfromtimestamp(
+                                    expires_date_ms / 1000
+                                )
+                                if expires_date_ms
+                                else coach.subscription_expires_at
+                                or datetime.datetime.utcnow()
+                            )
+                            is_active = notification_type in (
+                                "DID_RENEW",
+                                "SUBSCRIBED",
+                            ) or (
+                                notification_type == "DID_CHANGE_RENEWAL_STATUS"
+                                and subtype == "AUTO_RENEW_ENABLED"
+                            )
+                            if notification_type in ("EXPIRED", "REVOKE", "REFUND"):
+                                is_active = False
+                            coach_service.apply_coach_subscription(
+                                db,
+                                user,
+                                product_id=product_id or "gojo_coach_monthly",
+                                plan_id=coach_plan_id_from_product(product_id)
+                                or coach.subscription_plan,
+                                expires_at=expires_at,
+                                is_active=is_active,
+                                source="apple",
+                                apple_original_transaction_id=original_transaction_id,
+                            )
+                        return {"status": "ok"}
+
                     user = db.query(models.User).filter(
                         models.User.apple_original_transaction_id == original_transaction_id
                     ).first()

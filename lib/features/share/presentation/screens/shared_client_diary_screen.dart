@@ -160,7 +160,7 @@ class _SharedClientDiaryScreenState
         ],
       ),
       body: _loading
-          ? const Center(
+          ? Center(
               child: CircularProgressIndicator(color: AppColors.primary),
             )
           : _error != null
@@ -313,7 +313,7 @@ class _DateRail extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(
+                    Icon(
                       LucideIcons.calendarDays,
                       size: 16,
                       color: AppColors.primaryDark,
@@ -554,7 +554,7 @@ class _MealCard extends StatelessWidget {
               color: AppColors.primaryLight,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(
+            child: Icon(
               LucideIcons.utensils,
               size: 18,
               color: AppColors.primaryDark,
@@ -614,7 +614,7 @@ class _WorkoutCard extends StatelessWidget {
               color: AppColors.surfaceMuted,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(
+            child: Icon(
               LucideIcons.dumbbell,
               size: 18,
               color: AppColors.textSecondary,
@@ -693,7 +693,7 @@ class _ShareDateSheetState extends State<_ShareDateSheet> {
     });
 
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),

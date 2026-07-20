@@ -237,7 +237,7 @@ class _ShareAccessScreenState extends ConsumerState<ShareAccessScreen> {
                     children: [
                       Text(
                         t('share_access_subtitle'),
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppColors.textSecondary,
                           height: 1.4,
                         ),
@@ -317,7 +317,7 @@ class _ShareAccessScreenState extends ConsumerState<ShareAccessScreen> {
   Widget _sectionTitle(String text) {
     return Text(
       text,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 16,
         fontWeight: FontWeight.w700,
         color: AppColors.textPrimary,
@@ -347,7 +347,7 @@ class _ShareAccessScreenState extends ConsumerState<ShareAccessScreen> {
         return _card(
           child: ListTile(
             contentPadding: EdgeInsets.zero,
-            leading: const CircleAvatar(
+            leading: CircleAvatar(
               backgroundColor: AppColors.primaryLight,
               child: Icon(LucideIcons.user, color: AppColors.primaryDark),
             ),
@@ -370,7 +370,7 @@ class _ShareAccessScreenState extends ConsumerState<ShareAccessScreen> {
         return _card(
           child: ListTile(
             contentPadding: EdgeInsets.zero,
-            leading: const Icon(LucideIcons.clock, color: AppColors.inactive),
+            leading: Icon(LucideIcons.clock, color: AppColors.inactive),
             title: Text(
               (g['invite_email'] as String?) ?? t('share_pending_invite'),
               style: const TextStyle(fontWeight: FontWeight.w600),
@@ -424,7 +424,7 @@ class _ShareAccessScreenState extends ConsumerState<ShareAccessScreen> {
       return _card(
         child: ListTile(
           contentPadding: EdgeInsets.zero,
-          leading: const CircleAvatar(
+          leading: CircleAvatar(
             backgroundColor: AppColors.surfaceMuted,
             child: Icon(LucideIcons.eye, color: AppColors.textSecondary),
           ),
@@ -446,7 +446,7 @@ class _ShareAccessScreenState extends ConsumerState<ShareAccessScreen> {
     return _card(
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Text(text, style: const TextStyle(color: AppColors.textSecondary)),
+        child: Text(text, style: TextStyle(color: AppColors.textSecondary)),
       ),
     );
   }

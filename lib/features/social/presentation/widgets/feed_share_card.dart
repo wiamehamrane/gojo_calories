@@ -45,7 +45,7 @@ class FeedShareCard extends StatelessWidget {
                         colors: [Color(0xFF12343B), Color(0xFF0A0A0A)],
                       ),
                     ),
-                    child: const Center(
+                    child: Center(
                       child: Icon(
                         LucideIcons.image,
                         size: 56,
@@ -127,7 +127,7 @@ class FeedShareCard extends StatelessWidget {
                 Image.asset(
                   'assets/icons/logo_header.png',
                   height: 22,
-                  errorBuilder: (_, _, _) => const Icon(
+                  errorBuilder: (_, _, _) => Icon(
                     LucideIcons.sparkles,
                     size: 18,
                     color: AppColors.primary,

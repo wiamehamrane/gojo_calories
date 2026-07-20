@@ -7,14 +7,15 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/localization/locale_provider.dart';
 import '../../../../core/localization/translations.dart';
 import '../../../../core/routing/route_paths.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../providers/tasks_provider.dart';
 
-const _kBackground = Colors.white;
-const _kCard = Color(0xFFF2F2F7);
-const _kPrimaryText = Color(0xFF000000);
-const _kSecondaryText = Color(0xFF8E8E93);
-const _kCancelButton = Color(0xFFE5E5EA);
-const _kCancelText = Color(0xFF8E8E93);
+Color get _kBackground => AppColors.surface;
+Color get _kCard => AppColors.background;
+Color get _kPrimaryText => AppColors.textPrimary;
+Color get _kSecondaryText => AppColors.textSecondary;
+Color get _kCancelButton => AppColors.surfaceMuted;
+Color get _kCancelText => AppColors.textSecondary;
 const _kStartButton = Color(0xFFDDF8E4);
 const _kStartText = Color(0xFF248A3D);
 const _kPickerHeight = 216.0;
@@ -99,7 +100,7 @@ class _CreateTaskScreenState extends ConsumerState<CreateTaskScreen> {
                     padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
                     child: Text(
                       Translations.t(lang, 'tasks_screen_title'),
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: _kPrimaryText,
                         fontSize: 34,
                         fontWeight: FontWeight.w700,
@@ -124,7 +125,7 @@ class _CreateTaskScreenState extends ConsumerState<CreateTaskScreen> {
                               height: _kPickerHeight,
                               width: constraints.maxWidth,
                               child: CupertinoTheme(
-                                data: const CupertinoThemeData(
+                                data: CupertinoThemeData(
                                   brightness: Brightness.light,
                                   primaryColor: _kStartText,
                                   textTheme: CupertinoTextThemeData(
@@ -322,7 +323,7 @@ class _SettingsInputRow extends StatelessWidget {
         children: [
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               color: _kPrimaryText,
               fontSize: 17,
               fontWeight: FontWeight.w400,
@@ -338,7 +339,7 @@ class _SettingsInputRow extends StatelessWidget {
               textAlign: TextAlign.right,
               decoration: const BoxDecoration(),
               padding: const EdgeInsets.symmetric(vertical: 6),
-              style: const TextStyle(
+              style: TextStyle(
                 color: _kSecondaryText,
                 fontSize: 17,
                 fontWeight: FontWeight.w400,

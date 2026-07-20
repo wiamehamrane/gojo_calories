@@ -486,6 +486,7 @@ def get_me(db: Session = Depends(get_db), current_user_id: str = Depends(get_cur
         "name": user.name,
         "age": user.age,
         "has_paid": user.has_paid,
+        "is_coach": bool(getattr(user, "is_coach", False)),
         "current_weight": user.current_weight,
         "goal_weight": user.goal_weight,
         "weight_unit": user.weight_unit,

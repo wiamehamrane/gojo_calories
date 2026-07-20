@@ -10,6 +10,7 @@ import '../../features/social/data/repositories/groups_repository.dart';
 import '../../features/social/data/repositories/memories_repository.dart';
 import '../../features/stats/data/repositories/stats_repository.dart';
 import '../../features/exercise/data/repositories/exercise_repository.dart';
+import '../../features/coach/data/repositories/coaches_repository.dart';
 
 final authRepositoryProvider = Provider<AuthRepository>(
   (ref) => AuthRepository(),
@@ -53,4 +54,8 @@ final referralsRepositoryProvider = Provider<ReferralsRepository>(
 
 final exerciseRepositoryProvider = Provider<ExerciseRepository>(
   (ref) => ExerciseRepository(),
+);
+
+final coachesRepositoryProvider = Provider<CoachesRepository>(
+  (ref) => CoachesRepository(),
 );

@@ -222,7 +222,7 @@ class MealShareCard extends StatelessWidget {
                     'assets/icons/app_icon.png',
                     width: 18,
                     height: 18,
-                    errorBuilder: (_, _, _) => const Icon(
+                    errorBuilder: (_, _, _) => Icon(
                       LucideIcons.sparkles,
                       size: 16,
                       color: AppColors.primaryDark,

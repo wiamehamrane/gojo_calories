@@ -22,18 +22,31 @@ class EventsTheme {
   static const String headingFont = 'Inter';
   static const String bodyFont = 'Inter';
 
+  // ── Shimmer ─────────────────────────────────────────────────
+  static Color get shimmerBase =>
+      AppColors.isDark ? AppColors.darkBorder : const Color(0xFFE8E8E8);
+  static Color get shimmerHighlight =>
+      AppColors.isDark ? AppColors.darkSurfaceMuted : const Color(0xFFF5F5F5);
+
   // ── Brand Gradient ─────────────────────────────────────────
   static LinearGradient get brandGradient => LinearGradient(
-    colors: [AppColors.primary, const Color(0xFF00D1ED)],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
+        colors: [
+          AppColors.primary,
+          AppColors.isDark
+              ? const Color(0xFF3AD7EB)
+              : const Color(0xFF00D1ED),
+        ],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      );
 
-  static const LinearGradient heroGradient = LinearGradient(
-    colors: [Color(0xFF00B4CC), Color(0xFF00D1ED), Color(0xFF62F0FF)],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
+  static LinearGradient get heroGradient => LinearGradient(
+        colors: AppColors.isDark
+            ? const [Color(0xFF007D8F), Color(0xFF1AC6DC), Color(0xFF3AD7EB)]
+            : const [Color(0xFF00B4CC), Color(0xFF00D1ED), Color(0xFF62F0FF)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      );
 
   // ── Event Type Colors ───────────────────────────────────────
   static Color eventTypeColor(String type) {
@@ -56,10 +69,6 @@ class EventsTheme {
   static Color eventTypeLightColor(String type) {
     return eventTypeColor(type).withValues(alpha: 0.12);
   }
-
-  // ── Shimmer ─────────────────────────────────────────────────
-  static const Color shimmerBase = Color(0xFFE8E8E8);
-  static const Color shimmerHighlight = Color(0xFFF5F5F5);
 
   // ── Spacing tokens ──────────────────────────────────────────
   static const double pagePadding = 20.0;

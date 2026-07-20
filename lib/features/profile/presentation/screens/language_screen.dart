@@ -7,6 +7,20 @@ import '../../../../core/localization/translations.dart';
 class LanguageScreen extends ConsumerWidget {
   const LanguageScreen({super.key});
 
+  static const _options = <({String code, String label, String native})>[
+    (code: 'en', label: 'English', native: 'English'),
+    (code: 'fr', label: 'Français', native: 'Français'),
+    (code: 'ar', label: 'العربية', native: 'العربية (دارجة)'),
+    (code: 'es', label: 'Español', native: 'Español'),
+    (code: 'nl', label: 'Nederlands', native: 'Nederlands'),
+    (code: 'pt', label: 'Português', native: 'Português'),
+    (code: 'zh', label: 'Chinese', native: '中文'),
+    (code: 'ru', label: 'Russian', native: 'Русский'),
+    (code: 'de', label: 'German', native: 'Deutsch'),
+    (code: 'ja', label: 'Japanese', native: '日本語'),
+    (code: 'ko', label: 'Korean', native: '한국어'),
+  ];
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final lang = ref.watch(localeProvider);
@@ -25,57 +39,20 @@ class LanguageScreen extends ConsumerWidget {
         elevation: 0,
         iconTheme: IconThemeData(color: AppColors.textPrimary),
       ),
-      body: ListView(
+      body: ListView.separated(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-        children: [
-          _LangOption(
-            code: 'en',
-            label: 'English',
-            native: 'English',
+        itemCount: _options.length,
+        separatorBuilder: (context, index) => const SizedBox(height: 10),
+        itemBuilder: (context, index) {
+          final option = _options[index];
+          return _LangOption(
+            code: option.code,
+            label: option.label,
+            native: option.native,
             currentLang: lang,
             ref: ref,
-          ),
-          const SizedBox(height: 10),
-          _LangOption(
-            code: 'fr',
-            label: 'Français',
-            native: 'Français',
-            currentLang: lang,
-            ref: ref,
-          ),
-          const SizedBox(height: 10),
-          _LangOption(
-            code: 'ar',
-            label: 'العربية',
-            native: 'العربية (دارجة)',
-            currentLang: lang,
-            ref: ref,
-          ),
-          const SizedBox(height: 10),
-          _LangOption(
-            code: 'es',
-            label: 'Español',
-            native: 'Español',
-            currentLang: lang,
-            ref: ref,
-          ),
-          const SizedBox(height: 10),
-          _LangOption(
-            code: 'nl',
-            label: 'Nederlands',
-            native: 'Nederlands',
-            currentLang: lang,
-            ref: ref,
-          ),
-          const SizedBox(height: 10),
-          _LangOption(
-            code: 'pt',
-            label: 'Português',
-            native: 'Português',
-            currentLang: lang,
-            ref: ref,
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -169,6 +146,22 @@ class _LanguageFlag extends StatelessWidget {
     );
   }
 
+  Widget _letterBadge(String letters, Color bg) {
+    return Container(
+      color: bg,
+      alignment: Alignment.center,
+      child: Text(
+        letters,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+          height: 1,
+        ),
+      ),
+    );
+  }
+
   Widget _buildFlag() {
     switch (code) {
       case 'fr':
@@ -234,21 +227,44 @@ class _LanguageFlag extends StatelessWidget {
             ),
           ],
         );
-      case 'en':
-      default:
+      case 'zh':
+        return _letterBadge('中文', const Color(0xFFDE2910));
+      case 'ru':
+        return const Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(child: ColoredBox(color: Color(0xFFFFFFFF))),
+            Expanded(child: ColoredBox(color: Color(0xFF0039A6))),
+            Expanded(child: ColoredBox(color: Color(0xFFD52B1E))),
+          ],
+        );
+      case 'de':
+        return const Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(child: ColoredBox(color: Color(0xFF000000))),
+            Expanded(child: ColoredBox(color: Color(0xFFDD0000))),
+            Expanded(child: ColoredBox(color: Color(0xFFFFCE00))),
+          ],
+        );
+      case 'ja':
         return Container(
-          color: const Color(0xFF012169),
+          color: Colors.white,
           alignment: Alignment.center,
-          child: const Text(
-            'EN',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
-              height: 1,
+          child: Container(
+            width: 12,
+            height: 12,
+            decoration: const BoxDecoration(
+              color: Color(0xFFBC002D),
+              shape: BoxShape.circle,
             ),
           ),
         );
+      case 'ko':
+        return _letterBadge('한', const Color(0xFF003478));
+      case 'en':
+      default:
+        return _letterBadge('EN', const Color(0xFF012169));
     }
   }
 }

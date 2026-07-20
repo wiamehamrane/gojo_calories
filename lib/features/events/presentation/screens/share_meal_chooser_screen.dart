@@ -20,7 +20,7 @@ class ShareMealChooserScreen extends StatelessWidget {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(
+          icon: Icon(
             LucideIcons.chevronLeft,
             size: 24,
             color: AppColors.textPrimary,
@@ -30,7 +30,7 @@ class ShareMealChooserScreen extends StatelessWidget {
             context.pop();
           },
         ),
-        title: const Text(
+        title: Text(
           'Share a meal',
           style: TextStyle(
             fontSize: 17,
@@ -46,7 +46,7 @@ class ShareMealChooserScreen extends StatelessWidget {
           child: Column(
             children: [
               const Spacer(flex: 2),
-              const Text(
+              Text(
                 'How do you want to share?',
                 textAlign: TextAlign.center,
                 style: TextStyle(
@@ -60,7 +60,7 @@ class ShareMealChooserScreen extends StatelessWidget {
                   .fadeIn(duration: 420.ms, curve: Curves.easeOut)
                   .slideY(begin: 0.18, end: 0, duration: 420.ms, curve: Curves.easeOutCubic),
               const SizedBox(height: 10),
-              const Text(
+              Text(
                 'Share something you already logged, or create a new community meal from scratch.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
@@ -209,7 +209,7 @@ class _SquareOptionState extends State<_SquareOption> {
                 textAlign: TextAlign.center,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
                   height: 1.2,
@@ -222,7 +222,7 @@ class _SquareOptionState extends State<_SquareOption> {
                 textAlign: TextAlign.center,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
                   height: 1.3,
                   color: AppColors.textSecondary,

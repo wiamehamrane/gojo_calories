@@ -140,7 +140,7 @@ class _ShareMealScreenState extends ConsumerState<ShareMealScreen> {
       HapticFeedback.mediumImpact();
       context.pop();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text('Meal shared with the community! 🍽️'),
           backgroundColor: AppColors.primaryDark,
         ),
@@ -161,7 +161,7 @@ class _ShareMealScreenState extends ConsumerState<ShareMealScreen> {
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
-          title: const Text(
+          title: Text(
             'Share a meal',
             style: TextStyle(
               fontSize: 17,
@@ -171,7 +171,7 @@ class _ShareMealScreenState extends ConsumerState<ShareMealScreen> {
           ),
           backgroundColor: AppColors.background,
           elevation: 0,
-          iconTheme: const IconThemeData(color: AppColors.textPrimary),
+          iconTheme: IconThemeData(color: AppColors.textPrimary),
         ),
         body: ListView(
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
@@ -274,7 +274,7 @@ class _ShareMealScreenState extends ConsumerState<ShareMealScreen> {
           image: preview,
         ),
         child: preview == null
-            ? const Column(
+            ? Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(LucideIcons.camera, size: 32, color: AppColors.inactive),
@@ -311,7 +311,7 @@ class _ShareMealScreenState extends ConsumerState<ShareMealScreen> {
       padding: const EdgeInsets.only(bottom: 8),
       child: Text(
         text,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.w700,
           color: AppColors.textPrimary,
@@ -330,10 +330,10 @@ class _ShareMealScreenState extends ConsumerState<ShareMealScreen> {
       maxLines: maxLines,
       textInputAction:
           maxLines == 1 ? TextInputAction.next : TextInputAction.newline,
-      style: const TextStyle(fontSize: 15, color: AppColors.textPrimary),
+      style: TextStyle(fontSize: 15, color: AppColors.textPrimary),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(
+        hintStyle: TextStyle(
           color: AppColors.textPlaceholder,
           fontSize: 14,
         ),
@@ -341,15 +341,15 @@ class _ShareMealScreenState extends ConsumerState<ShareMealScreen> {
         fillColor: AppColors.surface,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.border),
+          borderSide: BorderSide(color: AppColors.border),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.border),
+          borderSide: BorderSide(color: AppColors.border),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.primary),
+          borderSide: BorderSide(color: AppColors.primary),
         ),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -364,14 +364,14 @@ class _ShareMealScreenState extends ConsumerState<ShareMealScreen> {
       textAlign: TextAlign.center,
       textInputAction: TextInputAction.done,
       onSubmitted: (_) => FocusManager.instance.primaryFocus?.unfocus(),
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 14,
         fontWeight: FontWeight.w600,
         color: AppColors.textPrimary,
       ),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(
+        hintStyle: TextStyle(
           color: AppColors.textPlaceholder,
           fontSize: 11,
         ),
@@ -379,15 +379,15 @@ class _ShareMealScreenState extends ConsumerState<ShareMealScreen> {
         fillColor: AppColors.surface,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.border),
+          borderSide: BorderSide(color: AppColors.border),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.border),
+          borderSide: BorderSide(color: AppColors.border),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.primary),
+          borderSide: BorderSide(color: AppColors.primary),
         ),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 6, vertical: 12),

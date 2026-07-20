@@ -19,7 +19,7 @@ load_dotenv()
 
 os.makedirs("uploads", exist_ok=True)
 
-from routes import vision, auth, stats, groups, referrals, payments, notifications, exercises, recipes, events, apple_iap, google_iap, memories, feed, friends, clan, shares, shared_meals, users, progress_photos
+from routes import vision, auth, stats, groups, referrals, payments, notifications, exercises, recipes, events, apple_iap, google_iap, memories, feed, friends, clan, shares, shared_meals, users, coaches, progress_photos
 from routes.admin import router as admin_router
 
 # Durable media storage check — local /uploads is wiped on every ECS redeploy.
@@ -393,6 +393,48 @@ try:
                 joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_coach BOOLEAN DEFAULT FALSE;"))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS coaches (
+                id VARCHAR(36) PRIMARY KEY,
+                user_id VARCHAR(36) NOT NULL UNIQUE REFERENCES users(id),
+                bio TEXT,
+                specialties JSON,
+                gender VARCHAR,
+                experience_years INTEGER,
+                photo_url VARCHAR,
+                phone VARCHAR,
+                latitude FLOAT,
+                longitude FLOAT,
+                city VARCHAR,
+                languages JSON,
+                coaching_mode VARCHAR,
+                is_active BOOLEAN DEFAULT FALSE,
+                subscription_plan VARCHAR,
+                subscription_expires_at TIMESTAMP,
+                subscription_source VARCHAR,
+                apple_original_transaction_id VARCHAR,
+                google_order_id VARCHAR,
+                google_purchase_token VARCHAR,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_coaches_user_id ON coaches (user_id);"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_coaches_is_active ON coaches (is_active);"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_coaches_gender ON coaches (gender);"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_is_coach ON users (is_coach);"))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS coach_works (
+                id VARCHAR(36) PRIMARY KEY,
+                coach_id VARCHAR(36) NOT NULL REFERENCES coaches(id) ON DELETE CASCADE,
+                before_url VARCHAR NOT NULL,
+                after_url VARCHAR NOT NULL,
+                caption VARCHAR,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_coach_works_coach_id ON coach_works (coach_id);"))
         # Ensure daily_stats has all expected columns
         conn.execute(text("""
             DO $$ BEGIN
@@ -553,6 +595,7 @@ app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(payments.router, prefix="/api/payments", tags=["Payments"])
 app.include_router(clan.router, prefix="/api/clan", tags=["Clan"])
 app.include_router(shares.router, prefix="/api/shares", tags=["Share Access"])
+app.include_router(coaches.router, prefix="/api/coaches", tags=["Coaches"])
 app.include_router(apple_iap.router, prefix="/api/payments/apple", tags=["Apple IAP"])
 app.include_router(google_iap.router, prefix="/api/payments/google", tags=["Google IAP"])
 

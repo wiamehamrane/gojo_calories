@@ -27,7 +27,7 @@ class LegalScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w700,
             color: AppColors.textPrimary,
@@ -35,12 +35,12 @@ class LegalScreen extends ConsumerWidget {
         ),
         backgroundColor: AppColors.background,
         elevation: 0,
-        iconTheme: const IconThemeData(color: AppColors.textPrimary),
+        iconTheme: IconThemeData(color: AppColors.textPrimary),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
         children: [
-          const Text(
+          Text(
             'Last updated: July 16, 2026',
             style: TextStyle(
               fontSize: 13,
@@ -52,7 +52,7 @@ class LegalScreen extends ConsumerWidget {
           for (final section in sections) ...[
             Text(
               section.title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
                 color: AppColors.textPrimary,
@@ -61,7 +61,7 @@ class LegalScreen extends ConsumerWidget {
             const SizedBox(height: 6),
             Text(
               section.body,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
                 height: 1.5,
                 color: AppColors.textSecondary,

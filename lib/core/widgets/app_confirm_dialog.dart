@@ -53,6 +53,7 @@ class AppConfirmDialog extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(AppRadius.card),
+          border: Border.all(color: AppColors.border.withValues(alpha: 0.8)),
           boxShadow: AppShadows.cardElevated,
         ),
         child: Column(
