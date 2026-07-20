@@ -214,12 +214,12 @@ class _GuidedCaptureScreenState extends ConsumerState<GuidedCaptureScreen> {
           _uploaded.isEmpty
               ? 'You haven\'t saved any shots yet.'
               : '${_uploaded.length} of ${_poses.length} shots are already saved. You can finish the rest later.',
-          style: const TextStyle(color: kInkSoft, height: 1.4),
+          style: TextStyle(color: kInkSoft, height: 1.4),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Keep going', style: TextStyle(color: kInkSoft)),
+            child: Text('Keep going', style: TextStyle(color: kInkSoft)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -304,7 +304,7 @@ class _GuidedCaptureScreenState extends ConsumerState<GuidedCaptureScreen> {
         children: [
           IconButton(
             onPressed: _busy ? null : _confirmClose,
-            icon: const Icon(LucideIcons.x, color: kInk),
+            icon: Icon(LucideIcons.x, color: kInk),
           ),
           Expanded(
             child: Column(
@@ -391,7 +391,7 @@ class _GuidedCaptureScreenState extends ConsumerState<GuidedCaptureScreen> {
                         Icon(_current.icon, size: 14, color: kAccent),
                         const SizedBox(width: 6),
                         Text(_current.label,
-                            style: const TextStyle(
+                            style: TextStyle(
                                 color: kAccent,
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600)),
@@ -406,9 +406,9 @@ class _GuidedCaptureScreenState extends ConsumerState<GuidedCaptureScreen> {
         const SizedBox(height: 22),
         Text(_current.instruction,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: kInk, fontSize: 15.5, height: 1.45)),
+            style: TextStyle(color: kInk, fontSize: 15.5, height: 1.45)),
         const SizedBox(height: 8),
-        const Text('Same spot, same distance, same light each day.',
+        Text('Same spot, same distance, same light each day.',
             textAlign: TextAlign.center,
             style: TextStyle(color: kMuted, fontSize: 12.5)),
         const SizedBox(height: 16),
@@ -450,7 +450,7 @@ class _GuidedCaptureScreenState extends ConsumerState<GuidedCaptureScreen> {
                           saved
                               ? '${_current.label} saved'
                               : '${_current.label} captured',
-                          style: const TextStyle(
+                          style: TextStyle(
                               color: kInk,
                               fontSize: 12,
                               fontWeight: FontWeight.w600),
@@ -478,7 +478,7 @@ class _GuidedCaptureScreenState extends ConsumerState<GuidedCaptureScreen> {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
       child: _busy
-          ? const SizedBox(
+          ? SizedBox(
               height: 54,
               child: Center(
                 child: CircularProgressIndicator(
@@ -511,7 +511,7 @@ class _GuidedCaptureScreenState extends ConsumerState<GuidedCaptureScreen> {
                             border: Border.all(color: kHair),
                             color: kSurface,
                           ),
-                          child: const Text('Retake',
+                          child: Text('Retake',
                               style: TextStyle(
                                   color: kInk, fontWeight: FontWeight.w600)),
                         ),

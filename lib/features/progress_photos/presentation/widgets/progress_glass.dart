@@ -1,54 +1,54 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:google_fonts/google_fonts.dart';
 
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_shadows.dart';
 import '../../domain/models/progress_photo.dart';
 
-/// Progress journal visual system — aligned with Gojo teal, modern geometric
-/// type (Sora + DM Sans), soft cards, lively motion.
-const Color kPaper = Color(0xFFF2F2F7);
-const Color kSurface = Color(0xFFFFFFFF);
-const Color kInk = Color(0xFF0A0A0A);
-const Color kInkSoft = Color(0xFF6B6B6B);
-const Color kMuted = Color(0xFF9E9E9E);
-const Color kHair = Color(0xFFE8E8E8);
-const Color kAccent = Color(0xFF007D8F);
-const Color kAccentBright = Color(0xFF00B4CC);
-const Color kAccentSoft = Color(0xFFE0F8FB);
-const Color kDanger = Color(0xFFE53935);
+/// Progress journal tokens — theme-aware (follow [AppColors] light/dark).
+Color get kPaper => AppColors.background;
+Color get kSurface => AppColors.surface;
+Color get kInk => AppColors.textPrimary;
+Color get kInkSoft => AppColors.textSecondary;
+Color get kMuted => AppColors.inactive;
+Color get kHair => AppColors.border;
+Color get kAccent => AppColors.primaryDark;
+Color get kAccentBright => AppColors.primary;
+Color get kAccentSoft => AppColors.primaryLight;
+const Color kDanger = AppColors.danger;
 
-/// Display / titles — geometric, modern, premium (Sora).
+/// Titles — system font, same weights as the rest of the app.
 TextStyle display({
   double size = 16,
   FontWeight weight = FontWeight.w700,
-  Color color = kInk,
+  Color? color,
   double? height,
   double? spacing,
   FontStyle? style,
 }) {
-  return GoogleFonts.sora(
+  return TextStyle(
     fontSize: size,
     fontWeight: weight,
-    color: color,
+    color: color ?? kInk,
     height: height,
     letterSpacing: spacing,
     fontStyle: style,
   );
 }
 
-/// Body / UI labels — clean readable (DM Sans).
+/// Body / UI labels.
 TextStyle body({
   double size = 14,
   FontWeight weight = FontWeight.w500,
-  Color color = kInkSoft,
+  Color? color,
   double? height,
   double? spacing,
 }) {
-  return GoogleFonts.dmSans(
+  return TextStyle(
     fontSize: size,
     fontWeight: weight,
-    color: color,
+    color: color ?? kInkSoft,
     height: height,
     letterSpacing: spacing,
   );
@@ -58,7 +58,7 @@ TextStyle body({
 TextStyle serif({
   double size = 16,
   FontWeight weight = FontWeight.w700,
-  Color color = kInk,
+  Color? color,
   double? height,
   double? spacing,
   FontStyle? style,
@@ -72,27 +72,21 @@ TextStyle serif({
       style: style,
     );
 
-/// Small section label — DM Sans, tracked, uppercase.
 class Eyebrow extends StatelessWidget {
   final String text;
-  final Color color;
-  const Eyebrow(this.text, {super.key, this.color = kMuted});
+  final Color? color;
+  const Eyebrow(this.text, {super.key, this.color});
 
   @override
   Widget build(BuildContext context) {
     return Text(
-      text.toUpperCase(),
-      style: body(
-        size: 11,
-        weight: FontWeight.w700,
-        color: color,
-        spacing: 1.4,
-      ),
+      text,
+      style: body(size: 13, weight: FontWeight.w500, color: color ?? kMuted),
     );
   }
 }
 
-/// Soft rounded card with a light teal wash shadow.
+/// White card matching soft profile-photo sheet cards.
 class EditorialCard extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry padding;
@@ -101,8 +95,8 @@ class EditorialCard extends StatelessWidget {
   const EditorialCard({
     super.key,
     required this.child,
-    this.padding = const EdgeInsets.all(20),
-    this.radius = 22,
+    this.padding = const EdgeInsets.all(18),
+    this.radius = 24,
     this.onTap,
   });
 
@@ -113,19 +107,8 @@ class EditorialCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: kSurface,
         borderRadius: BorderRadius.circular(radius),
-        border: Border.all(color: kHair.withValues(alpha: 0.85)),
-        boxShadow: [
-          BoxShadow(
-            color: kAccentBright.withValues(alpha: 0.06),
-            blurRadius: 24,
-            offset: const Offset(0, 10),
-          ),
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        border: Border.all(color: kHair),
+        boxShadow: AppShadows.cardShadow,
       ),
       child: child,
     );
@@ -201,7 +184,7 @@ class AnimatedProgressRing extends StatelessWidget {
     super.key,
     required this.count,
     required this.total,
-    this.size = 64,
+    this.size = 56,
     this.strokeWidth = 4,
   });
 
@@ -213,7 +196,7 @@ class AnimatedProgressRing extends StatelessWidget {
       height: size,
       child: TweenAnimationBuilder<double>(
         tween: Tween(end: target),
-        duration: const Duration(milliseconds: 560),
+        duration: const Duration(milliseconds: 520),
         curve: Curves.easeOutCubic,
         builder: (context, value, _) {
           return Stack(
@@ -225,8 +208,8 @@ class AnimatedProgressRing extends StatelessWidget {
                 child: CircularProgressIndicator(
                   value: value,
                   strokeWidth: strokeWidth,
-                  backgroundColor: kHair,
-                  valueColor: const AlwaysStoppedAnimation(kAccentBright),
+                  backgroundColor: AppColors.ringTrack,
+                  valueColor: AlwaysStoppedAnimation(kAccentBright),
                   strokeCap: StrokeCap.round,
                 ),
               ),
@@ -266,7 +249,7 @@ class SoftPulse extends StatefulWidget {
     required this.child,
     this.enabled = true,
     this.minScale = 1.0,
-    this.maxScale = 1.018,
+    this.maxScale = 1.015,
     this.duration = const Duration(milliseconds: 1400),
   });
 
@@ -328,8 +311,8 @@ class SoftEntrance extends StatelessWidget {
     super.key,
     required this.child,
     this.delay = Duration.zero,
-    this.duration = const Duration(milliseconds: 420),
-    this.beginY = 0.04,
+    this.duration = const Duration(milliseconds: 380),
+    this.beginY = 0.03,
   });
 
   @override
@@ -348,19 +331,20 @@ class SoftEntrance extends StatelessWidget {
 
 class PoseSilhouettePainter extends CustomPainter {
   final BodyPose pose;
-  final Color color;
+  final Color? color;
 
-  PoseSilhouettePainter(this.pose, {this.color = kAccent});
+  PoseSilhouettePainter(this.pose, {this.color});
 
   @override
   void paint(Canvas canvas, Size size) {
+    final c = color ?? kAccent;
     final paint = Paint()
       ..style = PaintingStyle.fill
-      ..color = color.withValues(alpha: 0.14);
+      ..color = c.withValues(alpha: 0.14);
     final stroke = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2
-      ..color = color.withValues(alpha: 0.5);
+      ..color = c.withValues(alpha: 0.5);
 
     final cx = size.width / 2;
     final h = size.height;
