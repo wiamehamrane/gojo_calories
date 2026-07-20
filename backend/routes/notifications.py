@@ -177,3 +177,19 @@ def trigger_nutrition_check(payload: NutritionCheckPayload, db: Session = Depend
         raise HTTPException(status_code=403, detail="Invalid admin key")
     from services.smart_nutrition_service import run_nutrition_check
     return run_nutrition_check(db)
+
+
+# ─── Progress-photo evening reminder ─────────────────────────────────────────
+
+@router.post("/progress-photo-check")
+def trigger_progress_photo_check(payload: NutritionCheckPayload, db: Session = Depends(get_db)):
+    """Manually trigger the evening body-photo reminder pass.
+
+    The same pass runs automatically at PROGRESS_PHOTO_REMINDER_HOUR local time
+    via the in-process scheduler (see main.py). Each active user who hasn't
+    completed today's 4 guided poses gets one nudge.
+    """
+    if payload.admin_key != ADMIN_API_KEY:
+        raise HTTPException(status_code=403, detail="Invalid admin key")
+    from services.progress_reminder_service import run_progress_photo_reminder
+    return run_progress_photo_reminder(db)

@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Body Journal — Premium Preview</title>
+<style>
+  :root{
+    --teal:#00E0C6; --teal-deep:#00B4A6; --ink:#05100F;
+    --glass:rgba(255,255,255,0.08); --glass-2:rgba(255,255,255,0.05);
+    --stroke:rgba(255,255,255,0.14); --stroke-2:rgba(255,255,255,0.08);
+    --txt:#F4FBFA; --muted:rgba(244,251,250,0.62); --faint:rgba(244,251,250,0.4);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:-apple-system,"SF Pro Display","Segoe UI",Roboto,system-ui,sans-serif;
+    color:var(--txt);
+    background:
+      radial-gradient(120% 80% at 15% -10%, #0c3b39 0%, transparent 55%),
+      radial-gradient(120% 90% at 90% 10%, #123a53 0%, transparent 50%),
+      linear-gradient(180deg,#06110f 0%,#04100f 40%,#020a0a 100%);
+    background-attachment:fixed;
+    min-height:100vh;
+    display:flex;justify-content:center;
+  }
+  .phone{width:100%;max-width:430px;min-height:100vh;padding:0 18px 40px;position:relative;overflow-x:hidden;}
+  .statusbar{display:flex;justify-content:space-between;align-items:center;padding:14px 4px 6px;font-size:13px;font-weight:600;color:var(--txt);}
+  .statusbar .right{display:flex;gap:6px;align-items:center;font-size:12px;}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:6px 2px 2px;}
+  .iconbtn{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+    background:var(--glass);border:1px solid var(--stroke);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);}
+  .topbar h2{font-size:15px;font-weight:600;margin:0;letter-spacing:.2px;}
+
+  h1{font-size:30px;font-weight:800;letter-spacing:-1px;margin:14px 2px 8px;line-height:1.05;}
+  .chip{display:inline-flex;gap:6px;align-items:center;font-size:12px;font-weight:600;color:var(--teal);
+    background:rgba(0,224,198,0.1);border:1px solid rgba(0,224,198,0.25);padding:6px 11px;border-radius:20px;}
+
+  .seg{display:flex;gap:4px;margin:18px 0 20px;padding:5px;border-radius:16px;
+    background:var(--glass-2);border:1px solid var(--stroke-2);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);}
+  .seg button{flex:1;border:0;background:transparent;color:var(--muted);font-size:12.5px;font-weight:600;
+    padding:9px 4px;border-radius:12px;cursor:pointer;transition:.22s;font-family:inherit;letter-spacing:.2px;}
+  .seg button.on{background:linear-gradient(180deg,rgba(0,224,198,0.9),rgba(0,180,166,0.9));color:#022;box-shadow:0 6px 18px -6px rgba(0,224,198,0.6);}
+
+  .card{background:var(--glass);border:1px solid var(--stroke);border-radius:24px;
+    backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);
+    box-shadow:0 20px 50px -30px rgba(0,0,0,0.9), inset 0 1px 0 rgba(255,255,255,0.08);}
+
+  /* Hero */
+  .hero{padding:20px;margin-bottom:22px;position:relative;overflow:hidden;}
+  .hero:before{content:"";position:absolute;inset:0;background:
+    radial-gradient(90% 120% at 100% 0%, rgba(0,224,198,0.18), transparent 60%);pointer-events:none;}
+  .hero .row{display:flex;align-items:center;gap:16px;position:relative;}
+  .ring{width:66px;height:66px;flex:none;}
+  .hero h3{margin:0;font-size:19px;font-weight:700;letter-spacing:-.3px;}
+  .hero p{margin:3px 0 0;font-size:12.5px;color:var(--muted);line-height:1.35;}
+  .poses{display:flex;gap:8px;margin:18px 0 16px;position:relative;}
+  .pose{flex:1;text-align:center;}
+  .pdot{width:44px;height:44px;margin:0 auto 7px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    border:1.5px solid var(--stroke);background:var(--glass-2);font-size:17px;}
+  .pose.done .pdot{background:#fff;color:#044;border-color:#fff;}
+  .pose small{font-size:10.5px;color:var(--muted);font-weight:600;}
+  .pose.done small{color:var(--txt);}
+  .cta{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;padding:15px;border:0;cursor:pointer;
+    border-radius:15px;font-family:inherit;font-size:15.5px;font-weight:700;color:#033;
+    background:linear-gradient(180deg,#fff,#dff8f4);box-shadow:0 10px 26px -12px rgba(0,224,198,0.7);position:relative;}
+
+  /* Timeline day */
+  .dayhead{display:flex;align-items:center;gap:9px;margin:6px 2px 12px;}
+  .daydot{width:8px;height:8px;border-radius:50%;background:var(--teal);}
+  .daydot.old{background:var(--faint);}
+  .dayhead b{font-size:15px;font-weight:700;}
+  .dayhead span{font-size:12.5px;color:var(--muted);}
+  .badge{margin-left:auto;font-size:11.5px;font-weight:700;padding:4px 9px;border-radius:9px;
+    background:rgba(0,224,198,0.12);color:var(--teal);border:1px solid rgba(0,224,198,0.22);}
+  .badge.part{background:var(--glass-2);color:var(--muted);border-color:var(--stroke-2);}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-bottom:26px;}
+  .tile{aspect-ratio:3/4;border-radius:18px;overflow:hidden;position:relative;border:1px solid var(--stroke-2);
+    background:linear-gradient(160deg,#0e2422,#0a1a1c);display:flex;align-items:flex-end;}
+  .tile.empty{border:1.4px dashed var(--stroke);background:var(--glass-2);align-items:center;justify-content:center;flex-direction:column;gap:7px;}
+  .tile.empty i{font-size:22px;color:var(--faint);}
+  .tile.empty em{font-size:11px;color:var(--faint);font-style:normal;font-weight:600;}
+  .tile .lbl{position:relative;z-index:2;width:100%;padding:8px 10px;font-size:11.5px;font-weight:700;
+    background:linear-gradient(0deg,rgba(0,0,0,0.6),transparent);}
+  .silh{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;}
+  .silh svg{height:82%;opacity:.9;}
+
+  /* Compare */
+  .subhead{font-size:13px;color:var(--muted);font-weight:600;margin:2px 2px 12px;}
+  .presets{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:16px;scrollbar-width:none;}
+  .presets::-webkit-scrollbar{display:none;}
+  .presets button{flex:none;padding:9px 15px;border-radius:20px;font-size:12.5px;font-weight:600;font-family:inherit;cursor:pointer;
+    background:var(--glass);border:1px solid var(--stroke);color:var(--muted);}
+  .presets button.on{background:rgba(0,224,198,0.16);border-color:rgba(0,224,198,0.4);color:var(--teal);}
+  .cmp{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;}
+  .cmp .frame{border-radius:20px;overflow:hidden;border:1px solid var(--stroke);position:relative;
+    background:linear-gradient(160deg,#0e2422,#0a1a1c);aspect-ratio:3/4.4;}
+  .cmp .tag{position:absolute;top:10px;left:10px;z-index:2;font-size:11px;font-weight:700;padding:5px 9px;border-radius:9px;
+    background:rgba(0,0,0,0.5);backdrop-filter:blur(8px);}
+  .cmp .tag.now{background:rgba(0,224,198,0.85);color:#022;}
+  .cmp .date{position:absolute;bottom:10px;left:10px;z-index:2;font-size:12px;font-weight:600;}
+  .poseswitch{display:flex;gap:6px;margin-bottom:18px;padding:5px;border-radius:14px;background:var(--glass-2);border:1px solid var(--stroke-2);}
+  .poseswitch button{flex:1;border:0;background:transparent;color:var(--muted);font-size:12px;font-weight:600;padding:8px 2px;border-radius:10px;cursor:pointer;font-family:inherit;}
+  .poseswitch button.on{background:var(--glass);color:var(--txt);border:1px solid var(--stroke);}
+  .deltacard{padding:16px 18px;display:flex;align-items:center;gap:14px;}
+  .deltacard .big{font-size:26px;font-weight:800;color:var(--teal);letter-spacing:-.5px;}
+  .deltacard .lab{font-size:12.5px;color:var(--muted);line-height:1.35;}
+
+  /* Calendar */
+  .calnav{display:flex;align-items:center;justify-content:space-between;margin:2px 4px 16px;}
+  .calnav b{font-size:16px;font-weight:700;}
+  .calnav .iconbtn{width:34px;height:34px;border-radius:10px;}
+  .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:7px;margin-bottom:22px;}
+  .cal .dow{font-size:10.5px;color:var(--faint);text-align:center;font-weight:700;padding-bottom:4px;}
+  .cal .cell{aspect-ratio:1;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    font-size:13px;font-weight:600;background:var(--glass-2);border:1px solid transparent;position:relative;cursor:pointer;color:var(--muted);}
+  .cal .cell.has{color:var(--txt);background:var(--glass);border-color:var(--stroke-2);}
+  .cal .cell.full:after{content:"";position:absolute;bottom:6px;width:5px;height:5px;border-radius:50%;background:var(--teal);}
+  .cal .cell.part:after{content:"";position:absolute;bottom:6px;width:5px;height:5px;border-radius:50%;background:var(--faint);}
+  .cal .cell.sel{background:linear-gradient(180deg,var(--teal),var(--teal-deep));color:#022;border-color:transparent;}
+  .cal .cell.blank{background:transparent;border:0;cursor:default;}
+
+  /* Scrub */
+  .scrubframe{border-radius:24px;overflow:hidden;border:1px solid var(--stroke);position:relative;aspect-ratio:3/4;margin-bottom:18px;
+    background:linear-gradient(160deg,#0e2422,#0a1a1c);}
+  .scrubframe .stamp{position:absolute;top:14px;left:14px;z-index:3;font-size:13px;font-weight:700;padding:7px 12px;border-radius:11px;
+    background:rgba(0,0,0,0.45);backdrop-filter:blur(10px);}
+  .scrubframe .stamp small{display:block;font-size:10.5px;color:var(--teal);font-weight:600;margin-top:1px;}
+  input[type=range]{-webkit-appearance:none;width:100%;height:6px;border-radius:6px;margin:6px 0 4px;
+    background:linear-gradient(90deg,var(--teal) 0%,var(--teal) var(--pct,60%),rgba(255,255,255,0.14) var(--pct,60%));}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:50%;background:#fff;
+    border:4px solid var(--teal-deep);box-shadow:0 4px 12px rgba(0,0,0,0.5);cursor:pointer;}
+  .scrubends{display:flex;justify-content:space-between;font-size:11.5px;color:var(--faint);font-weight:600;padding:0 2px;}
+
+  .view{display:none;animation:fade .28s ease;}
+  .view.on{display:block;}
+  @keyframes fade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+  .note{font-size:11px;color:var(--faint);text-align:center;margin-top:26px;line-height:1.5;}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="statusbar"><span>15:25</span><span class="right">5G &nbsp; 85% ▮</span></div>
+
+  <div class="topbar">
+    <div class="iconbtn">‹</div>
+    <h2>Progress</h2>
+    <div class="iconbtn">⋯</div>
+  </div>
+
+  <h1>Your body<br>journal</h1>
+  <span class="chip">🔒 Private to you</span>
+
+  <div class="seg">
+    <button class="on" data-v="journal">Journal</button>
+    <button data-v="compare">Compare</button>
+    <button data-v="calendar">Calendar</button>
+    <button data-v="scrub">Scrub</button>
+  </div>
+
+  <!-- JOURNAL -->
+  <div class="view on" id="journal">
+    <div class="card hero">
+      <div class="row">
+        <svg class="ring" viewBox="0 0 36 36">
+          <circle cx="18" cy="18" r="15.5" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="3.4"/>
+          <circle cx="18" cy="18" r="15.5" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round"
+            stroke-dasharray="97.4" stroke-dashoffset="48.7" transform="rotate(-90 18 18)"/>
+          <text x="18" y="21.5" text-anchor="middle" font-size="10" font-weight="800" fill="#fff">2/4</text>
+        </svg>
+        <div>
+          <h3>Today's photos</h3>
+          <p>2 of 4 angles done — finish your sides &amp; back.</p>
+        </div>
+      </div>
+      <div class="poses">
+        <div class="pose done"><div class="pdot">✓</div><small>Front</small></div>
+        <div class="pose done"><div class="pdot">✓</div><small>Left</small></div>
+        <div class="pose"><div class="pdot">→</div><small>Right</small></div>
+        <div class="pose"><div class="pdot">◐</div><small>Back</small></div>
+      </div>
+      <button class="cta">📷 &nbsp;Continue (2 left)</button>
+    </div>
+
+    <div class="dayhead"><span class="daydot"></span><b>Today</b><span>Jul 18</span><span class="badge part">2/4</span></div>
+    <div class="grid2">
+      <div class="tile"><div class="silh">SILH_FRONT</div><div class="lbl">Front</div></div>
+      <div class="tile"><div class="silh">SILH_LEFT</div><div class="lbl">Left side</div></div>
+      <div class="tile empty"><i>→</i><em>Right · not taken</em></div>
+      <div class="tile empty"><i>◐</i><em>Back · not taken</em></div>
+    </div>
+
+    <div class="dayhead"><span class="daydot old"></span><b>Yesterday</b><span>Jul 17</span><span class="badge">4/4</span></div>
+    <div class="grid2">
+      <div class="tile"><div class="silh">SILH_FRONT</div><div class="lbl">Front</div></div>
+      <div class="tile"><div class="silh">SILH_LEFT</div><div class="lbl">Left side</div></div>
+      <div class="tile"><div class="silh">SILH_RIGHT</div><div class="lbl">Right side</div></div>
+      <div class="tile"><div class="silh">SILH_BACK</div><div class="lbl">Back</div></div>
+    </div>
+  </div>
+
+  <!-- COMPARE -->
+  <div class="view" id="compare">
+    <div class="subhead">See how far you've come — pick a range.</div>
+    <div class="presets">
+      <button>1 week</button><button>1 month</button>
+      <button class="on">3 months</button><button>6 months</button><button>1 year</button>
+    </div>
+    <div class="cmp">
+      <div class="frame"><span class="tag">3 months ago</span><div class="silh" style="opacity:.55">SILH_BEFORE</div><span class="date">Apr 18</span></div>
+      <div class="frame"><span class="tag now">Now</span><div class="silh">SILH_AFTER</div><span class="date">Jul 18</span></div>
+    </div>
+    <div class="poseswitch">
+      <button class="on">Front</button><button>Left</button><button>Right</button><button>Back</button>
+    </div>
+    <div class="card deltacard">
+      <div class="big">−6.2 kg</div>
+      <div class="lab">Down from 84.0 kg to 77.8 kg<br>over these 3 months.</div>
+    </div>
+  </div>
+
+  <!-- CALENDAR -->
+  <div class="view" id="calendar">
+    <div class="subhead">Tap any day to view that day's photos.</div>
+    <div class="calnav"><div class="iconbtn">‹</div><b>July 2026</b><div class="iconbtn">›</div></div>
+    <div class="cal" id="calgrid"></div>
+    <div class="card" style="padding:14px 16px;">
+      <div class="dayhead" style="margin:0 0 12px;"><span class="daydot"></span><b>July 18</b><span>selected</span><span class="badge part">2/4</span></div>
+      <div class="grid2" style="margin:0;">
+        <div class="tile"><div class="silh">SILH_FRONT</div><div class="lbl">Front</div></div>
+        <div class="tile"><div class="silh">SILH_LEFT</div><div class="lbl">Left</div></div>
+        <div class="tile empty"><i>→</i><em>Right</em></div>
+        <div class="tile empty"><i>◐</i><em>Back</em></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRUB -->
+  <div class="view" id="scrub">
+    <div class="subhead">Drag to travel through time — front view.</div>
+    <div class="scrubframe">
+      <div class="stamp" id="scrubStamp">Jul 18, 2026<small id="scrubRel">Today</small></div>
+      <div class="silh" id="scrubImg">SILH_AFTER</div>
+    </div>
+    <input type="range" min="0" max="6" value="6" id="scrubRange" style="--pct:100%">
+    <div class="scrubends"><span>Jan</span><span>now</span></div>
+    <div class="poseswitch" style="margin-top:18px;">
+      <button class="on">Front</button><button>Left</button><button>Right</button><button>Back</button>
+    </div>
+  </div>
+
+  <div class="note">Interactive preview · glass / frosted direction<br>Placeholder silhouettes stand in for real photos.</div>
+</div>
+
+<script>
+  const bodySVG = (fill, w=64) => `<svg viewBox="0 0 80 200" width="${w}" xmlns="http://www.w3.org/2000/svg">
+    <g fill="${fill}"><circle cx="40" cy="24" r="15"/>
+    <path d="M20 44 q20 -8 40 0 l-6 70 q-14 6 -28 0 z"/>
+    <rect x="14" y="46" width="11" height="60" rx="5"/><rect x="55" y="46" width="11" height="60" rx="5"/>
+    <rect x="28" y="112" width="11" height="80" rx="5"/><rect x="41" y="112" width="11" height="80" rx="5"/></g></svg>`;
+  const bodyProfile = (fill, w=64, dir=1) => `<svg viewBox="0 0 80 200" width="${w}" xmlns="http://www.w3.org/2000/svg">
+    <g fill="${fill}" transform="${dir<0?'scale(-1,1) translate(-80,0)':''}"><circle cx="42" cy="24" r="14"/>
+    <path d="M30 44 q16 -4 22 4 q4 30 0 66 q-14 6 -24 0 q-2 -36 2 -70z"/>
+    <rect x="34" y="48" width="10" height="58" rx="5"/>
+    <rect x="30" y="112" width="11" height="80" rx="5"/></g></svg>`;
+
+  const T='rgba(0,224,198,0.85)', W='rgba(255,255,255,0.9)', M='rgba(150,220,215,0.7)';
+  const map={
+    SILH_FRONT:bodySVG(W), SILH_LEFT:bodyProfile(M,64,-1), SILH_RIGHT:bodyProfile(M,64,1),
+    SILH_BACK:bodySVG('rgba(120,200,195,0.65)'),
+    SILH_BEFORE:bodySVG('rgba(255,255,255,0.55)',72), SILH_AFTER:bodySVG(T,72)
+  };
+  document.querySelectorAll('.silh').forEach(el=>{const k=el.textContent.trim(); if(map[k]) el.innerHTML=map[k];});
+
+  document.querySelectorAll('.seg button').forEach(b=>b.onclick=()=>{
+    document.querySelectorAll('.seg button').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
+    document.getElementById(b.dataset.v).classList.add('on');
+    window.scrollTo({top:0,behavior:'smooth'});
+  });
+
+  // Pose switch toggles (visual only)
+  document.querySelectorAll('.poseswitch').forEach(sw=>sw.querySelectorAll('button').forEach(b=>b.onclick=()=>{
+    sw.querySelectorAll('button').forEach(x=>x.classList.remove('on')); b.classList.add('on');
+  }));
+  document.querySelectorAll('.presets button').forEach(b=>b.onclick=()=>{
+    document.querySelectorAll('.presets button').forEach(x=>x.classList.remove('on')); b.classList.add('on');
+  });
+
+  // Calendar
+  const grid=document.getElementById('calgrid');
+  ['S','M','T','W','T','F','S'].forEach(d=>{const e=document.createElement('div');e.className='dow';e.textContent=d;grid.appendChild(e);});
+  const firstDow=2; // July 1 2026 is a Wednesday
+  for(let i=0;i<firstDow;i++){const e=document.createElement('div');e.className='cell blank';grid.appendChild(e);}
+  const full=[2,3,5,6,9,10,11,13,14,16,17];
+  const part=[1,7,12,15];
+  for(let d=1;d<=31;d++){
+    const e=document.createElement('div');e.className='cell';
+    if(full.includes(d)){e.classList.add('has','full');}
+    else if(part.includes(d)){e.classList.add('has','part');}
+    if(d===18){e.classList.add('sel','has');}
+    e.innerHTML=d;
+    e.onclick=()=>{if(!e.classList.contains('blank')){grid.querySelectorAll('.cell').forEach(c=>c.classList.remove('sel'));e.classList.add('sel');}};
+    grid.appendChild(e);
+  }
+
+  // Scrub
+  const dates=['Jan 18','Feb 18','Mar 18','Apr 18','May 18','Jun 18','Jul 18'];
+  const rels=['6 months ago','5 months ago','4 months ago','3 months ago','2 months ago','1 month ago','Today'];
+  const rng=document.getElementById('scrubRange');
+  const shades=['rgba(255,255,255,0.4)','rgba(180,235,228,0.5)','rgba(150,228,218,0.55)','rgba(120,224,210,0.62)','rgba(80,224,205,0.72)','rgba(40,224,200,0.82)',T];
+  rng.oninput=()=>{
+    const v=+rng.value, pct=(v/6*100).toFixed(0);
+    rng.style.setProperty('--pct',pct+'%');
+    document.getElementById('scrubStamp').firstChild.textContent=dates[v]+', 2026';
+    document.getElementById('scrubRel').textContent=rels[v];
+    document.getElementById('scrubImg').innerHTML=bodySVG(shades[v],72);
+  };
+</script>
+</body>
+</html>

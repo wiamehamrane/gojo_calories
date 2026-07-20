@@ -142,6 +142,12 @@ class ProfileScreen extends ConsumerWidget {
               ),
 
               const SizedBox(height: 20),
+              const _SectionLabel('My body journal'),
+              _ProgressPromoCard(
+                onTap: () => context.push(RoutePaths.progressPhotos),
+              ),
+
+              const SizedBox(height: 20),
               _SectionLabel(t('my_events')),
 
               _GroupedListCard(
@@ -1122,6 +1128,155 @@ class _GroupedListCard extends StatelessWidget {
         boxShadow: AppShadows.cardShadow,
       ),
       child: Column(children: children),
+    );
+  }
+}
+
+class _ProgressPromoCard extends StatefulWidget {
+  final VoidCallback onTap;
+
+  const _ProgressPromoCard({required this.onTap});
+
+  @override
+  State<_ProgressPromoCard> createState() => _ProgressPromoCardState();
+}
+
+class _ProgressPromoCardState extends State<_ProgressPromoCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1700),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PressScale(
+      scale: 0.98,
+      child: GestureDetector(
+        onTap: () {
+          HapticFeedback.selectionClick();
+          widget.onTap();
+        },
+        child: AnimatedBuilder(
+          animation: _pulse,
+          builder: (context, child) {
+            final t = Curves.easeInOut.transform(_pulse.value);
+            return Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(22),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: AppColors.heroGradientWarm,
+                ),
+                border: Border.all(
+                  color: AppColors.primary.withValues(alpha: 0.18 + t * 0.12),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.10 + t * 0.08),
+                    blurRadius: 18 + t * 6,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: child,
+            );
+          },
+          child: Row(
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.primary.withValues(alpha: 0.25),
+                      AppColors.primaryLight,
+                    ],
+                  ),
+                ),
+                child: Icon(
+                  LucideIcons.personStanding,
+                  color: AppColors.primaryDark,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Front, sides & back',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Compare days and watch yourself change.',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryDark,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'View progress',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                          SizedBox(width: 4),
+                          Icon(
+                            LucideIcons.arrowRight,
+                            size: 14,
+                            color: Colors.white,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

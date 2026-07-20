@@ -77,6 +77,9 @@ class User(Base):
     created_events = relationship("Event", back_populates="creator")
     joined_events = relationship("EventParticipant", back_populates="user")
     memories = relationship("Memory", back_populates="user", cascade="all, delete-orphan")
+    progress_photos = relationship(
+        "ProgressPhoto", back_populates="user", cascade="all, delete-orphan"
+    )
     posts = relationship("Post", back_populates="user", cascade="all, delete-orphan")
 
 class DailyStats(Base):
@@ -377,6 +380,24 @@ class Memory(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     
     user = relationship("User", back_populates="memories")
+
+
+class ProgressPhoto(Base):
+    """Private daily body progress photo — visible only to the owner."""
+    __tablename__ = "progress_photos"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid, index=True)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    image_url = Column(String, nullable=False)  # stable S3 key
+    note = Column(String, nullable=True)
+    # Which of the four standardized angles this shot is: front | left | right | back.
+    # Nullable for legacy rows created before guided capture existed.
+    pose = Column(String(10), nullable=True, index=True)
+    photo_date = Column(Date, nullable=False, default=datetime.date.today, index=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    user = relationship("User", back_populates="progress_photos")
+
 
 class Post(Base):
     __tablename__ = "posts"

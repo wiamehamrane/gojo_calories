@@ -38,6 +38,7 @@ abstract final class RoutePaths {
   static const coachPaywall = '/profile/become-coach/paywall';
   static const profileTerms = '/profile/terms';
   static const profilePrivacy = '/profile/privacy';
+  static const progressPhotos = '/profile/progress-photos';
   static const shareClientDiary = '/share/client/:id';
   static const shareJoin = '/share/join';
 
