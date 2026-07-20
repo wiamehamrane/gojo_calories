@@ -522,7 +522,7 @@ class _WeightSetupScreenState extends ConsumerState<WeightSetupScreen> {
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.primaryDark.withValues(alpha: 0.3),
+                        color: Colors.black.withValues(alpha: 0.2),
                         blurRadius: 16,
                         offset: const Offset(0, 8),
                       ),
@@ -808,7 +808,7 @@ class _WeightSetupScreenState extends ConsumerState<WeightSetupScreen> {
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: AppColors.primaryDark.withValues(alpha: 0.2),
+                    color: Colors.black.withValues(alpha: 0.12),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),

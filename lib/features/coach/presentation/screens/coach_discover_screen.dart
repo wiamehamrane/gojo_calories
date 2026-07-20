@@ -9,6 +9,7 @@ import '../../../../core/localization/locale_provider.dart';
 import '../../../../core/localization/translations.dart';
 import '../../../../core/routing/route_paths.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_shadows.dart';
 import '../../../../core/widgets/app_confirm_dialog.dart';
 import '../../../events/domain/models/event_location_selection.dart';
 import '../../../events/presentation/widgets/event_location_picker_sheet.dart';
@@ -345,13 +346,7 @@ class _FilterBar extends StatelessWidget {
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: AppColors.border.withValues(alpha: 0.8)),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.05),
-            blurRadius: 18,
-            offset: const Offset(0, 6),
-          ),
-        ],
+        boxShadow: AppShadows.cardShadow,
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -734,13 +729,7 @@ class _CoachCard extends StatelessWidget {
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(22),
           border: Border.all(color: AppColors.border.withValues(alpha: 0.75)),
-          boxShadow: [
-            BoxShadow(
-              color: accent.withValues(alpha: 0.08),
-              blurRadius: 18,
-              offset: const Offset(0, 8),
-            ),
-          ],
+          boxShadow: AppShadows.cardShadow,
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(22),
@@ -964,13 +953,6 @@ class _EmptyState extends StatelessWidget {
                         colors: AppColors.chipGradient,
                       ),
                       borderRadius: BorderRadius.circular(28),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.primary.withValues(alpha: 0.18),
-                          blurRadius: 20,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
                     ),
                     child: Icon(
                       LucideIcons.mapPin,

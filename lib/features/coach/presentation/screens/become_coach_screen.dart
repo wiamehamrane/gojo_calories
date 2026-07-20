@@ -878,12 +878,6 @@ class _ConnectedStepIndicator extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: AppColors.primary,
                           borderRadius: BorderRadius.circular(999),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.primary.withValues(alpha: 0.35),
-                              blurRadius: 8,
-                            ),
-                          ],
                         ),
                       ),
                     ),
@@ -908,16 +902,6 @@ class _ConnectedStepIndicator extends StatelessWidget {
                                   : AppColors.border,
                               width: 2,
                             ),
-                            boxShadow: active
-                                ? [
-                                    BoxShadow(
-                                      color: AppColors.primary
-                                          .withValues(alpha: 0.4),
-                                      blurRadius: 10,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ]
-                                : null,
                           ),
                           child: Center(
                             child: done
@@ -999,13 +983,6 @@ class _ProRequired extends StatelessWidget {
                       AppColors.primaryLight,
                     ],
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.25),
-                      blurRadius: 20,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
                 ),
                 child: Icon(
                   LucideIcons.badgeCheck,
