@@ -15,7 +15,7 @@ class AppShadows {
   static List<BoxShadow> get cardElevated => [
         BoxShadow(
           color: AppColors.isDark
-              ? AppColors.primary.withValues(alpha: 0.12)
+              ? const Color(0x73000000)
               : const Color(0x1A000000),
           blurRadius: AppColors.isDark ? 24 : 20,
           offset: const Offset(0, 4),
@@ -31,7 +31,7 @@ class AppShadows {
   static List<BoxShadow> get fabShadow => [
         BoxShadow(
           color: AppColors.isDark
-              ? AppColors.primary.withValues(alpha: 0.35)
+              ? const Color(0x80000000)
               : const Color(0x40000000),
           blurRadius: 16,
           offset: const Offset(0, 4),

@@ -1462,13 +1462,6 @@ class _CoachPromoCardState extends State<_CoachPromoCard>
                 border: Border.all(
                   color: AppColors.primary.withValues(alpha: 0.18 + t * 0.12),
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.10 + t * 0.08),
-                    blurRadius: 18 + t * 6,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
               ),
               child: child,
             );

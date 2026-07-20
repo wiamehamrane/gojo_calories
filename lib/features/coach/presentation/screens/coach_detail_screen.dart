@@ -140,13 +140,6 @@ class _CoachDetailScreenState extends ConsumerState<CoachDetailScreen> {
                                           AppColors.primaryLight,
                                         ],
                                       ),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: accent.withValues(alpha: 0.25),
-                                          blurRadius: 20,
-                                          offset: const Offset(0, 8),
-                                        ),
-                                      ],
                                     ),
                                     padding: const EdgeInsets.all(4),
                                     child: CircleAvatar(

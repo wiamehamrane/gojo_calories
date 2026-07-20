@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_shadows.dart';
 
 IconData coachSpecialtyIcon(String specialty) {
   switch (specialty) {
@@ -208,13 +209,6 @@ class _PulsingIconBadgeState extends State<_PulsingIconBadge>
                 AppColors.primaryLight,
               ],
             ),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primary.withValues(alpha: 0.18 + t * 0.12),
-                blurRadius: 14 + t * 8,
-                offset: const Offset(0, 4),
-              ),
-            ],
           ),
           child: child,
         );
@@ -247,18 +241,7 @@ class CoachSectionCard extends StatelessWidget {
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: AppColors.border.withValues(alpha: 0.7)),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.04),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-          const BoxShadow(
-            color: Color(0x0A000000),
-            blurRadius: 10,
-            offset: Offset(0, 2),
-          ),
-        ],
+        boxShadow: AppShadows.cardShadow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -393,15 +376,6 @@ class CoachModeCard extends StatelessWidget {
               color: selected ? AppColors.primary : Colors.transparent,
               width: 1.6,
             ),
-            boxShadow: selected
-                ? [
-                    BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.18),
-                      blurRadius: 14,
-                      offset: const Offset(0, 4),
-                    ),
-                  ]
-                : null,
           ),
           child: Column(
             children: [
