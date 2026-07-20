@@ -124,7 +124,7 @@ class _ShareAcceptScreenState extends ConsumerState<ShareAcceptScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const Icon(
+                      Icon(
                         LucideIcons.shieldCheck,
                         size: 48,
                         color: AppColors.primaryDark,
@@ -141,7 +141,7 @@ class _ShareAcceptScreenState extends ConsumerState<ShareAcceptScreen> {
                       const SizedBox(height: 12),
                       Text(
                         t('share_accept_body'),
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppColors.textSecondary,
                           height: 1.45,
                         ),

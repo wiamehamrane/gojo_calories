@@ -140,7 +140,7 @@ class _ShareExistingMealScreenState
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(
+          icon: Icon(
             LucideIcons.chevronLeft,
             size: 24,
             color: AppColors.textPrimary,
@@ -150,7 +150,7 @@ class _ShareExistingMealScreenState
             context.pop();
           },
         ),
-        title: const Text(
+        title: Text(
           'Your meals',
           style: TextStyle(
             fontSize: 17,
@@ -175,12 +175,12 @@ class _ShareExistingMealScreenState
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(LucideIcons.wifiOff, size: 36, color: AppColors.inactive),
+              Icon(LucideIcons.wifiOff, size: 36, color: AppColors.inactive),
               const SizedBox(height: 12),
               Text(
                 _error!,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.textSecondary),
+                style: TextStyle(color: AppColors.textSecondary),
               ),
               const SizedBox(height: 16),
               TextButton(
@@ -193,7 +193,7 @@ class _ShareExistingMealScreenState
       );
     }
     if (_meals.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
           padding: EdgeInsets.all(32),
           child: Column(
@@ -298,7 +298,7 @@ class _MealTile extends StatelessWidget {
                         fit: BoxFit.cover,
                         memCacheWidth: 216,
                         placeholder:
-                            const ColoredBox(color: Color(0xFFF2F2F7)),
+                            ColoredBox(color: AppColors.background),
                         errorWidget: _fallback(),
                       )
                     : _fallback(),
@@ -313,7 +313,7 @@ class _MealTile extends StatelessWidget {
                     name,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
                       color: AppColors.textPrimary,
@@ -323,7 +323,7 @@ class _MealTile extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       DateFormat.yMMMd().add_jm().format(createdAt),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         color: AppColors.textSecondary,
                       ),
@@ -332,7 +332,7 @@ class _MealTile extends StatelessWidget {
                   const SizedBox(height: 6),
                   Text(
                     '$calories kcal · ${protein}g P · ${carbs}g C · ${fat}g F',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11,
                       color: AppColors.textSecondary,
                     ),
@@ -340,7 +340,7 @@ class _MealTile extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(
+            Icon(
               LucideIcons.chevronRight,
               size: 18,
               color: AppColors.inactive,
@@ -354,7 +354,7 @@ class _MealTile extends StatelessWidget {
   Widget _fallback() {
     return Container(
       color: AppColors.primaryLight,
-      child: const Center(
+      child: Center(
         child: Icon(LucideIcons.utensils, size: 24, color: AppColors.primaryDark),
       ),
     );

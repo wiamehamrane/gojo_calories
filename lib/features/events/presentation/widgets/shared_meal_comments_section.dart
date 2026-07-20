@@ -213,7 +213,7 @@ class _SharedMealCommentsSectionState
       children: [
         Row(
           children: [
-            const Expanded(
+            Expanded(
               child: Text(
                 'Comments',
                 style: TextStyle(
@@ -227,7 +227,7 @@ class _SharedMealCommentsSectionState
               GestureDetector(
                 onTap: _showOwnerCommentsMenu,
                 behavior: HitTestBehavior.opaque,
-                child: const Padding(
+                child: Padding(
                   padding: EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                   child: Icon(
                     LucideIcons.settings2,
@@ -244,7 +244,7 @@ class _SharedMealCommentsSectionState
             _isMealOwner
                 ? 'Comments are turned off. Tap the settings icon to turn them back on.'
                 : 'Comments are turned off for this meal.',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
               color: AppColors.textSecondary,
             ),
@@ -258,7 +258,7 @@ class _SharedMealCommentsSectionState
           ),
           error: (e, _) => Text(
             AppErrorHandler.message(e),
-            style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+            style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
           ),
           data: (remote) {
             final comments = _merged(remote);
@@ -269,7 +269,7 @@ class _SharedMealCommentsSectionState
                   widget.commentsEnabled
                       ? 'No comments yet. Be the first!'
                       : 'No comments.',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     color: AppColors.textSecondary,
                   ),
@@ -354,14 +354,14 @@ class _SharedMealCommentComposerState
   Widget build(BuildContext context) {
     if (!widget.enabled) {
       return Material(
-        color: Colors.white,
+        color: AppColors.surface,
         elevation: 8,
         shadowColor: Colors.black26,
         child: SafeArea(
           top: false,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-            child: const Text(
+            child: Text(
               'Comments are turned off',
               textAlign: TextAlign.center,
               style: TextStyle(
@@ -375,7 +375,7 @@ class _SharedMealCommentComposerState
     }
 
     return Material(
-      color: Colors.white,
+      color: AppColors.surface,
       elevation: 8,
       shadowColor: Colors.black26,
       child: SafeArea(
@@ -393,13 +393,13 @@ class _SharedMealCommentComposerState
                   minLines: 1,
                   textInputAction: TextInputAction.send,
                   onSubmitted: (_) => _submit(),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     color: AppColors.textPrimary,
                   ),
                   decoration: InputDecoration(
                     hintText: 'Add a comment…',
-                    hintStyle: const TextStyle(
+                    hintStyle: TextStyle(
                       color: AppColors.textPlaceholder,
                       fontSize: 14,
                     ),
@@ -479,7 +479,7 @@ class _CommentAvatar extends StatelessWidget {
       child: Center(
         child: Text(
           name.isNotEmpty ? name[0].toUpperCase() : '?',
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w700,
             color: AppColors.primaryDark,
@@ -540,7 +540,7 @@ class _CommentTile extends StatelessWidget {
                         Flexible(
                           child: Text(
                             comment.authorName,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
                               color: AppColors.textPrimary,
@@ -549,7 +549,7 @@ class _CommentTile extends StatelessWidget {
                         ),
                         if (comment.profilePublic) ...[
                           const SizedBox(width: 4),
-                          const Icon(
+                          Icon(
                             LucideIcons.chevronRight,
                             size: 14,
                             color: AppColors.inactive,
@@ -561,7 +561,7 @@ class _CommentTile extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     comment.body,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       height: 1.4,
                       color: AppColors.textPrimary,

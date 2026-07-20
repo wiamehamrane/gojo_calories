@@ -74,11 +74,11 @@ class _ReferralsScreenState extends ConsumerState<ReferralsScreen> {
       builder: (context, ref, _) {
         final lang = ref.watch(localeProvider);
         return Scaffold(
-          backgroundColor: AppColors.surface,
+          backgroundColor: AppColors.background,
           appBar: AppBar(
-            backgroundColor: AppColors.surface,
+            backgroundColor: AppColors.background,
             elevation: 0,
-            surfaceTintColor: AppColors.surface,
+            surfaceTintColor: AppColors.background,
             leading: IconButton(
               icon: Icon(LucideIcons.chevronLeft, color: AppColors.textPrimary),
               onPressed: () => Navigator.of(context).pop(),
@@ -119,7 +119,7 @@ class _ReferralsScreenState extends ConsumerState<ReferralsScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(LucideIcons.wifiOff, size: 40, color: Color(0xFFCCCCCC)),
+            Icon(LucideIcons.wifiOff, size: 40, color: AppColors.inactive),
             const SizedBox(height: 16),
             Text(
               Translations.t(lang, 'could_not_load_referrals'),
@@ -135,7 +135,13 @@ class _ReferralsScreenState extends ConsumerState<ReferralsScreen> {
                   color: AppColors.textPrimary,
                   borderRadius: BorderRadius.circular(999),
                 ),
-                child: Text(Translations.t(lang, 'retry'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                child: Text(
+                  Translations.t(lang, 'retry'),
+                  style: TextStyle(
+                    color: AppColors.surface,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
             ),
           ],
@@ -162,11 +168,16 @@ class _ReferralsScreenState extends ConsumerState<ReferralsScreen> {
         children: [
           const SizedBox(height: 8),
 
-          // ── Hero Balance Card ──────────────────────────────────────────
+          // ── Hero Balance Card (always dark fill + light type) ──────────
           Container(
             decoration: BoxDecoration(
-              color: AppColors.textPrimary,
+              color: AppColors.isDark
+                  ? const Color(0xFF1A2428)
+                  : AppColors.lightTextPrimary,
               borderRadius: BorderRadius.circular(24),
+              border: AppColors.isDark
+                  ? Border.all(color: AppColors.border)
+                  : null,
             ),
             padding: const EdgeInsets.all(24),
             child: Column(
@@ -174,11 +185,18 @@ class _ReferralsScreenState extends ConsumerState<ReferralsScreen> {
               children: [
                 Row(
                   children: [
-                    const Icon(LucideIcons.gift, color: Colors.white54, size: 14),
+                    Icon(
+                      LucideIcons.gift,
+                      color: Colors.white.withValues(alpha: 0.55),
+                      size: 14,
+                    ),
                     const SizedBox(width: 6),
                     Text(
                       t('available_balance'),
-                      style: const TextStyle(fontSize: 13, color: Colors.white54),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.white.withValues(alpha: 0.55),
+                      ),
                     ),
                   ],
                 ),
@@ -195,7 +213,10 @@ class _ReferralsScreenState extends ConsumerState<ReferralsScreen> {
                 const SizedBox(height: 4),
                 Text(
                   '${t('total_earned_prefix')} \$${totalEarned.toStringAsFixed(2)}',
-                  style: const TextStyle(fontSize: 13, color: Colors.white38),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.white.withValues(alpha: 0.4),
+                  ),
                 ),
                 const SizedBox(height: 20),
                 GestureDetector(
@@ -203,7 +224,9 @@ class _ReferralsScreenState extends ConsumerState<ReferralsScreen> {
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
                     decoration: BoxDecoration(
-                      color: balance > 0 ? Colors.white : Colors.white.withValues(alpha: 0.15),
+                      color: balance > 0
+                          ? Colors.white
+                          : Colors.white.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(14),
                     ),
                     padding: const EdgeInsets.symmetric(vertical: 14),
@@ -214,15 +237,21 @@ class _ReferralsScreenState extends ConsumerState<ReferralsScreen> {
                         Icon(
                           LucideIcons.arrowDownToLine,
                           size: 16,
-                          color: balance > 0 ? Colors.black : Colors.white38,
+                          color: balance > 0
+                              ? AppColors.lightTextPrimary
+                              : Colors.white.withValues(alpha: 0.4),
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          balance > 0 ? t('withdraw_earnings') : t('no_balance_withdraw'),
+                          balance > 0
+                              ? t('withdraw_earnings')
+                              : t('no_balance_withdraw'),
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w700,
-                            color: balance > 0 ? Colors.black : Colors.white38,
+                            color: balance > 0
+                                ? AppColors.lightTextPrimary
+                                : Colors.white.withValues(alpha: 0.4),
                           ),
                         ),
                       ],
@@ -250,8 +279,9 @@ class _ReferralsScreenState extends ConsumerState<ReferralsScreen> {
           _SectionLabel(t('your_referral_code')),
           Container(
             decoration: BoxDecoration(
-              color: const Color(0xFFF5F5F5),
+              color: AppColors.surfaceMuted,
               borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: AppColors.border.withValues(alpha: 0.7)),
             ),
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -275,10 +305,14 @@ class _ReferralsScreenState extends ConsumerState<ReferralsScreen> {
                         width: 42,
                         height: 42,
                         decoration: BoxDecoration(
-                          color: AppColors.textPrimary,
+                          color: AppColors.primaryDark,
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(LucideIcons.copy, size: 18, color: Colors.white),
+                        child: const Icon(
+                          LucideIcons.copy,
+                          size: 18,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ],
@@ -287,7 +321,11 @@ class _ReferralsScreenState extends ConsumerState<ReferralsScreen> {
                 Text(
                   t('referral_code_hint'),
                   textAlign: TextAlign.left,
-                  style: const TextStyle(fontSize: 13, color: Color(0xFF888888), height: 1.5),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                    height: 1.5,
+                  ),
                 ),
               ],
             ),
@@ -298,7 +336,8 @@ class _ReferralsScreenState extends ConsumerState<ReferralsScreen> {
           _SectionLabel(t('how_it_works')),
           Container(
             decoration: BoxDecoration(
-              border: Border.all(color: const Color(0xFFE8E8E8)),
+              color: AppColors.surface,
+              border: Border.all(color: AppColors.border),
               borderRadius: BorderRadius.circular(18),
             ),
             padding: const EdgeInsets.all(16),
@@ -364,8 +403,9 @@ class _StatCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
         decoration: BoxDecoration(
-          color: const Color(0xFFF5F5F5),
+          color: AppColors.surfaceMuted,
           borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.border.withValues(alpha: 0.6)),
         ),
         child: Column(
           children: [
@@ -373,7 +413,7 @@ class _StatCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
             const SizedBox(height: 2),
-            Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF888888))),
+            Text(label, style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
           ],
         ),
       ),
@@ -391,7 +431,12 @@ class _SectionLabel extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 10, left: 2),
       child: Text(
         label,
-        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF888888), letterSpacing: 0.5),
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: AppColors.textSecondary,
+          letterSpacing: 0.5,
+        ),
       ),
     );
   }
@@ -401,7 +446,7 @@ class _Divider extends StatelessWidget {
   const _Divider();
   @override
   Widget build(BuildContext context) =>
-      const Divider(color: Color(0xFFEEEEEE), height: 24, thickness: 1);
+      Divider(color: AppColors.border, height: 24, thickness: 1);
 }
 
 class _StepRow extends StatelessWidget {
@@ -419,11 +464,18 @@ class _StepRow extends StatelessWidget {
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: AppColors.textPrimary,
+            color: AppColors.primaryLight,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Center(
-            child: Text(num, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Colors.white)),
+            child: Text(
+              num,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: AppColors.primaryDark,
+              ),
+            ),
           ),
         ),
         const SizedBox(width: 14),
@@ -432,7 +484,7 @@ class _StepRow extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
-              Text(subtitle, style: const TextStyle(fontSize: 12, color: Color(0xFF888888))),
+              Text(subtitle, style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
             ],
           ),
         ),
@@ -459,7 +511,8 @@ class _ReferralHistoryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        border: Border.all(color: const Color(0xFFE8E8E8)),
+        color: AppColors.surface,
+        border: Border.all(color: AppColors.border),
         borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
@@ -475,7 +528,10 @@ class _ReferralHistoryCard extends StatelessWidget {
                   children: [
                     Container(
                       width: 36, height: 36,
-                      decoration: const BoxDecoration(color: Color(0xFFF0F0F0), shape: BoxShape.circle),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceMuted,
+                        shape: BoxShape.circle,
+                      ),
                       child: Center(
                         child: Text(
                           name.isNotEmpty ? name[0].toUpperCase() : 'F',
@@ -489,7 +545,7 @@ class _ReferralHistoryCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(name, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-                          Text(_fmt(item['created_at'] as String?), style: const TextStyle(fontSize: 12, color: Color(0xFF888888))),
+                          Text(_fmt(item['created_at'] as String?), style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                         ],
                       ),
                     ),
@@ -528,7 +584,8 @@ class _WithdrawalHistoryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        border: Border.all(color: const Color(0xFFE8E8E8)),
+        color: AppColors.surface,
+        border: Border.all(color: AppColors.border),
         borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
@@ -550,13 +607,13 @@ class _WithdrawalHistoryCard extends StatelessWidget {
                     Container(
                       width: 40, height: 40,
                       decoration: BoxDecoration(
-                        color: isPaid ? Colors.black : const Color(0xFFF0F0F0),
+                        color: isPaid ? AppColors.textPrimary : AppColors.surfaceMuted,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
                         isPaid ? LucideIcons.circleCheck : LucideIcons.clock,
                         size: 18,
-                        color: isPaid ? Colors.white : const Color(0xFF888888),
+                        color: isPaid ? AppColors.surface : AppColors.textSecondary,
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -570,25 +627,29 @@ class _WithdrawalHistoryCard extends StatelessWidget {
                                 .replaceAll('{method}', methodLabel),
                               style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
                           Text(_fmt(w['created_at'] as String?),
-                              style: const TextStyle(fontSize: 12, color: Color(0xFF888888))),
+                              style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                         ],
                       ),
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: isPaid ? Colors.black : const Color(0xFFF0F0F0),
+                        color: isPaid ? AppColors.textPrimary : AppColors.surfaceMuted,
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
                         isPaid ? t('paid') : t('pending'),
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: isPaid ? Colors.white : const Color(0xFF888888)),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: isPaid ? AppColors.surface : AppColors.textSecondary,
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-              if (i < items.length - 1) const Divider(height: 1, color: Color(0xFFEEEEEE), indent: 68),
+              if (i < items.length - 1) Divider(height: 1, color: AppColors.border, indent: 68),
             ],
           );
         }).toList(),
@@ -660,9 +721,9 @@ class _WithdrawSheetState extends ConsumerState<_WithdrawSheet> {
     String t(String k) => Translations.t(widget.lang, k);
     final mq = MediaQuery.of(context);
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       ),
       padding: EdgeInsets.only(left: 24, right: 24, top: 16, bottom: mq.viewInsets.bottom + 32),
       child: Column(
@@ -672,7 +733,7 @@ class _WithdrawSheetState extends ConsumerState<_WithdrawSheet> {
           Center(
             child: Container(
               width: 36, height: 4,
-              decoration: BoxDecoration(color: const Color(0xFFDDDDDD), borderRadius: BorderRadius.circular(2)),
+              decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)),
             ),
           ),
           const SizedBox(height: 24),
@@ -680,10 +741,10 @@ class _WithdrawSheetState extends ConsumerState<_WithdrawSheet> {
           const SizedBox(height: 4),
           Text(
             t('balance_amount').replaceAll('{amount}', '\$${widget.maxAmount.toStringAsFixed(2)}'),
-            style: const TextStyle(fontSize: 14, color: Color(0xFF888888)),
+            style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
           ),
           const SizedBox(height: 24),
-          Text(t('amount'), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF888888))),
+          Text(t('amount'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
           const SizedBox(height: 8),
           TextField(
             controller: _amountCtrl,
@@ -693,14 +754,14 @@ class _WithdrawSheetState extends ConsumerState<_WithdrawSheet> {
               prefixText: '\$ ',
               prefixStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
               filled: true,
-              fillColor: const Color(0xFFF5F5F5),
+              fillColor: AppColors.surfaceMuted,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
-              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: AppColors.textPrimary, width: 1.5)),
+              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: AppColors.primary, width: 1.5)),
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             ),
           ),
           const SizedBox(height: 20),
-          Text(t('method'), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF888888))),
+          Text(t('method'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
           const SizedBox(height: 8),
           Row(
             children: [
@@ -718,8 +779,11 @@ class _WithdrawSheetState extends ConsumerState<_WithdrawSheet> {
                     margin: EdgeInsets.only(right: m == 'PayPal' ? 8 : 0),
                     padding: const EdgeInsets.symmetric(vertical: 13),
                     decoration: BoxDecoration(
-                      color: selected ? Colors.black : const Color(0xFFF5F5F5),
+                      color: selected ? AppColors.textPrimary : AppColors.surfaceMuted,
                       borderRadius: BorderRadius.circular(14),
+                      border: selected
+                          ? null
+                          : Border.all(color: AppColors.border),
                     ),
                     alignment: Alignment.center,
                     child: Text(
@@ -727,7 +791,7 @@ class _WithdrawSheetState extends ConsumerState<_WithdrawSheet> {
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: selected ? Colors.white : const Color(0xFF888888),
+                        color: selected ? AppColors.surface : AppColors.textSecondary,
                       ),
                     ),
                   ),
@@ -737,7 +801,7 @@ class _WithdrawSheetState extends ConsumerState<_WithdrawSheet> {
           ),
           if (_error != null) ...[
             const SizedBox(height: 14),
-            Text(_error!, style: const TextStyle(fontSize: 13, color: Color(0xFFCC0000)), textAlign: TextAlign.center),
+            Text(_error!, style: TextStyle(fontSize: 13, color: AppColors.danger), textAlign: TextAlign.center),
           ],
           const SizedBox(height: 24),
           GestureDetector(
@@ -746,7 +810,7 @@ class _WithdrawSheetState extends ConsumerState<_WithdrawSheet> {
               duration: const Duration(milliseconds: 150),
               height: 54,
               decoration: BoxDecoration(
-                color: _loading ? const Color(0xFFDDDDDD) : Colors.black,
+                color: _loading ? AppColors.surfaceMuted : AppColors.textPrimary,
                 borderRadius: BorderRadius.circular(16),
               ),
               alignment: Alignment.center,
@@ -755,7 +819,7 @@ class _WithdrawSheetState extends ConsumerState<_WithdrawSheet> {
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
-                  color: _loading ? const Color(0xFF888888) : Colors.white,
+                  color: _loading ? AppColors.textSecondary : AppColors.surface,
                 ),
               ),
             ),

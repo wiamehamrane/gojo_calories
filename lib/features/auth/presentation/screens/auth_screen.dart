@@ -256,7 +256,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      backgroundColor: const Color(0xFFF7F7F7),
+      backgroundColor: AppColors.background,
       body: Stack(
         children: [
           // Background that gently dims while the email sheet is open.
@@ -265,8 +265,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
               duration: const Duration(milliseconds: 380),
               curve: Curves.easeOutCubic,
               color: _showEmailSheet
-                  ? const Color(0xFFB5B5B5)
-                  : const Color(0xFFF7F7F7),
+                  ? Color.alphaBlend(
+                      AppColors.textPrimary.withValues(alpha: 0.28),
+                      AppColors.background,
+                    )
+                  : AppColors.background,
             ),
           ),
           SafeArea(
@@ -446,12 +449,14 @@ class _SocialCircleButton extends StatelessWidget {
         width: 64,
         height: 64,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
           shape: BoxShape.circle,
-          border: Border.all(color: const Color(0xFFE0E0E0)),
+          border: Border.all(color: AppColors.border),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
+              color: Colors.black.withValues(
+                alpha: AppColors.isDark ? 0.35 : 0.04,
+              ),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -568,10 +573,12 @@ class _EmailAuthSheet extends StatelessWidget {
         child: Container(
           width: double.infinity,
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.72),
+            color: AppColors.surface.withValues(
+              alpha: AppColors.isDark ? 0.88 : 0.72,
+            ),
             border: Border(
               top: BorderSide(
-                color: Colors.white.withValues(alpha: 0.65),
+                color: AppColors.border.withValues(alpha: 0.85),
                 width: 1,
               ),
             ),
@@ -594,7 +601,7 @@ class _EmailAuthSheet extends StatelessWidget {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFD0D0D0),
+                    color: AppColors.border,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -767,7 +774,7 @@ class _AnimatedAuthTabBar extends StatelessWidget {
           height: 44,
           padding: const EdgeInsets.all(3),
           decoration: BoxDecoration(
-            color: const Color(0xFFF0F0F0),
+            color: AppColors.surfaceMuted,
             borderRadius: BorderRadius.circular(22),
           ),
           child: AnimatedBuilder(
@@ -892,7 +899,7 @@ class _AuthField extends StatelessWidget {
         const SizedBox(height: 8),
         Container(
           decoration: BoxDecoration(
-            color: const Color(0xFFF0F0F0),
+            color: AppColors.surfaceMuted,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(

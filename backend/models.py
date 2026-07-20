@@ -18,6 +18,7 @@ class User(Base):
     is_admin = Column(Boolean, default=False, nullable=False)
     is_influencer = Column(Boolean, default=False, nullable=False)
     is_banned = Column(Boolean, default=False, nullable=False)
+    is_coach = Column(Boolean, default=False, nullable=False)
     verification_code = Column(String(6), nullable=True)
     verification_code_expires_at = Column(DateTime, nullable=True)
 
@@ -513,3 +514,53 @@ class ShareGrant(Base):
 
     owner = relationship("User", foreign_keys=[owner_user_id])
     viewer = relationship("User", foreign_keys=[viewer_user_id])
+
+
+class Coach(Base):
+    __tablename__ = "coaches"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid, index=True)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, unique=True, index=True)
+    bio = Column(Text, nullable=True)
+    specialties = Column(JSON, nullable=True)
+    gender = Column(String, nullable=True)
+    experience_years = Column(Integer, nullable=True)
+    photo_url = Column(String, nullable=True)
+    phone = Column(String, nullable=True)
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
+    city = Column(String, nullable=True)
+    languages = Column(JSON, nullable=True)
+    coaching_mode = Column(String, nullable=True)
+    is_active = Column(Boolean, default=False, nullable=False)
+    subscription_plan = Column(String, nullable=True)
+    subscription_expires_at = Column(DateTime, nullable=True)
+    subscription_source = Column(String, nullable=True)
+    apple_original_transaction_id = Column(String, nullable=True, index=True)
+    google_order_id = Column(String, nullable=True, index=True)
+    google_purchase_token = Column(String, nullable=True, index=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+    user = relationship("User", foreign_keys=[user_id])
+    works = relationship(
+        "CoachWork",
+        back_populates="coach",
+        cascade="all, delete-orphan",
+        order_by="CoachWork.created_at.desc()",
+    )
+
+
+class CoachWork(Base):
+    __tablename__ = "coach_works"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid, index=True)
+    coach_id = Column(
+        String(36), ForeignKey("coaches.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    before_url = Column(String, nullable=False)
+    after_url = Column(String, nullable=False)
+    caption = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    coach = relationship("Coach", back_populates="works")

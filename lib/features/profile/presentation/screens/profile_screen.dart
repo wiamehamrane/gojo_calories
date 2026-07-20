@@ -33,6 +33,7 @@ class ProfileScreen extends ConsumerWidget {
     final lang = ref.watch(localeProvider);
     String t(String k) => Translations.t(lang, k);
     final profileAsync = ref.watch(profileProvider);
+    final isCoach = profileAsync.asData?.value['is_coach'] == true;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -170,6 +171,23 @@ class ProfileScreen extends ConsumerWidget {
                     onTap: () => context.push(RoutePaths.starredMeals),
                   ),
                 ],
+              ),
+
+              const SizedBox(height: 20),
+              _CoachPromoCard(
+                isCoach: isCoach,
+                title: isCoach
+                    ? t('become_coach_manage_title')
+                    : t('become_coach_title'),
+                subtitle: isCoach
+                    ? t('coach_hub_subtitle')
+                    : t('coach_paywall_headline'),
+                cta: isCoach
+                    ? t('become_coach_continue')
+                    : t('become_coach_submit'),
+                onTap: () => context.push(
+                  isCoach ? RoutePaths.coachHub : RoutePaths.becomeCoach,
+                ),
               ),
 
               const SizedBox(height: 20),
@@ -482,14 +500,14 @@ class ProfileScreen extends ConsumerWidget {
                             height: 52,
                             fit: BoxFit.cover,
                             memCacheWidth: 160,
-                            placeholder: const Center(
+                            placeholder: Center(
                               child: Icon(
                                 LucideIcons.user,
                                 size: 28,
                                 color: AppColors.inactive,
                               ),
                             ),
-                            errorWidget: const Center(
+                            errorWidget: Center(
                               child: Icon(
                                 LucideIcons.user,
                                 size: 28,
@@ -497,7 +515,7 @@ class ProfileScreen extends ConsumerWidget {
                               ),
                             ),
                           )
-                        : const Icon(
+                        : Icon(
                             LucideIcons.user,
                             size: 28,
                             color: AppColors.inactive,
@@ -542,7 +560,7 @@ class ProfileScreen extends ConsumerWidget {
                     Flexible(
                       child: Text(
                         data['name'] ?? 'User',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 17,
                           fontWeight: FontWeight.w600,
                           color: AppColors.textPrimary,
@@ -803,7 +821,7 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
-                const Padding(
+                Padding(
                   padding: EdgeInsets.symmetric(horizontal: 20),
                   child: Align(
                     alignment: Alignment.centerLeft,
@@ -827,7 +845,7 @@ class ProfileScreen extends ConsumerWidget {
                         height: 40,
                         fit: BoxFit.cover,
                         memCacheWidth: 120,
-                        placeholder: const ColoredBox(
+                        placeholder: ColoredBox(
                           color: AppColors.surfaceMuted,
                         ),
                       ),
@@ -845,7 +863,7 @@ class ProfileScreen extends ConsumerWidget {
                     },
                   ),
                 ListTile(
-                  leading: const Icon(
+                  leading: Icon(
                     LucideIcons.image,
                     size: 22,
                     color: AppColors.textPrimary,
@@ -861,7 +879,7 @@ class ProfileScreen extends ConsumerWidget {
                       Navigator.pop(sheetContext, _AvatarSheetAction.gallery),
                 ),
                 ListTile(
-                  leading: const Icon(
+                  leading: Icon(
                     LucideIcons.camera,
                     size: 22,
                     color: AppColors.textPrimary,
@@ -1327,14 +1345,14 @@ class _ProgressPromoCard extends StatelessWidget {
                   color: AppColors.primaryLight,
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: const Icon(
+                child: Icon(
                   LucideIcons.images,
                   size: 24,
                   color: AppColors.primaryDark,
                 ),
               ),
               const SizedBox(width: 14),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -1366,10 +1384,171 @@ class _ProgressPromoCard extends StatelessWidget {
                   color: AppColors.surfaceMuted,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(
+                child: Icon(
                   LucideIcons.chevronRight,
                   size: 18,
                   color: AppColors.inactive,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CoachPromoCard extends StatefulWidget {
+  final bool isCoach;
+  final String title;
+  final String subtitle;
+  final String cta;
+  final VoidCallback onTap;
+
+  const _CoachPromoCard({
+    required this.isCoach,
+    required this.title,
+    required this.subtitle,
+    required this.cta,
+    required this.onTap,
+  });
+
+  @override
+  State<_CoachPromoCard> createState() => _CoachPromoCardState();
+}
+
+class _CoachPromoCardState extends State<_CoachPromoCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1600),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PressScale(
+      scale: 0.98,
+      child: GestureDetector(
+        onTap: () {
+          HapticFeedback.selectionClick();
+          widget.onTap();
+        },
+        child: AnimatedBuilder(
+          animation: _pulse,
+          builder: (context, child) {
+            final t = Curves.easeInOut.transform(_pulse.value);
+            return Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(22),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: AppColors.heroGradientWarm,
+                ),
+                border: Border.all(
+                  color: AppColors.primary.withValues(alpha: 0.18 + t * 0.12),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.10 + t * 0.08),
+                    blurRadius: 18 + t * 6,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: child,
+            );
+          },
+          child: Row(
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.primary.withValues(alpha: 0.25),
+                      AppColors.primaryLight,
+                    ],
+                  ),
+                ),
+                child: Icon(
+                  widget.isCoach ? LucideIcons.badgeCheck : LucideIcons.sparkles,
+                  color: AppColors.primaryDark,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.title,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      widget.subtitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        height: 1.35,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryDark,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            widget.cta,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          const Icon(
+                            LucideIcons.arrowRight,
+                            size: 14,
+                            color: Colors.white,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -1396,28 +1575,31 @@ class _SettingsRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return PressScale(
       scale: 0.98,
-      child: ListTile(
-        leading: Icon(icon, size: 22, color: color ?? AppColors.textPrimary),
-        title: Text(
-          label,
-          style: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w500,
-            color: color ?? AppColors.textPrimary,
+      child: Material(
+        color: Colors.transparent,
+        child: ListTile(
+          leading: Icon(icon, size: 22, color: color ?? AppColors.textPrimary),
+          title: Text(
+            label,
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w500,
+              color: color ?? AppColors.textPrimary,
+            ),
           ),
+          trailing: color == null
+              ? Icon(
+                  LucideIcons.chevronRight,
+                  size: 18,
+                  color: AppColors.inactive,
+                )
+              : null,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          onTap: () {
+            HapticFeedback.selectionClick();
+            onTap();
+          },
         ),
-        trailing: color == null
-            ? Icon(
-                LucideIcons.chevronRight,
-                size: 18,
-                color: AppColors.inactive,
-              )
-            : null,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        onTap: () {
-          HapticFeedback.selectionClick();
-          onTap();
-        },
       ),
     );
   }

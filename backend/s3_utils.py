@@ -176,3 +176,39 @@ def resolve_media_url(entry):
     if entry.startswith('/'):
         return entry
     return presign_s3_key(entry)
+
+
+def delete_media(entry: str | None) -> None:
+    """Best-effort delete of a stored media entry (local file or S3 object)."""
+    if not entry or not isinstance(entry, str):
+        return
+
+    # Local /uploads path (dev fallback)
+    if entry.startswith('/uploads/'):
+        file_name = entry[len('/uploads/') :]
+        if not file_name or '..' in file_name or file_name.startswith('/'):
+            return
+        file_path = os.path.join('uploads', file_name)
+        try:
+            if os.path.isfile(file_path):
+                os.remove(file_path)
+                logger.info('Deleted local media file %s', file_path)
+        except OSError as e:
+            logger.warning('Failed to delete local media %s: %s', file_path, e)
+        return
+
+    # Absolute URL → try extract S3 key
+    key = entry
+    if entry.startswith('http'):
+        key = extract_s3_key_from_url(entry)
+        if not key:
+            return
+
+    bucket = os.getenv('AWS_BUCKET_NAME')
+    if not bucket:
+        return
+    try:
+        get_s3_client().delete_object(Bucket=bucket, Key=key)
+        logger.info('Deleted S3 object %s/%s', bucket, key)
+    except Exception as e:
+        logger.warning('Failed to delete S3 object %s: %s', key, e)

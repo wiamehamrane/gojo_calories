@@ -86,7 +86,7 @@ class _SharedMealCardState extends ConsumerState<SharedMealCard> {
                               fit: BoxFit.cover,
                               memCacheWidth: 900,
                               placeholder:
-                                  const ColoredBox(color: Color(0xFFF2F2F7)),
+                                  ColoredBox(color: AppColors.background),
                               errorWidget: _imageFallback(),
                             )
                           : _imageFallback(),
@@ -101,7 +101,7 @@ class _SharedMealCardState extends ConsumerState<SharedMealCard> {
                           liveMeal.name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
                             color: AppColors.textPrimary,
@@ -112,7 +112,7 @@ class _SharedMealCardState extends ConsumerState<SharedMealCard> {
                           'by ${liveMeal.authorName}',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
                             color: AppColors.textSecondary,
                           ),
@@ -165,7 +165,7 @@ class _SharedMealCardState extends ConsumerState<SharedMealCard> {
   Widget _imageFallback() {
     return Container(
       color: AppColors.primaryLight,
-      child: const Center(
+      child: Center(
         child: Icon(LucideIcons.utensils, size: 30, color: AppColors.primaryDark),
       ),
     );
@@ -476,10 +476,10 @@ class _SharedMealSheetState extends ConsumerState<_SharedMealSheet> {
                 imageUrl: meal.imageUrl,
                 fit: BoxFit.cover,
                 memCacheWidth: 1080,
-                placeholder: const ColoredBox(color: Color(0xFFF2F2F7)),
+                placeholder: ColoredBox(color: AppColors.background),
                 errorWidget: Container(
                   color: AppColors.primaryLight,
-                  child: const Center(
+                  child: Center(
                     child: Icon(LucideIcons.utensils,
                         size: 42, color: AppColors.primaryDark),
                   ),
@@ -490,7 +490,7 @@ class _SharedMealSheetState extends ConsumerState<_SharedMealSheet> {
             Container(
               height: 160,
               color: AppColors.primaryLight,
-              child: const Center(
+              child: Center(
                 child: Icon(LucideIcons.utensils,
                     size: 42, color: AppColors.primaryDark),
               ),
@@ -555,7 +555,7 @@ class _SharedMealSheetState extends ConsumerState<_SharedMealSheet> {
           Expanded(
             child: Text(
               meal.name,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w800,
                 color: AppColors.textPrimary,
@@ -593,7 +593,7 @@ class _SharedMealSheetState extends ConsumerState<_SharedMealSheet> {
         onTap: _openAuthorProfile,
         child: Text(
           'Shared by ${meal.authorName}',
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
             color: AppColors.textSecondary,
           ),
@@ -661,7 +661,7 @@ class _SharedMealSheetState extends ConsumerState<_SharedMealSheet> {
       detailsChildren.addAll([
         const SizedBox(height: 24),
         _enter(
-          const Text(
+          Text(
             'Ingredients',
             style: TextStyle(
               fontSize: 16,
@@ -679,7 +679,7 @@ class _SharedMealSheetState extends ConsumerState<_SharedMealSheet> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.only(top: 5),
                     child: Icon(LucideIcons.check,
                         size: 14, color: AppColors.primaryDark),
@@ -688,7 +688,7 @@ class _SharedMealSheetState extends ConsumerState<_SharedMealSheet> {
                   Expanded(
                     child: Text(
                       meal.ingredients[i],
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         height: 1.4,
                         color: AppColors.textPrimary,
@@ -709,7 +709,7 @@ class _SharedMealSheetState extends ConsumerState<_SharedMealSheet> {
       detailsChildren.addAll([
         const SizedBox(height: 20),
         _enter(
-          const Text(
+          Text(
             'How to cook it',
             style: TextStyle(
               fontSize: 16,
@@ -723,7 +723,7 @@ class _SharedMealSheetState extends ConsumerState<_SharedMealSheet> {
         _enter(
           Text(
             meal.instructions!.trim(),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               height: 1.55,
               color: AppColors.textPrimary,
@@ -759,9 +759,9 @@ class _SharedMealSheetState extends ConsumerState<_SharedMealSheet> {
       expand: false,
       builder: (context, scrollController) {
         final sheet = Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
           ),
           clipBehavior: Clip.antiAlias,
           child: Column(
@@ -814,7 +814,7 @@ class _EngagementChip extends StatelessWidget {
   final IconData icon;
   final String label;
   final bool active;
-  final Color activeColor;
+  final Color? activeColor;
   final VoidCallback onTap;
 
   const _EngagementChip({
@@ -822,15 +822,17 @@ class _EngagementChip extends StatelessWidget {
     required this.label,
     required this.active,
     required this.onTap,
-    this.activeColor = AppColors.primaryDark,
+    this.activeColor,
   });
+
+  Color get _activeColor => activeColor ?? AppColors.primaryDark;
 
   @override
   Widget build(BuildContext context) {
-    final color = active ? activeColor : AppColors.textSecondary;
+    final color = active ? _activeColor : AppColors.textSecondary;
     return Material(
       color: active
-          ? activeColor.withValues(alpha: 0.12)
+          ? _activeColor.withValues(alpha: 0.12)
           : AppColors.surfaceMuted,
       borderRadius: BorderRadius.circular(999),
       child: InkWell(
@@ -878,7 +880,7 @@ class _MacroStat extends StatelessWidget {
         children: [
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w800,
               color: AppColors.textPrimary,
@@ -887,7 +889,7 @@ class _MacroStat extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
               color: AppColors.textSecondary,
             ),

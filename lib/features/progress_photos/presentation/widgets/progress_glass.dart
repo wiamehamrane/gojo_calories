@@ -6,23 +6,23 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_shadows.dart';
 import '../../domain/models/progress_photo.dart';
 
-/// Progress journal tokens — same palette as the rest of Gojo.
-const Color kPaper = AppColors.background;
-const Color kSurface = AppColors.surface;
-const Color kInk = AppColors.textPrimary;
-const Color kInkSoft = AppColors.textSecondary;
-const Color kMuted = AppColors.inactive;
-const Color kHair = AppColors.border;
-const Color kAccent = AppColors.primaryDark;
-const Color kAccentBright = AppColors.primary;
-const Color kAccentSoft = AppColors.primaryLight;
+/// Progress journal tokens — theme-aware (follow [AppColors] light/dark).
+Color get kPaper => AppColors.background;
+Color get kSurface => AppColors.surface;
+Color get kInk => AppColors.textPrimary;
+Color get kInkSoft => AppColors.textSecondary;
+Color get kMuted => AppColors.inactive;
+Color get kHair => AppColors.border;
+Color get kAccent => AppColors.primaryDark;
+Color get kAccentBright => AppColors.primary;
+Color get kAccentSoft => AppColors.primaryLight;
 const Color kDanger = AppColors.danger;
 
 /// Titles — system font, same weights as the rest of the app.
 TextStyle display({
   double size = 16,
   FontWeight weight = FontWeight.w700,
-  Color color = kInk,
+  Color? color,
   double? height,
   double? spacing,
   FontStyle? style,
@@ -30,7 +30,7 @@ TextStyle display({
   return TextStyle(
     fontSize: size,
     fontWeight: weight,
-    color: color,
+    color: color ?? kInk,
     height: height,
     letterSpacing: spacing,
     fontStyle: style,
@@ -41,14 +41,14 @@ TextStyle display({
 TextStyle body({
   double size = 14,
   FontWeight weight = FontWeight.w500,
-  Color color = kInkSoft,
+  Color? color,
   double? height,
   double? spacing,
 }) {
   return TextStyle(
     fontSize: size,
     fontWeight: weight,
-    color: color,
+    color: color ?? kInkSoft,
     height: height,
     letterSpacing: spacing,
   );
@@ -58,7 +58,7 @@ TextStyle body({
 TextStyle serif({
   double size = 16,
   FontWeight weight = FontWeight.w700,
-  Color color = kInk,
+  Color? color,
   double? height,
   double? spacing,
   FontStyle? style,
@@ -74,14 +74,14 @@ TextStyle serif({
 
 class Eyebrow extends StatelessWidget {
   final String text;
-  final Color color;
-  const Eyebrow(this.text, {super.key, this.color = kMuted});
+  final Color? color;
+  const Eyebrow(this.text, {super.key, this.color});
 
   @override
   Widget build(BuildContext context) {
     return Text(
       text,
-      style: body(size: 13, weight: FontWeight.w500, color: color),
+      style: body(size: 13, weight: FontWeight.w500, color: color ?? kMuted),
     );
   }
 }
@@ -209,7 +209,7 @@ class AnimatedProgressRing extends StatelessWidget {
                   value: value,
                   strokeWidth: strokeWidth,
                   backgroundColor: AppColors.ringTrack,
-                  valueColor: const AlwaysStoppedAnimation(kAccentBright),
+                  valueColor: AlwaysStoppedAnimation(kAccentBright),
                   strokeCap: StrokeCap.round,
                 ),
               ),
@@ -331,19 +331,20 @@ class SoftEntrance extends StatelessWidget {
 
 class PoseSilhouettePainter extends CustomPainter {
   final BodyPose pose;
-  final Color color;
+  final Color? color;
 
-  PoseSilhouettePainter(this.pose, {this.color = kAccent});
+  PoseSilhouettePainter(this.pose, {this.color});
 
   @override
   void paint(Canvas canvas, Size size) {
+    final c = color ?? kAccent;
     final paint = Paint()
       ..style = PaintingStyle.fill
-      ..color = color.withValues(alpha: 0.14);
+      ..color = c.withValues(alpha: 0.14);
     final stroke = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2
-      ..color = color.withValues(alpha: 0.5);
+      ..color = c.withValues(alpha: 0.5);
 
     final cx = size.width / 2;
     final h = size.height;

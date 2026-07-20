@@ -39,6 +39,16 @@ Locale toFlutterLocale(String code) {
       return const Locale('nl');
     case 'pt':
       return const Locale('pt');
+    case 'zh':
+      return const Locale('zh');
+    case 'ru':
+      return const Locale('ru');
+    case 'de':
+      return const Locale('de');
+    case 'ja':
+      return const Locale('ja');
+    case 'ko':
+      return const Locale('ko');
     default:
       return const Locale('en');
   }
@@ -57,6 +67,16 @@ String toIntlLocale(String code) {
       return 'nl_NL';
     case 'pt':
       return 'pt_BR';
+    case 'zh':
+      return 'zh_CN';
+    case 'ru':
+      return 'ru_RU';
+    case 'de':
+      return 'de_DE';
+    case 'ja':
+      return 'ja_JP';
+    case 'ko':
+      return 'ko_KR';
     default:
       return 'en_US';
   }

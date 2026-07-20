@@ -35,7 +35,7 @@ class PublicProfileScreen extends ConsumerWidget {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(
+          icon: Icon(
             LucideIcons.chevronLeft,
             size: 24,
             color: AppColors.textPrimary,
@@ -45,7 +45,7 @@ class PublicProfileScreen extends ConsumerWidget {
             context.pop();
           },
         ),
-        title: const Text(
+        title: Text(
           'Profile',
           style: TextStyle(
             fontSize: 17,
@@ -64,7 +64,7 @@ class PublicProfileScreen extends ConsumerWidget {
             child: Text(
               AppErrorHandler.message(e),
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.textSecondary),
+              style: TextStyle(color: AppColors.textSecondary),
             ),
           ),
         ),
@@ -83,14 +83,14 @@ class PublicProfileScreen extends ConsumerWidget {
                     const SizedBox(height: 16),
                     Text(
                       name,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w800,
                         color: AppColors.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 10),
-                    const Text(
+                    Text(
                       'This profile is private.',
                       style: TextStyle(
                         fontSize: 14,
@@ -135,7 +135,7 @@ class PublicProfileScreen extends ConsumerWidget {
                 Text(
                   name,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.w800,
                     color: AppColors.textPrimary,
@@ -149,7 +149,7 @@ class PublicProfileScreen extends ConsumerWidget {
                       if (gender != null && gender.isNotEmpty) gender,
                     ].join(' · '),
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       color: AppColors.textSecondary,
                     ),
@@ -160,7 +160,7 @@ class PublicProfileScreen extends ConsumerWidget {
                   meals.isEmpty
                       ? 'Shared meals'
                       : 'Shared meals (${meals.length})',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w800,
                     color: AppColors.textPrimary,
@@ -176,7 +176,7 @@ class PublicProfileScreen extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: AppColors.border),
                     ),
-                    child: const Column(
+                    child: Column(
                       children: [
                         Icon(LucideIcons.utensils,
                             size: 28, color: AppColors.inactive),
@@ -292,7 +292,7 @@ class _ProfileMealTile extends StatelessWidget {
                         fit: BoxFit.cover,
                         memCacheWidth: 216,
                         placeholder:
-                            const ColoredBox(color: Color(0xFFF2F2F7)),
+                            ColoredBox(color: AppColors.background),
                         errorWidget: _fallback(),
                       )
                     : _fallback(),
@@ -307,7 +307,7 @@ class _ProfileMealTile extends StatelessWidget {
                     meal.name,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
                       color: AppColors.textPrimary,
@@ -316,7 +316,7 @@ class _ProfileMealTile extends StatelessWidget {
                   const SizedBox(height: 6),
                   Text(
                     '${meal.calories} kcal · ${meal.protein}g P · ${meal.carbs}g C · ${meal.fat}g F',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11,
                       color: AppColors.textSecondary,
                     ),
@@ -334,13 +334,13 @@ class _ProfileMealTile extends StatelessWidget {
                       const SizedBox(width: 4),
                       Text(
                         '${meal.likesCount}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
                           color: AppColors.textSecondary,
                         ),
                       ),
                       const SizedBox(width: 12),
-                      const Icon(
+                      Icon(
                         LucideIcons.messageCircle,
                         size: 13,
                         color: AppColors.inactive,
@@ -348,7 +348,7 @@ class _ProfileMealTile extends StatelessWidget {
                       const SizedBox(width: 4),
                       Text(
                         '${meal.commentsCount}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
                           color: AppColors.textSecondary,
                         ),
@@ -358,7 +358,7 @@ class _ProfileMealTile extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(
+            Icon(
               LucideIcons.chevronRight,
               size: 18,
               color: AppColors.inactive,
@@ -372,7 +372,7 @@ class _ProfileMealTile extends StatelessWidget {
   Widget _fallback() {
     return Container(
       color: AppColors.primaryLight,
-      child: const Center(
+      child: Center(
         child: Icon(LucideIcons.utensils, size: 24, color: AppColors.primaryDark),
       ),
     );

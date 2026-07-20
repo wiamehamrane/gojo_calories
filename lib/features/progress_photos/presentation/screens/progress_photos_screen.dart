@@ -43,7 +43,7 @@ class _ProgressPhotosScreenState extends ConsumerState<ProgressPhotosScreen> {
     );
     if (completed == true && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text('Photos saved to your journal.'),
           backgroundColor: kAccent,
         ),
@@ -95,13 +95,13 @@ class _ProgressPhotosScreenState extends ConsumerState<ProgressPhotosScreen> {
             Expanded(
               child: photosAsync.when(
                 loading: () =>
-                    const Center(child: CircularProgressIndicator(color: kAccent)),
+                    Center(child: CircularProgressIndicator(color: kAccent)),
                 error: (e, _) => Center(
                   child: Padding(
                     padding: const EdgeInsets.all(32),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
-                      children: const [
+                      children: [
                         Icon(LucideIcons.wifiOff, size: 32, color: kMuted),
                         SizedBox(height: 12),
                         Text('Couldn\'t load your photos. Pull to retry.',
@@ -159,7 +159,7 @@ class _ProgressPhotosScreenState extends ConsumerState<ProgressPhotosScreen> {
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(LucideIcons.chevronLeft, size: 24, color: kInk),
+            icon: Icon(LucideIcons.chevronLeft, size: 24, color: kInk),
             onPressed: () {
               HapticFeedback.selectionClick();
               context.pop();
@@ -697,7 +697,7 @@ class _PhotoTile extends StatelessWidget {
                 imageUrl: photo!.imageUrl,
                 fit: BoxFit.cover,
                 memCacheWidth: 700,
-                placeholder: const ColoredBox(color: kAccentSoft),
+                placeholder: ColoredBox(color: kAccentSoft),
               ),
               Positioned(
                 left: 0,
@@ -749,7 +749,7 @@ class _EmptyState extends StatelessWidget {
               color: AppColors.primaryLight,
               borderRadius: BorderRadius.circular(18),
             ),
-            child: const Icon(
+            child: Icon(
               LucideIcons.camera,
               size: 26,
               color: AppColors.primaryDark,
@@ -904,7 +904,7 @@ class _CompareViewState extends ConsumerState<_CompareView> {
                           style: body(size: 12.5, color: kMuted),
                         ),
                         trailing: on
-                            ? const Icon(LucideIcons.check,
+                            ? Icon(LucideIcons.check,
                                 color: kAccent, size: 18)
                             : null,
                       );
@@ -1003,7 +1003,7 @@ class _CompareViewState extends ConsumerState<_CompareView> {
                         color: kAccentSoft,
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(LucideIcons.arrowLeftRight,
+                      child: Icon(LucideIcons.arrowLeftRight,
                           size: 18, color: kAccent),
                     ),
                   ),
@@ -1122,7 +1122,7 @@ class _CompareViewState extends ConsumerState<_CompareView> {
   Widget _hint(String text) => EditorialCard(
         padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
         child: Column(children: [
-          const Icon(LucideIcons.gitCompare, size: 28, color: kAccent),
+          Icon(LucideIcons.gitCompare, size: 28, color: kAccent),
           const SizedBox(height: 14),
           Text(text,
               textAlign: TextAlign.center,
@@ -1189,7 +1189,7 @@ class _DayPickChip extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                const Icon(LucideIcons.chevronDown, size: 16, color: kMuted),
+                Icon(LucideIcons.chevronDown, size: 16, color: kMuted),
               ],
             ),
           ],
@@ -1251,9 +1251,9 @@ class _CompareFrame extends StatelessWidget {
                               fit: BoxFit.cover,
                               memCacheWidth: 800,
                               placeholder:
-                                  const ColoredBox(color: kAccentSoft),
+                                  ColoredBox(color: kAccentSoft),
                             )
-                          : const ColoredBox(
+                          : ColoredBox(
                               key: ValueKey('empty'), color: kAccentSoft),
                     ),
                     Positioned(
@@ -1273,13 +1273,13 @@ class _CompareFrame extends StatelessWidget {
                               Container(
                                 width: 6,
                                 height: 6,
-                                decoration: const BoxDecoration(
+                                decoration: BoxDecoration(
                                     color: kAccent, shape: BoxShape.circle),
                               ),
                               const SizedBox(width: 5),
                             ],
                             Text(tag,
-                                style: const TextStyle(
+                                style: TextStyle(
                                     color: kInk,
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600)),
@@ -1341,7 +1341,7 @@ class _CalendarViewState extends ConsumerState<_CalendarView> {
       padding: const EdgeInsets.fromLTRB(22, 20, 22, 40),
       children: [
         SoftEntrance(
-          child: const Text('Tap any day to view that day\'s photos.',
+          child: Text('Tap any day to view that day\'s photos.',
               style: TextStyle(color: kInkSoft, fontSize: 14)),
         ),
         const SizedBox(height: 18),
@@ -1382,7 +1382,7 @@ class _CalendarViewState extends ConsumerState<_CalendarView> {
                 .map((d) => Expanded(
                       child: Center(
                         child: Text(d,
-                            style: const TextStyle(
+                            style: TextStyle(
                                 color: kMuted,
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600)),
@@ -1408,7 +1408,7 @@ class _CalendarViewState extends ConsumerState<_CalendarView> {
           ),
         ),
         const SizedBox(height: 24),
-        const Divider(height: 1, thickness: 1, color: kHair),
+        Divider(height: 1, thickness: 1, color: kHair),
         const SizedBox(height: 20),
         AnimatedSwitcher(
           duration: const Duration(milliseconds: 280),
@@ -1437,12 +1437,12 @@ class _CalendarViewState extends ConsumerState<_CalendarView> {
                   ? KeyedSubtree(
                       key: ValueKey('empty-${_key(_selected!)}'),
                       child: Column(children: [
-                        const Icon(LucideIcons.calendarOff,
+                        Icon(LucideIcons.calendarOff,
                             size: 26, color: kMuted),
                         const SizedBox(height: 10),
                         Text(
                             'No photos on ${DateFormat.yMMMd().format(_selected!)}.',
-                            style: const TextStyle(color: kInkSoft)),
+                            style: TextStyle(color: kInkSoft)),
                       ]),
                     )
                   : const SizedBox.shrink(key: ValueKey('none')),

@@ -17,7 +17,6 @@ import '../widgets/shared_meal_card.dart';
 import '../../domain/models/event.dart';
 import '../../domain/models/shared_meal.dart';
 
-const _kDarkBackground = Color(0xFF0A0A0A);
 const _kSheetRadius = 32.0;
 
 class EventsFeedScreen extends ConsumerStatefulWidget {
@@ -84,14 +83,31 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
     context.push(RoutePaths.createEvent);
   }
 
+  /// Explore keeps a dark canvas; sheets / search adapt in dark mode.
+  Color get _canvas =>
+      AppColors.isDark ? AppColors.background : AppColors.darkBackground;
+
+  Color get _onCanvas =>
+      AppColors.isDark ? AppColors.textPrimary : Colors.white;
+
+  Color get _onCanvasMuted => AppColors.isDark
+      ? AppColors.textSecondary
+      : Colors.white.withValues(alpha: 0.55);
+
+  Color get _sheetColor => AppColors.surface;
+
+  Color get _searchFill =>
+      AppColors.isDark ? AppColors.surfaceMuted : const Color(0xFFE5E5EA);
+
   @override
   Widget build(BuildContext context) {
     final eventsAsync = ref.watch(eventsProvider);
-
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light,
+      value: SystemUiOverlayStyle.light.copyWith(
+        statusBarColor: Colors.transparent,
+      ),
       child: Scaffold(
-        backgroundColor: _kDarkBackground,
+        backgroundColor: _canvas,
         body: RefreshIndicator(
           color: AppColors.primary,
           backgroundColor: AppColors.surface,
@@ -104,6 +120,7 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
             ]);
           },
           child: CustomScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
             physics: const BouncingScrollPhysics(
               parent: AlwaysScrollableScrollPhysics(),
             ),
@@ -112,7 +129,14 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
                 child: SafeArea(bottom: false, child: _buildDarkHeader()),
               ),
               if (_activeQuery == null) ...[
-                SliverToBoxAdapter(child: Padding(padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenPadding), child: _buildMealsSection(),)),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.screenPadding,
+                    ),
+                    child: _buildMealsSection(),
+                  ),
+                ),
                 const SliverToBoxAdapter(child: SizedBox(height: 20)),
               ],
               ..._buildEventsSlivers(eventsAsync),
@@ -137,12 +161,12 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Center(
+          Center(
             child: Text(
               'Where the doers and\nthe creatives and\nthe top meet.',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: Colors.white,
+                color: _onCanvas,
                 fontSize: 26,
                 fontWeight: FontWeight.w800,
                 height: 1.3,
@@ -158,7 +182,7 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
                 'Search for events in your city, or find people near you to train with.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.55),
+                  color: _onCanvasMuted,
                   fontSize: 13,
                   height: 1.5,
                 ),
@@ -180,8 +204,13 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
     return Container(
       height: 54,
       decoration: BoxDecoration(
-        color: const Color(0xFFE5E5EA),
+        color: _searchFill,
         borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: AppColors.isDark
+              ? AppColors.border
+              : Colors.transparent,
+        ),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 8),
       child: Row(
@@ -193,8 +222,13 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
               width: 38,
               height: 38,
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.9),
+                color: AppColors.isDark
+                    ? AppColors.surface
+                    : Colors.white.withValues(alpha: 0.9),
                 shape: BoxShape.circle,
+                border: AppColors.isDark
+                    ? Border.all(color: AppColors.border)
+                    : null,
               ),
               child: Icon(
                 LucideIcons.plus,
@@ -210,22 +244,23 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
               textInputAction: TextInputAction.search,
               textAlign: TextAlign.center,
               onSubmitted: (_) => _runSearch(),
+              onTapOutside: (_) => _searchFocus.unfocus(),
               style: TextStyle(
                 color: AppColors.textPrimary,
                 fontSize: 14.5,
                 fontWeight: FontWeight.w500,
               ),
-              cursorColor: AppColors.textPrimary,
-              decoration: const InputDecoration(
+              cursorColor: AppColors.primary,
+              decoration: InputDecoration(
                 hintText: 'I wanna go for a run…',
                 hintStyle: TextStyle(
-                  color: Color(0xFF6B6B6B),
+                  color: AppColors.textSecondary,
                   fontSize: 14.5,
                   fontWeight: FontWeight.w400,
                 ),
                 border: InputBorder.none,
                 isDense: true,
-                contentPadding: EdgeInsets.symmetric(horizontal: 8),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 8),
               ),
             ),
           ),
@@ -241,7 +276,7 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
                 width: 38,
                 height: 38,
                 decoration: BoxDecoration(
-                  color: AppColors.textPrimary,
+                  color: AppColors.primaryDark,
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -253,10 +288,10 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
             )
           else
             Padding(
-              padding: EdgeInsets.only(right: 10),
+              padding: const EdgeInsets.only(right: 10),
               child: Icon(
                 LucideIcons.sparkles,
-                color: AppColors.primaryDark,
+                color: AppColors.primary,
                 size: 18,
               ),
             ),
@@ -283,11 +318,11 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
           ),
           child: Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
                   'Meals',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: _onCanvas,
                     fontSize: 22,
                     fontWeight: FontWeight.w800,
                     letterSpacing: -0.3,
@@ -303,10 +338,10 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.12),
+                    color: _onCanvas.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(AppRadius.chip),
                     border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.18),
+                      color: _onCanvas.withValues(alpha: 0.18),
                     ),
                   ),
                   child: Row(
@@ -314,14 +349,14 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
                       Icon(
                         LucideIcons.plus,
                         size: 13,
-                        color: Colors.white.withValues(alpha: 0.9),
+                        color: _onCanvas.withValues(alpha: 0.9),
                       ),
                       const SizedBox(width: 4),
                       Text(
                         'Share yours',
                         style: AppTextStyles.bodyBold.copyWith(
                           fontSize: 12,
-                          color: Colors.white.withValues(alpha: 0.9),
+                          color: _onCanvas.withValues(alpha: 0.9),
                         ),
                       ),
                     ],
@@ -334,9 +369,12 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
         Container(
           clipBehavior: Clip.hardEdge,
           width: double.infinity,
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.all(Radius.circular(_kSheetRadius)),
+          decoration: BoxDecoration(
+            color: _sheetColor,
+            borderRadius: const BorderRadius.all(Radius.circular(_kSheetRadius)),
+            border: AppColors.isDark
+                ? Border.all(color: AppColors.border.withValues(alpha: 0.7))
+                : null,
           ),
           padding: const EdgeInsets.symmetric(vertical: 14),
           child: mealsAsync.isLoading && meals.isEmpty
@@ -398,7 +436,7 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(LucideIcons.utensils,
+              Icon(LucideIcons.utensils,
                   size: 30, color: AppColors.inactive),
               const SizedBox(height: 10),
               Text(
@@ -532,8 +570,8 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
                 'Results for “$_activeQuery”',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: _onCanvas,
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
                   letterSpacing: -0.3,
@@ -546,14 +584,14 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.12),
+                  color: _onCanvas.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(AppRadius.chip),
                 ),
                 child: Text(
                   'Clear',
                   style: AppTextStyles.bodyBold.copyWith(
                     fontSize: 12,
-                    color: Colors.white.withValues(alpha: 0.85),
+                    color: _onCanvas.withValues(alpha: 0.85),
                   ),
                 ),
               ),
@@ -563,8 +601,8 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
       );
     }
 
-    return const Padding(
-      padding: EdgeInsets.fromLTRB(
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
         AppSpacing.screenPadding,
         0,
         AppSpacing.screenPadding,
@@ -573,7 +611,7 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
       child: Text(
         'Events',
         style: TextStyle(
-          color: Colors.white,
+          color: _onCanvas,
           fontSize: 22,
           fontWeight: FontWeight.w800,
           letterSpacing: -0.3,
@@ -585,9 +623,12 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
   Widget _eventsCard({required Widget child}) {
     return Container(
       width: double.infinity,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.all(Radius.circular(_kSheetRadius)),
+      decoration: BoxDecoration(
+        color: _sheetColor,
+        borderRadius: const BorderRadius.all(Radius.circular(_kSheetRadius)),
+        border: AppColors.isDark
+            ? Border.all(color: AppColors.border.withValues(alpha: 0.7))
+            : null,
       ),
       child: child,
     );

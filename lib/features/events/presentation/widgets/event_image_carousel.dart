@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../domain/models/event.dart';
 import '../widgets/event_card.dart';
 import '../../../../core/widgets/cached_food_image.dart';
+import '../../../../core/theme/app_colors.dart';
 
 /// Swipeable image carousel for event photos.
 class EventImageCarousel extends StatefulWidget {
@@ -43,7 +44,7 @@ class _EventImageCarouselState extends State<EventImageCarousel> {
         child: widget.placeholder ??
             AspectRatio(
               aspectRatio: widget.aspectRatio,
-              child: const ColoredBox(color: Color(0xFFF2F2F7)),
+              child: ColoredBox(color: AppColors.background),
             ),
       );
     }
@@ -124,8 +125,8 @@ class _NetworkImage extends StatelessWidget {
       fit: BoxFit.cover,
       width: double.infinity,
       memCacheWidth: 1080,
-      placeholder: const ColoredBox(color: Color(0xFFF2F2F7)),
-      errorWidget: const ColoredBox(color: Color(0xFFF2F2F7)),
+      placeholder: ColoredBox(color: AppColors.background),
+      errorWidget: ColoredBox(color: AppColors.background),
     );
 
     if (height != null) {

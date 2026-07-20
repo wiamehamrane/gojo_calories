@@ -43,7 +43,7 @@ class DayProgressDots extends ConsumerWidget {
             children: [
               Text(
                 Translations.t(lang, 'tasks_day'),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w800,
                   color: AppColors.textPrimary,
@@ -51,7 +51,7 @@ class DayProgressDots extends ConsumerWidget {
               ),
               Text(
                 '$percent%',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w800,
                   color: AppColors.primaryDark,
