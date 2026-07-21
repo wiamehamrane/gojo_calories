@@ -32,8 +32,11 @@ abstract final class RoutePaths {
   static const profileShare = '/profile/share';
   static const coaches = '/coaches';
   static const coachDetail = '/coaches/:id';
+  static const coachAbout = '/coaches/:id/about';
   static const coachHub = '/profile/coach';
   static const coachPortfolio = '/profile/coach/portfolio';
+  static const coachCreatePost = '/profile/coach/posts/create';
+  static const coachPostViewer = '/profile/coach/posts/viewer';
   static const becomeCoach = '/profile/become-coach';
   static const profileTerms = '/profile/terms';
   static const profilePrivacy = '/profile/privacy';
@@ -42,6 +45,7 @@ abstract final class RoutePaths {
   static const shareJoin = '/share/join';
 
   static String coachDetailPath(String id) => '/coaches/$id';
+  static String coachAboutPath(String id) => '/coaches/$id/about';
 
   static const logExercise = '/log_exercise';
   static const runIntensity = '/run_intensity';

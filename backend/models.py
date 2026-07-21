@@ -543,6 +543,12 @@ class Coach(Base):
         cascade="all, delete-orphan",
         order_by="CoachWork.created_at.desc()",
     )
+    posts = relationship(
+        "CoachPost",
+        back_populates="coach",
+        cascade="all, delete-orphan",
+        order_by="CoachPost.created_at.desc()",
+    )
 
 
 class CoachWork(Base):
@@ -558,3 +564,62 @@ class CoachWork(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     coach = relationship("Coach", back_populates="works")
+
+
+class CoachPost(Base):
+    """Instagram-style coach feed post (image, video, or before/after carousel)."""
+
+    __tablename__ = "coach_posts"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid, index=True)
+    coach_id = Column(
+        String(36), ForeignKey("coaches.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    post_type = Column(String, nullable=False)  # image | video | before_after
+    caption = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow, index=True)
+
+    coach = relationship("Coach", back_populates="posts")
+    media = relationship(
+        "CoachPostMedia",
+        back_populates="post",
+        cascade="all, delete-orphan",
+        order_by="CoachPostMedia.sort_order",
+    )
+
+
+class CoachPostMedia(Base):
+    __tablename__ = "coach_post_media"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid, index=True)
+    post_id = Column(
+        String(36), ForeignKey("coach_posts.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    media_type = Column(String, nullable=False)  # image | video
+    url = Column(String, nullable=False)  # S3 key or local path
+    thumbnail_url = Column(String, nullable=True)  # preview frame for videos
+    role = Column(String, nullable=True)  # single | before | after
+    sort_order = Column(Integer, nullable=False, default=0)
+
+    post = relationship("CoachPost", back_populates="media")
+
+
+class UserFollow(Base):
+    """Directed follow graph: follower → following (any user, including coaches)."""
+
+    __tablename__ = "user_follows"
+    __table_args__ = (
+        UniqueConstraint("follower_id", "following_id", name="uq_user_follows_pair"),
+    )
+
+    id = Column(String(36), primary_key=True, default=generate_uuid, index=True)
+    follower_id = Column(
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    following_id = Column(
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    follower = relationship("User", foreign_keys=[follower_id])
+    following = relationship("User", foreign_keys=[following_id])

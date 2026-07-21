@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 
 import '../../../../core/network/api_client.dart';
 import '../../domain/models/coach.dart';
+import '../../domain/models/coach_post.dart';
 
 class CoachesRepository {
   Future<CoachSearchPage> search({
@@ -95,6 +96,92 @@ class CoachesRepository {
 
   Future<void> deleteWork(String workId) async {
     await ApiClient.instance.delete('coaches/me/works/$workId');
+  }
+
+  Future<CoachSocialProfile> getSocial(String coachId) async {
+    final res = await ApiClient.instance.get('coaches/$coachId/social');
+    return CoachSocialProfile.fromJson(Map<String, dynamic>.from(res.data as Map));
+  }
+
+  Future<CoachPostPage> listPosts({
+    required String coachId,
+    String tab = 'all',
+    int page = 1,
+    int pageSize = 18,
+  }) async {
+    final res = await ApiClient.instance.get(
+      'coaches/$coachId/posts',
+      queryParameters: {
+        'tab': tab,
+        'page': page,
+        'page_size': pageSize,
+      },
+    );
+    return CoachPostPage.fromJson(Map<String, dynamic>.from(res.data as Map));
+  }
+
+  Future<CoachPostPage> listMyPosts({
+    String tab = 'all',
+    int page = 1,
+    int pageSize = 18,
+  }) async {
+    final res = await ApiClient.instance.get(
+      'coaches/me/posts',
+      queryParameters: {
+        'tab': tab,
+        'page': page,
+        'page_size': pageSize,
+      },
+    );
+    return CoachPostPage.fromJson(Map<String, dynamic>.from(res.data as Map));
+  }
+
+  Future<CoachPost> createPost({
+    required String postType,
+    required File media,
+    File? after,
+    File? thumbnail,
+    String? caption,
+  }) async {
+    final map = <String, dynamic>{
+      'post_type': postType,
+      if (caption != null && caption.trim().isNotEmpty) 'caption': caption.trim(),
+    };
+
+    if (postType == 'before_after') {
+      if (after == null) {
+        throw ArgumentError('after image is required for before_after posts');
+      }
+      map['before'] = await MultipartFile.fromFile(
+        media.path,
+        filename: media.path.split('/').last,
+      );
+      map['after'] = await MultipartFile.fromFile(
+        after.path,
+        filename: after.path.split('/').last,
+      );
+    } else {
+      map['media'] = await MultipartFile.fromFile(
+        media.path,
+        filename: media.path.split('/').last,
+      );
+      if (thumbnail != null) {
+        map['thumbnail'] = await MultipartFile.fromFile(
+          thumbnail.path,
+          filename: thumbnail.path.split('/').last,
+        );
+      }
+    }
+
+    final res = await ApiClient.instance.post(
+      'coaches/me/posts',
+      data: FormData.fromMap(map),
+    );
+    return CoachPost.fromJson(Map<String, dynamic>.from(res.data as Map));
+  }
+
+  Future<void> deletePost(String postId) async {
+    await ApiClient.instance.delete('coaches/me/posts/$postId');
   }
 }
 

@@ -19,7 +19,7 @@ load_dotenv()
 
 os.makedirs("uploads", exist_ok=True)
 
-from routes import vision, auth, stats, groups, referrals, payments, notifications, exercises, recipes, events, apple_iap, google_iap, memories, feed, friends, clan, shares, shared_meals, users, coaches, progress_photos
+from routes import vision, auth, stats, groups, referrals, payments, notifications, exercises, recipes, events, apple_iap, google_iap, memories, feed, friends, clan, shares, shared_meals, users, coaches, progress_photos, follows
 from routes.admin import router as admin_router
 
 # Durable media storage check — local /uploads is wiped on every ECS redeploy.
@@ -429,6 +429,41 @@ try:
             );
         """))
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_coach_works_coach_id ON coach_works (coach_id);"))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS coach_posts (
+                id VARCHAR(36) PRIMARY KEY,
+                coach_id VARCHAR(36) NOT NULL REFERENCES coaches(id) ON DELETE CASCADE,
+                post_type VARCHAR NOT NULL,
+                caption TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_coach_posts_coach_id ON coach_posts (coach_id);"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_coach_posts_created_at ON coach_posts (created_at);"))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS coach_post_media (
+                id VARCHAR(36) PRIMARY KEY,
+                post_id VARCHAR(36) NOT NULL REFERENCES coach_posts(id) ON DELETE CASCADE,
+                media_type VARCHAR NOT NULL,
+                url VARCHAR NOT NULL,
+                thumbnail_url VARCHAR,
+                role VARCHAR,
+                sort_order INTEGER NOT NULL DEFAULT 0
+            );
+        """))
+        conn.execute(text("ALTER TABLE coach_post_media ADD COLUMN IF NOT EXISTS thumbnail_url VARCHAR;"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_coach_post_media_post_id ON coach_post_media (post_id);"))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS user_follows (
+                id VARCHAR(36) PRIMARY KEY,
+                follower_id VARCHAR(36) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                following_id VARCHAR(36) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT uq_user_follows_pair UNIQUE (follower_id, following_id)
+            );
+        """))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_user_follows_follower_id ON user_follows (follower_id);"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_user_follows_following_id ON user_follows (following_id);"))
         # Ensure daily_stats has all expected columns
         conn.execute(text("""
             DO $$ BEGIN
@@ -590,6 +625,7 @@ app.include_router(payments.router, prefix="/api/payments", tags=["Payments"])
 app.include_router(clan.router, prefix="/api/clan", tags=["Clan"])
 app.include_router(shares.router, prefix="/api/shares", tags=["Share Access"])
 app.include_router(coaches.router, prefix="/api/coaches", tags=["Coaches"])
+app.include_router(follows.router, prefix="/api/follows", tags=["Follows"])
 app.include_router(apple_iap.router, prefix="/api/payments/apple", tags=["Apple IAP"])
 app.include_router(google_iap.router, prefix="/api/payments/google", tags=["Google IAP"])
 
