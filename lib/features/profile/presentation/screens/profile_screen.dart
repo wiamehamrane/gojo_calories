@@ -176,7 +176,7 @@ class ProfileScreen extends ConsumerWidget {
                     : t('become_coach_title'),
                 subtitle: isCoach
                     ? t('coach_hub_subtitle')
-                    : t('coach_paywall_headline'),
+                    : t('become_coach_promo_subtitle'),
                 onTap: () => context.push(
                   isCoach ? RoutePaths.coachHub : RoutePaths.becomeCoach,
                 ),

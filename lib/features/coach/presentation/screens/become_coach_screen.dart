@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../../../core/config/env_config.dart';
 import '../../../../core/di/repository_providers.dart';
 import '../../../../core/localization/locale_provider.dart';
 import '../../../../core/localization/translations.dart';
@@ -61,7 +60,6 @@ class _BecomeCoachScreenState extends ConsumerState<BecomeCoachScreen> {
   bool _userHasPaid = false;
   bool _userIsCoach = false;
   bool _isActive = false;
-  bool _hasCoachSub = false;
 
   final Set<String> _specialties = {};
   final Set<String> _languages = {};
@@ -112,7 +110,6 @@ class _BecomeCoachScreenState extends ConsumerState<BecomeCoachScreen> {
         _longitude = profile.longitude;
         _city = profile.city;
         _isActive = profile.isActive;
-        _hasCoachSub = profile.hasActiveCoachSubscription;
       }
       setState(() {
         _userHasPaid = me.userHasPaid;
@@ -225,7 +222,6 @@ class _BecomeCoachScreenState extends ConsumerState<BecomeCoachScreen> {
       _saving = false;
       _userIsCoach = true;
       _isActive = activated.isActive;
-      _hasCoachSub = activated.hasActiveCoachSubscription || _hasCoachSub;
     });
     ref.invalidate(profileProvider);
     AppMessage.success(context, _t('become_coach_success'));
@@ -298,44 +294,22 @@ class _BecomeCoachScreenState extends ConsumerState<BecomeCoachScreen> {
       await ref.read(coachesRepositoryProvider).upsertMe(_payload());
       if (!mounted) return;
 
-      if (!_hasCoachSub && !EnvConfig.skipCoachPayment) {
-        setState(() => _saving = false);
-        final paid = await context.push<bool>(RoutePaths.coachPaywall);
-        if (!mounted) return;
-        if (paid != true) {
-          setState(() => _error = 'become_coach_payment_required');
-          return;
-        }
-        setState(() {
-          _hasCoachSub = true;
-          _saving = true;
-        });
-      }
-
       final activated = await ref.read(coachesRepositoryProvider).activate();
       if (!mounted) return;
       setState(() {
         _saving = false;
         _isActive = activated.isActive;
         _userIsCoach = true;
-        _hasCoachSub = activated.hasActiveCoachSubscription || _hasCoachSub;
       });
       ref.invalidate(profileProvider);
       AppMessage.success(context, _t('become_coach_resumed'));
     } on DioException catch (e) {
-      final status = e.response?.statusCode;
       final detail = e.response?.data is Map
           ? (e.response!.data['detail']?.toString() ?? '')
           : '';
       setState(() {
         _saving = false;
-        if (status == 402) {
-          _error = 'become_coach_sub_required';
-        } else if (detail.isNotEmpty) {
-          _error = detail;
-        } else {
-          _error = 'become_coach_failed';
-        }
+        _error = detail.isNotEmpty ? detail : 'become_coach_failed';
       });
     } catch (_) {
       setState(() {
@@ -371,21 +345,6 @@ class _BecomeCoachScreenState extends ConsumerState<BecomeCoachScreen> {
       await repo.upsertMe(_payload());
       if (!mounted) return;
 
-      if (!_hasCoachSub && !EnvConfig.skipCoachPayment) {
-        setState(() => _saving = false);
-        final paid = await context.push<bool>(RoutePaths.coachPaywall);
-        if (!mounted) return;
-        if (paid != true) {
-          setState(() => _error = 'become_coach_payment_required');
-          return;
-        }
-        setState(() {
-          _hasCoachSub = true;
-          _saving = true;
-          _error = null;
-        });
-      }
-
       await _activateCoach();
     } on DioException catch (e) {
       final status = e.response?.statusCode;
@@ -397,8 +356,6 @@ class _BecomeCoachScreenState extends ConsumerState<BecomeCoachScreen> {
         if (status == 403) {
           _error = 'become_coach_pro_required';
           _userHasPaid = false;
-        } else if (status == 402) {
-          _error = 'become_coach_sub_required';
         } else if (detail.isNotEmpty) {
           _error = detail;
         } else {
@@ -674,9 +631,7 @@ class _BottomCtaBar extends StatelessWidget {
                                 ? t('become_coach_continue')
                                 : (userIsCoach
                                     ? t('become_coach_save')
-                                    : t(
-                                        'become_coach_continue_payment',
-                                      )),
+                                    : t('become_coach_submit')),
                           ),
                   ),
                 ),

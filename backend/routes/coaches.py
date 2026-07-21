@@ -15,8 +15,6 @@ from s3_utils import MediaUploadError, delete_media, upload_image_to_s3_key
 router = APIRouter()
 
 DEV_MODE = os.getenv("DEV_MODE", "false").lower() == "true"
-# Explicit only — does NOT follow DEV_MODE. Set true in .env to bypass coach IAP locally.
-SKIP_COACH_PAYMENT = os.getenv("SKIP_COACH_PAYMENT", "false").lower() == "true"
 
 _VALID_GENDERS = {"male", "female"}
 _VALID_COACHING_MODES = {"in_person", "online", "both"}
@@ -175,23 +173,6 @@ def activate_coach(
     ready, reason = coach_service.profile_ready_for_activation(coach)
     if not ready:
         raise HTTPException(status_code=400, detail=reason)
-
-    if not coach_service.coach_subscription_active(
-        coach, allow_skip=SKIP_COACH_PAYMENT
-    ):
-        raise HTTPException(
-            status_code=402,
-            detail="Coach subscription required",
-        )
-
-    if SKIP_COACH_PAYMENT and not coach_service.coach_subscription_active(
-        coach, allow_skip=False
-    ):
-        coach.subscription_plan = coach.subscription_plan or "yearly"
-        coach.subscription_source = coach.subscription_source or "skip"
-        coach.subscription_expires_at = datetime.datetime.utcnow() + datetime.timedelta(
-            days=365
-        )
 
     coach.is_active = True
     coach.updated_at = datetime.datetime.utcnow()

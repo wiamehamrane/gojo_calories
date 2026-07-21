@@ -533,12 +533,6 @@ class Coach(Base):
     languages = Column(JSON, nullable=True)
     coaching_mode = Column(String, nullable=True)
     is_active = Column(Boolean, default=False, nullable=False)
-    subscription_plan = Column(String, nullable=True)
-    subscription_expires_at = Column(DateTime, nullable=True)
-    subscription_source = Column(String, nullable=True)
-    apple_original_transaction_id = Column(String, nullable=True, index=True)
-    google_order_id = Column(String, nullable=True, index=True)
-    google_purchase_token = Column(String, nullable=True, index=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
 

@@ -410,12 +410,6 @@ try:
                 languages JSON,
                 coaching_mode VARCHAR,
                 is_active BOOLEAN DEFAULT FALSE,
-                subscription_plan VARCHAR,
-                subscription_expires_at TIMESTAMP,
-                subscription_source VARCHAR,
-                apple_original_transaction_id VARCHAR,
-                google_order_id VARCHAR,
-                google_purchase_token VARCHAR,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );

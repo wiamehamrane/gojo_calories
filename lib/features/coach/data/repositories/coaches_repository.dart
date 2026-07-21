@@ -139,9 +139,6 @@ class CoachOwnerProfile {
   final bool isActive;
   final bool userIsCoach;
   final bool userHasPaid;
-  final String? subscriptionPlan;
-  final DateTime? subscriptionExpiresAt;
-  final String? subscriptionSource;
 
   const CoachOwnerProfile({
     required this.id,
@@ -161,16 +158,7 @@ class CoachOwnerProfile {
     this.isActive = false,
     this.userIsCoach = false,
     this.userHasPaid = false,
-    this.subscriptionPlan,
-    this.subscriptionExpiresAt,
-    this.subscriptionSource,
   });
-
-  bool get hasActiveCoachSubscription {
-    final expires = subscriptionExpiresAt;
-    if (expires == null) return false;
-    return expires.isAfter(DateTime.now().toUtc());
-  }
 
   factory CoachOwnerProfile.fromJson(Map<String, dynamic> json) {
     List<String> asList(dynamic value) {
@@ -179,11 +167,6 @@ class CoachOwnerProfile {
           .map((e) => e?.toString().trim() ?? '')
           .where((e) => e.isNotEmpty)
           .toList();
-    }
-
-    DateTime? parseDate(dynamic value) {
-      if (value is! String || value.isEmpty) return null;
-      return DateTime.tryParse(value)?.toUtc();
     }
 
     return CoachOwnerProfile(
@@ -204,9 +187,6 @@ class CoachOwnerProfile {
       isActive: json['is_active'] as bool? ?? false,
       userIsCoach: json['user_is_coach'] as bool? ?? false,
       userHasPaid: json['user_has_paid'] as bool? ?? false,
-      subscriptionPlan: json['subscription_plan'] as String?,
-      subscriptionExpiresAt: parseDate(json['subscription_expires_at']),
-      subscriptionSource: json['subscription_source'] as String?,
     );
   }
 }

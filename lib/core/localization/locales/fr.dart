@@ -402,8 +402,6 @@ const Map<String, String> fr = {
       'Seuls les membres Pro peuvent devenir coach. Abonnez-vous à Pro, puis complétez votre profil.',
   'become_coach_get_pro': 'Passer Pro',
   'become_coach_pro_required': 'Abonnement Pro requis pour devenir coach.',
-  'become_coach_sub_required':
-      'Abonnement coach requis. Finalisez le paiement pour activer.',
   'become_coach_bio_required': 'Ajoutez une courte bio.',
   'become_coach_specialty_required': 'Choisissez au moins une spécialité.',
   'become_coach_gender_required': 'Choisissez votre genre.',
@@ -413,10 +411,6 @@ const Map<String, String> fr = {
   'become_coach_already_active': 'Votre profil coach est actif.',
   'become_coach_already_inactive':
       'Votre profil coach est enregistré mais inactif.',
-  'become_coach_subscribe_activate': 'S’abonner et activer',
-  'become_coach_continue_payment': 'Continuer vers le paiement',
-  'become_coach_payment_required':
-      'Le paiement est requis pour devenir coach. Votre profil a été enregistré en brouillon.',
   'become_coach_save': 'Enregistrer le profil',
   'become_coach_saved': 'Profil coach enregistré.',
   'become_coach_listing': 'Visibilité',
@@ -426,16 +420,7 @@ const Map<String, String> fr = {
   'become_coach_resumed': 'Vous êtes de nouveau visible dans la recherche.',
   'become_coach_status_visible': 'Visible dans la recherche de coachs',
   'become_coach_status_hidden': 'Masqué de la recherche de coachs',
-  'coach_paywall_title': 'Abonnement coach',
-  'coach_paywall_headline': 'Apparaissez comme coach',
-  'coach_paywall_body':
-      'Abonnez-vous pour apparaître dans la recherche et être contacté.',
-  'coach_paywall_monthly': 'Mensuel',
-  'coach_paywall_yearly': 'Annuel',
-  'coach_paywall_best_value': 'Meilleure offre',
-  'coach_paywall_yearly_save': 'Économisez 20 %',
-  'coach_paywall_subscribe': 'S’abonner',
-  'coach_paywall_success': 'Abonnement coach activé.',
+  'become_coach_promo_subtitle': 'Apparaissez comme coach',
   'coach_hub_title': 'Mon profil coach',
   'coach_hub_subtitle':
       'Gérez votre annonce et montrez vos résultats.',
