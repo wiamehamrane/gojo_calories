@@ -82,16 +82,6 @@ class CoachHubScreen extends ConsumerWidget {
               .animate()
               .fadeIn(delay: 110.ms, duration: 320.ms)
               .slideY(begin: 0.06, curve: Curves.easeOutCubic),
-          const SizedBox(height: 12),
-          _HubCard(
-            icon: LucideIcons.images,
-            title: t('coach_hub_portfolio'),
-            subtitle: t('coach_hub_portfolio_body'),
-            onTap: () => context.push(RoutePaths.coachPortfolio),
-          )
-              .animate()
-              .fadeIn(delay: 120.ms, duration: 320.ms)
-              .slideY(begin: 0.06, curve: Curves.easeOutCubic),
         ],
       ),
     );

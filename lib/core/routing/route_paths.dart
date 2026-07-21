@@ -34,7 +34,6 @@ abstract final class RoutePaths {
   static const coachDetail = '/coaches/:id';
   static const coachAbout = '/coaches/:id/about';
   static const coachHub = '/profile/coach';
-  static const coachPortfolio = '/profile/coach/portfolio';
   static const coachCreatePost = '/profile/coach/posts/create';
   static const coachPostViewer = '/profile/coach/posts/viewer';
   static const becomeCoach = '/profile/become-coach';
