@@ -143,8 +143,9 @@ class _CoachDiscoverScreenState extends ConsumerState<CoachDiscoverScreen> {
     final lang = ref.watch(localeProvider);
     String t(String k) => Translations.t(lang, k);
     final state = ref.watch(coachDiscoverProvider);
-    final bottomInset = MediaQuery.of(context).padding.bottom + 88;
+    final bottomInset = MediaQuery.of(context).padding.bottom + 24;
     final maxFilterHeight = MediaQuery.sizeOf(context).height * 0.48;
+    final canPop = context.canPop();
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -157,6 +158,19 @@ class _CoachDiscoverScreenState extends ConsumerState<CoachDiscoverScreen> {
               title: t('coaches_title'),
               subtitle: t('coaches_subtitle'),
               icon: LucideIcons.users,
+              trailing: canPop
+                  ? IconButton(
+                      onPressed: () {
+                        HapticFeedback.selectionClick();
+                        context.pop();
+                      },
+                      style: IconButton.styleFrom(
+                        backgroundColor: AppColors.surface,
+                        foregroundColor: AppColors.textPrimary,
+                      ),
+                      icon: const Icon(LucideIcons.x, size: 18),
+                    )
+                  : null,
             )
                 .animate()
                 .fadeIn(duration: 420.ms, curve: Curves.easeOut)

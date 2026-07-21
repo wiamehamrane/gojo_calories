@@ -20,6 +20,8 @@ const Map<String, String> pt = {
   'action_add_food_manually': 'Adicionar comida manualmente',
   'action_scan_food': 'Digitalizar alimentos',
   'action_tasks': 'Tarefas',
+  'action_body_journal': 'Diário corporal',
+  'coaching_section': 'Coaching',
   'tasks_greeting_morning': 'Bom dia',
   'tasks_greeting_afternoon': 'Boa tarde',
   'tasks_greeting_evening': 'Linda noite',

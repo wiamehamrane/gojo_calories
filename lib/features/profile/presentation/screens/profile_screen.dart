@@ -142,12 +142,6 @@ class ProfileScreen extends ConsumerWidget {
               ),
 
               const SizedBox(height: 20),
-              const _SectionLabel('My body journal'),
-              _ProgressPromoCard(
-                onTap: () => context.push(RoutePaths.progressPhotos),
-              ),
-
-              const SizedBox(height: 20),
               _SectionLabel(t('my_events')),
 
               _GroupedListCard(
@@ -174,6 +168,7 @@ class ProfileScreen extends ConsumerWidget {
               ),
 
               const SizedBox(height: 20),
+              _SectionLabel('Coaching'),
               _CoachPromoCard(
                 isCoach: isCoach,
                 title: isCoach
@@ -182,9 +177,6 @@ class ProfileScreen extends ConsumerWidget {
                 subtitle: isCoach
                     ? t('coach_hub_subtitle')
                     : t('coach_paywall_headline'),
-                cta: isCoach
-                    ? t('become_coach_continue')
-                    : t('become_coach_submit'),
                 onTap: () => context.push(
                   isCoach ? RoutePaths.coachHub : RoutePaths.becomeCoach,
                 ),
@@ -1313,10 +1305,18 @@ class _GroupedListCard extends StatelessWidget {
   }
 }
 
-class _ProgressPromoCard extends StatelessWidget {
+class _CoachPromoCard extends StatelessWidget {
+  final bool isCoach;
+  final String title;
+  final String subtitle;
   final VoidCallback onTap;
 
-  const _ProgressPromoCard({required this.onTap});
+  const _CoachPromoCard({
+    required this.isCoach,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1328,221 +1328,55 @@ class _ProgressPromoCard extends StatelessWidget {
           onTap();
         },
         child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
           decoration: BoxDecoration(
             color: AppColors.surface,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: AppColors.border),
+            borderRadius: BorderRadius.circular(20),
             boxShadow: AppShadows.cardShadow,
           ),
+          padding: const EdgeInsets.all(16),
           child: Row(
             children: [
               Container(
-                width: 52,
-                height: 52,
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
                   color: AppColors.primaryLight,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
-                  LucideIcons.images,
-                  size: 24,
-                  color: AppColors.primaryDark,
+                  isCoach ? LucideIcons.badgeCheck : LucideIcons.dumbbell,
+                  size: 20,
+                  color: AppColors.primary,
                 ),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Track your daily progress',
+                      title,
                       style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
                         color: AppColors.textPrimary,
                       ),
                     ),
-                    SizedBox(height: 4),
+                    const SizedBox(height: 2),
                     Text(
-                      'Capture daily angles and compare over time.',
+                      subtitle,
                       style: TextStyle(
                         fontSize: 13,
-                        height: 1.35,
                         color: AppColors.textSecondary,
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceMuted,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  LucideIcons.chevronRight,
-                  size: 18,
-                  color: AppColors.inactive,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _CoachPromoCard extends StatefulWidget {
-  final bool isCoach;
-  final String title;
-  final String subtitle;
-  final String cta;
-  final VoidCallback onTap;
-
-  const _CoachPromoCard({
-    required this.isCoach,
-    required this.title,
-    required this.subtitle,
-    required this.cta,
-    required this.onTap,
-  });
-
-  @override
-  State<_CoachPromoCard> createState() => _CoachPromoCardState();
-}
-
-class _CoachPromoCardState extends State<_CoachPromoCard>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _pulse;
-
-  @override
-  void initState() {
-    super.initState();
-    _pulse = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1600),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _pulse.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return PressScale(
-      scale: 0.98,
-      child: GestureDetector(
-        onTap: () {
-          HapticFeedback.selectionClick();
-          widget.onTap();
-        },
-        child: AnimatedBuilder(
-          animation: _pulse,
-          builder: (context, child) {
-            final t = Curves.easeInOut.transform(_pulse.value);
-            return Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(22),
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: AppColors.heroGradientWarm,
-                ),
-                border: Border.all(
-                  color: AppColors.primary.withValues(alpha: 0.18 + t * 0.12),
-                ),
-              ),
-              child: child,
-            );
-          },
-          child: Row(
-            children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  gradient: LinearGradient(
-                    colors: [
-                      AppColors.primary.withValues(alpha: 0.25),
-                      AppColors.primaryLight,
-                    ],
-                  ),
-                ),
-                child: Icon(
-                  widget.isCoach ? LucideIcons.badgeCheck : LucideIcons.sparkles,
-                  color: AppColors.primaryDark,
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.title,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.textPrimary,
-                        letterSpacing: -0.2,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      widget.subtitle,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 12,
-                        height: 1.35,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryDark,
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            widget.cta,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          const Icon(
-                            LucideIcons.arrowRight,
-                            size: 14,
-                            color: Colors.white,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+              Icon(
+                LucideIcons.chevronRight,
+                size: 18,
+                color: AppColors.inactive,
               ),
             ],
           ),

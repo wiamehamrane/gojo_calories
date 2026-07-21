@@ -21,6 +21,7 @@ const Map<String, String> en = {
   'action_add_food_manually': 'Add Food Manually',
   'action_scan_food': 'Scan Food',
   'action_tasks': 'Tasks',
+  'action_body_journal': 'Body Journal',
   'tasks_greeting_morning': 'Good morning',
   'tasks_greeting_afternoon': 'Good afternoon',
   'tasks_greeting_evening': 'Beautiful night',

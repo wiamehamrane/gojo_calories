@@ -154,13 +154,54 @@ class _EventsFeedScreenState extends ConsumerState<EventsFeedScreen> {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.screenPadding,
-        28,
+        12,
         AppSpacing.screenPadding,
         0,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Align(
+            alignment: Alignment.centerRight,
+            child: GestureDetector(
+              onTap: () {
+                HapticFeedback.selectionClick();
+                context.push(RoutePaths.coaches);
+              },
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: _onCanvas.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: _onCanvas.withValues(alpha: 0.16),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      LucideIcons.dumbbell,
+                      size: 15,
+                      color: _onCanvas,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Coach',
+                      style: TextStyle(
+                        color: _onCanvas,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: -0.1,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
           Center(
             child: Text(
               'Where the doers and\nthe creatives and\nthe top meet.',

@@ -20,6 +20,8 @@ const Map<String, String> nl = {
   'action_add_food_manually': 'Voeding handmatig toevoegen',
   'action_scan_food': 'Voedsel scannen',
   'action_tasks': 'Taken',
+  'action_body_journal': 'Lichaamsdagboek',
+  'coaching_section': 'Coaching',
   'tasks_greeting_morning': 'Goedemorgen',
   'tasks_greeting_afternoon': 'Goedemiddag',
   'tasks_greeting_evening': 'Prachtige nacht',

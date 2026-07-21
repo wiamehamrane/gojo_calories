@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_shadows.dart';
 
 IconData coachSpecialtyIcon(String specialty) {
   switch (specialty) {
@@ -16,7 +15,7 @@ IconData coachSpecialtyIcon(String specialty) {
     case 'cardio':
       return LucideIcons.heartPulse;
     case 'general':
-      return LucideIcons.sparkles;
+      return LucideIcons.userRound;
     default:
       return LucideIcons.badgeCheck;
   }
@@ -74,7 +73,8 @@ class _CoachPressableState extends State<CoachPressable> {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTapDown: widget.onTap == null ? null : (_) => setState(() => _pressed = true),
+      onTapDown:
+          widget.onTap == null ? null : (_) => setState(() => _pressed = true),
       onTapUp: widget.onTap == null
           ? null
           : (_) {
@@ -112,19 +112,20 @@ class CoachGradientHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: AppColors.heroGradient,
-          stops: const [0, 0.55, 1],
-        ),
-      ),
+      color: AppColors.background,
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _PulsingIconBadge(icon: icon),
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: AppColors.primaryLight,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(icon, color: AppColors.primary, size: 22),
+          ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
@@ -133,14 +134,14 @@ class CoachGradientHeader extends StatelessWidget {
                 Text(
                   title,
                   style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w800,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w700,
                     color: AppColors.textPrimary,
-                    letterSpacing: -0.6,
-                    height: 1.15,
+                    letterSpacing: -0.4,
+                    height: 1.2,
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
                 Text(
                   subtitle,
                   style: TextStyle(
@@ -158,62 +159,6 @@ class CoachGradientHeader extends StatelessWidget {
           ],
         ],
       ),
-    );
-  }
-}
-
-class _PulsingIconBadge extends StatefulWidget {
-  final IconData icon;
-
-  const _PulsingIconBadge({required this.icon});
-
-  @override
-  State<_PulsingIconBadge> createState() => _PulsingIconBadgeState();
-}
-
-class _PulsingIconBadgeState extends State<_PulsingIconBadge>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1800),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _ctrl,
-      builder: (context, child) {
-        final t = Curves.easeInOut.transform(_ctrl.value);
-        return Container(
-          width: 52,
-          height: 52,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                AppColors.primary.withValues(alpha: 0.22 + t * 0.12),
-                AppColors.primaryLight,
-              ],
-            ),
-          ),
-          child: child,
-        );
-      },
-      child: Icon(widget.icon, color: AppColors.primaryDark, size: 24),
     );
   }
 }
@@ -239,9 +184,8 @@ class CoachSectionCard extends StatelessWidget {
       padding: padding,
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.7)),
-        boxShadow: AppShadows.cardShadow,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -250,25 +194,16 @@ class CoachSectionCard extends StatelessWidget {
             Row(
               children: [
                 if (icon != null) ...[
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryLight,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(icon, size: 16, color: AppColors.primaryDark),
-                  ),
-                  const SizedBox(width: 10),
+                  Icon(icon, size: 18, color: AppColors.primary),
+                  const SizedBox(width: 8),
                 ],
                 Expanded(
                   child: Text(
                     title!,
                     style: TextStyle(
                       fontSize: 15,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w600,
                       color: AppColors.textPrimary,
-                      letterSpacing: -0.2,
                     ),
                   ),
                 ),
@@ -304,7 +239,7 @@ class CoachSelectTile extends StatelessWidget {
     final color = accent ?? AppColors.primaryDark;
     return CoachPressable(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(14),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeOutCubic,
@@ -313,10 +248,10 @@ class CoachSelectTile extends StatelessWidget {
           color: selected
               ? color.withValues(alpha: 0.12)
               : AppColors.surfaceMuted,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: selected ? color : Colors.transparent,
-            width: 1.5,
+            color: selected ? color : AppColors.border,
+            width: 1.2,
           ),
         ),
         child: Row(
@@ -333,7 +268,7 @@ class CoachSelectTile extends StatelessWidget {
                 label,
                 style: TextStyle(
                   fontSize: 13,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w600,
                   color: selected ? color : AppColors.textPrimary,
                 ),
               ),
@@ -364,34 +299,25 @@ class CoachModeCard extends StatelessWidget {
     return Expanded(
       child: CoachPressable(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(14),
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 220),
+          duration: const Duration(milliseconds: 200),
           curve: Curves.easeOutCubic,
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
           decoration: BoxDecoration(
             color: selected ? AppColors.primaryLight : AppColors.surfaceMuted,
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: selected ? AppColors.primary : Colors.transparent,
-              width: 1.6,
+              color: selected ? AppColors.primary : AppColors.border,
+              width: 1.2,
             ),
           ),
           child: Column(
             children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 220),
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: selected ? AppColors.primaryDark : AppColors.surface,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(
-                  icon,
-                  size: 18,
-                  color: selected ? Colors.white : AppColors.primaryDark,
-                ),
+              Icon(
+                icon,
+                size: 20,
+                color: selected ? AppColors.primaryDark : AppColors.textSecondary,
               ),
               const SizedBox(height: 8),
               Text(
@@ -401,7 +327,7 @@ class CoachModeCard extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 11,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w600,
                   height: 1.2,
                   color: selected
                       ? AppColors.primaryDark

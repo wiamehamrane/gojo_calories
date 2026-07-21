@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -462,43 +460,32 @@ class _BecomeCoachScreenState extends ConsumerState<BecomeCoachScreen> {
                 )
               : Column(
                   children: [
-                    Container(
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: AppColors.heroGradient,
-                          stops: const [0, 0.55, 1],
-                        ),
-                      ),
-                      child: SafeArea(
-                        bottom: false,
-                        child: Column(
-                          children: [
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: IconButton(
-                                onPressed: () => context.pop(),
-                                icon: const Icon(LucideIcons.arrowLeft),
-                              ),
+                    SafeArea(
+                      bottom: false,
+                      child: Column(
+                        children: [
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: IconButton(
+                              onPressed: () => context.pop(),
+                              icon: const Icon(LucideIcons.arrowLeft),
                             ),
-                            CoachGradientHeader(
-                              title: _userIsCoach
-                                  ? t('become_coach_manage_title')
-                                  : t('become_coach_title'),
-                              subtitle: _stepSubtitle(t),
-                              icon: _userIsCoach
-                                  ? LucideIcons.badgeCheck
-                                  : LucideIcons.sparkles,
-                            ),
-                          ],
-                        ),
+                          ),
+                          CoachGradientHeader(
+                            title: _userIsCoach
+                                ? t('become_coach_manage_title')
+                                : t('become_coach_title'),
+                            subtitle: _stepSubtitle(t),
+                            icon: _userIsCoach
+                                ? LucideIcons.badgeCheck
+                                : LucideIcons.dumbbell,
+                          ),
+                        ],
                       ),
                     )
                         .animate()
-                        .fadeIn(duration: 400.ms)
-                        .slideY(begin: -0.04, curve: Curves.easeOutCubic),
+                        .fadeIn(duration: 320.ms)
+                        .slideY(begin: -0.03, curve: Curves.easeOutCubic),
                     if (_userIsCoach)
                       _ListingStatusBanner(
                         t: t,
@@ -546,9 +533,9 @@ class _BecomeCoachScreenState extends ConsumerState<BecomeCoachScreen> {
                             onMode: (v) => setState(() => _coachingMode = v),
                           )
                               .animate(key: const ValueKey('coach-step-0'))
-                              .fadeIn(duration: 320.ms)
+                              .fadeIn(duration: 280.ms)
                               .slideY(
-                                begin: 0.05,
+                                begin: 0.04,
                                 curve: Curves.easeOutCubic,
                               ),
                           _ContactStep(
@@ -560,9 +547,9 @@ class _BecomeCoachScreenState extends ConsumerState<BecomeCoachScreen> {
                             onPickLocation: _pickLocation,
                           )
                               .animate(key: const ValueKey('coach-step-1'))
-                              .fadeIn(duration: 320.ms)
+                              .fadeIn(duration: 280.ms)
                               .slideY(
-                                begin: 0.05,
+                                begin: 0.04,
                                 curve: Curves.easeOutCubic,
                               ),
                           _ReviewStep(
@@ -582,9 +569,9 @@ class _BecomeCoachScreenState extends ConsumerState<BecomeCoachScreen> {
                             onResume: _resumeListing,
                           )
                               .animate(key: const ValueKey('coach-step-2'))
-                              .fadeIn(duration: 320.ms)
+                              .fadeIn(duration: 280.ms)
                               .slideY(
-                                begin: 0.05,
+                                begin: 0.04,
                                 curve: Curves.easeOutCubic,
                               ),
                         ],
@@ -633,82 +620,68 @@ class _BottomCtaBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-        child: Container(
-          decoration: BoxDecoration(
-            color: AppColors.surface.withValues(alpha: 0.88),
-            border: Border(
-              top: BorderSide(
-                color: AppColors.border.withValues(alpha: 0.8),
-              ),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.06),
-                blurRadius: 20,
-                offset: const Offset(0, -4),
-              ),
-            ],
-          ),
-          child: SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-              child: Row(
-                children: [
-                  if (step > 0)
-                    Expanded(
-                      child: SizedBox(
-                        height: 52,
-                        child: OutlinedButton(
-                          onPressed: saving ? null : onBack,
-                          style: OutlinedButton.styleFrom(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
-                          child: Text(t('become_coach_back')),
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        border: Border(
+          top: BorderSide(color: AppColors.border),
+        ),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          child: Row(
+            children: [
+              if (step > 0)
+                Expanded(
+                  child: SizedBox(
+                    height: 52,
+                    child: OutlinedButton(
+                      onPressed: saving ? null : onBack,
+                      style: OutlinedButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
                         ),
                       ),
-                    ),
-                  if (step > 0) const SizedBox(width: 10),
-                  Expanded(
-                    flex: 2,
-                    child: SizedBox(
-                      height: 52,
-                      child: FilledButton(
-                        onPressed: saving ? null : onPrimary,
-                        style: FilledButton.styleFrom(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                        ),
-                        child: saving
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : Text(
-                                step < 2
-                                    ? t('become_coach_continue')
-                                    : (userIsCoach
-                                        ? t('become_coach_save')
-                                        : t(
-                                            'become_coach_continue_payment',
-                                          )),
-                              ),
-                      ),
+                      child: Text(t('become_coach_back')),
                     ),
                   ),
-                ],
+                ),
+              if (step > 0) const SizedBox(width: 10),
+              Expanded(
+                flex: 2,
+                child: SizedBox(
+                  height: 52,
+                  child: FilledButton(
+                    onPressed: saving ? null : onPrimary,
+                    style: FilledButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: saving
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Text(
+                            step < 2
+                                ? t('become_coach_continue')
+                                : (userIsCoach
+                                    ? t('become_coach_save')
+                                    : t(
+                                        'become_coach_continue_payment',
+                                      )),
+                          ),
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
         ),
       ),
@@ -971,43 +944,28 @@ class _ProRequired extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 80,
-                height: 80,
+                width: 64,
+                height: 64,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(24),
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      AppColors.primary.withValues(alpha: 0.25),
-                      AppColors.primaryLight,
-                    ],
-                  ),
+                  color: AppColors.primaryLight,
+                  borderRadius: BorderRadius.circular(16),
                 ),
                 child: Icon(
                   LucideIcons.badgeCheck,
-                  color: AppColors.primaryDark,
-                  size: 36,
+                  color: AppColors.primary,
+                  size: 28,
                 ),
-              )
-                  .animate(onPlay: (c) => c.repeat(reverse: true))
-                  .scale(
-                    begin: const Offset(1, 1),
-                    end: const Offset(1.05, 1.05),
-                    duration: 1400.ms,
-                    curve: Curves.easeInOut,
-                  ),
+              ),
               const SizedBox(height: 20),
               Text(
                 t('become_coach_pro_title'),
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
                   color: AppColors.textPrimary,
-                  letterSpacing: -0.3,
                 ),
-              ).animate().fadeIn(delay: 80.ms).slideY(begin: 0.06),
+              ).animate().fadeIn(delay: 60.ms).slideY(begin: 0.04),
               const SizedBox(height: 10),
               Text(
                 t('become_coach_pro_body'),
@@ -1017,7 +975,7 @@ class _ProRequired extends StatelessWidget {
                   height: 1.45,
                   color: AppColors.textSecondary,
                 ),
-              ).animate().fadeIn(delay: 140.ms),
+              ).animate().fadeIn(delay: 100.ms),
               const SizedBox(height: 22),
               SizedBox(
                 width: double.infinity,
@@ -1026,17 +984,17 @@ class _ProRequired extends StatelessWidget {
                   onPressed: onSubscribe,
                   style: FilledButton.styleFrom(
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(14),
                     ),
                   ),
                   child: Text(t('become_coach_get_pro')),
                 ),
-              ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.08),
+              ).animate().fadeIn(delay: 140.ms).slideY(begin: 0.05),
             ],
           ),
         ),
       ),
-    ).animate().fadeIn(duration: 400.ms);
+    ).animate().fadeIn(duration: 320.ms);
   }
 }
 
@@ -1142,7 +1100,7 @@ class _AboutStep extends StatelessWidget {
         const SizedBox(height: 12),
         CoachSectionCard(
           title: t('coaches_specialty'),
-          icon: LucideIcons.sparkles,
+          icon: LucideIcons.tags,
           child: Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -1404,7 +1362,7 @@ class _ReviewStep extends StatelessWidget {
                 value: bio,
               ),
               _ReviewIconRow(
-                icon: LucideIcons.sparkles,
+                icon: LucideIcons.tags,
                 label: t('coaches_specialty'),
                 value: specialties
                     .map((s) => t('coach_specialty_$s'))

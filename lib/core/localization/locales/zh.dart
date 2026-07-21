@@ -21,6 +21,8 @@ const Map<String, String> zh = {
   'action_add_food_manually': '手动添加食物',
   'action_scan_food': '扫描食物',
   'action_tasks': '任务',
+  'action_body_journal': '身体日志',
+  'coaching_section': 'Coaching',
   'tasks_greeting_morning': '早上好',
   'tasks_greeting_afternoon': '下午好',
   'tasks_greeting_evening': '美好的夜晚',

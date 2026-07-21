@@ -21,6 +21,8 @@ const Map<String, String> ko = {
   'action_add_food_manually': '음식 수동 추가',
   'action_scan_food': '음식 스캔',
   'action_tasks': '할 일',
+  'action_body_journal': '바디 저널',
+  'coaching_section': 'Coaching',
   'tasks_greeting_morning': '좋은 아침이에요',
   'tasks_greeting_afternoon': '좋은 오후예요',
   'tasks_greeting_evening': '좋은 밤이에요',

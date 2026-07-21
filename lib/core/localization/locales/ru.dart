@@ -21,6 +21,8 @@ const Map<String, String> ru = {
   'action_add_food_manually': 'Добавить еду вручную',
   'action_scan_food': 'Сканировать еду',
   'action_tasks': 'Задания',
+  'action_body_journal': 'Дневник тела',
+  'coaching_section': 'Coaching',
   'tasks_greeting_morning': 'Доброе утро',
   'tasks_greeting_afternoon': 'Добрый день',
   'tasks_greeting_evening': 'Добрый вечер',

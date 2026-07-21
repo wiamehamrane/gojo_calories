@@ -20,6 +20,8 @@ const Map<String, String> ar = {
   'action_add_food_manually': 'إضافة طعام يدويًا',
   'action_scan_food': 'مسح الطعام',
   'action_tasks': 'المهام',
+  'action_body_journal': 'مذكرة الجسم',
+  'coaching_section': 'Coaching',
   'tasks_greeting_morning': 'صباح الخير',
   'tasks_greeting_afternoon': 'مساء الخير',
   'tasks_greeting_evening': 'ليلة جميلة',

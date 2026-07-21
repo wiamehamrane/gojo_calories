@@ -28,7 +28,6 @@ final GoRouter appRouter = GoRouter(
         ...homeRoutes,
         ...foodShellRoutes,
         ...eventsShellRoutes,
-        ...coachShellRoutes,
         ...profileShellRoutes,
       ],
     ),

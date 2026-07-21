@@ -27,8 +27,7 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
     final String location = GoRouterState.of(context).uri.path;
     if (location.startsWith('/home')) return 0;
     if (location.startsWith('/events')) return 1;
-    if (location.startsWith('/coaches')) return 2;
-    if (location.startsWith('/profile')) return 3;
+    if (location.startsWith('/profile')) return 2;
     return -1;
   }
 
@@ -49,9 +48,6 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
         context.go(RoutePaths.events);
         break;
       case 2:
-        context.go(RoutePaths.coaches);
-        break;
-      case 3:
         context.go(RoutePaths.profile);
         break;
     }
@@ -122,7 +118,7 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
                 final velocity = details.primaryVelocity ?? 0.0;
                 final goNext = velocity < -250 || _dragDx < -80;
                 final goPrev = velocity > 250 || _dragDx > 80;
-                if (goNext && currentIndex >= 0 && currentIndex < 3) {
+                if (goNext && currentIndex >= 0 && currentIndex < 2) {
                   _onItemTapped(currentIndex + 1, context);
                 } else if (goPrev && currentIndex > 0) {
                   _onItemTapped(currentIndex - 1, context);
@@ -204,18 +200,10 @@ class _FloatingNavBar extends StatelessWidget {
           ),
           Expanded(
             child: _NavSlot(
-              icon: LucideIcons.dumbbell,
-              label: Translations.t(lang, 'nav_coaches'),
-              isActive: currentIndex == 2,
-              onTap: () => onTap(2),
-            ),
-          ),
-          Expanded(
-            child: _NavSlot(
               icon: LucideIcons.user,
               label: Translations.t(lang, 'nav_profile'),
-              isActive: currentIndex == 3,
-              onTap: () => onTap(3),
+              isActive: currentIndex == 2,
+              onTap: () => onTap(2),
             ),
           ),
         ],
@@ -450,6 +438,14 @@ class _ActionGrid extends ConsumerWidget {
         () {
           Navigator.pop(context);
           context.push(RoutePaths.tasks);
+        },
+      ),
+      (
+        LucideIcons.images,
+        'Body Journal',
+        () {
+          Navigator.pop(context);
+          context.push(RoutePaths.progressPhotos);
         },
       ),
     ];
