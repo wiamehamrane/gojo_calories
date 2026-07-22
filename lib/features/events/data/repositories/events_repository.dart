@@ -43,6 +43,12 @@ class EventsRepository {
     return res.data as List<dynamic>;
   }
 
+  /// Events created by [userId] (for coach / public profiles).
+  Future<List<dynamic>> getEventsByUser(String userId) async {
+    final res = await _dio.get('events/user/$userId');
+    return res.data as List<dynamic>;
+  }
+
   Future<Map<String, dynamic>> updateEvent(
     String eventId,
     Map<String, dynamic> updates,

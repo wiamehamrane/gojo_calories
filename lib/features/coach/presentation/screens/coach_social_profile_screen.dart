@@ -12,6 +12,11 @@ import '../../../../core/routing/route_paths.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_message.dart';
 import '../../../../core/widgets/cached_food_image.dart';
+import '../../../events/domain/models/event.dart';
+import '../../../events/domain/models/shared_meal.dart';
+import '../../../events/presentation/providers/shared_meals_provider.dart';
+import '../../../events/presentation/widgets/event_card.dart';
+import '../../../events/presentation/widgets/shared_meal_card.dart';
 import '../../domain/models/coach_post.dart';
 
 class CoachSocialProfileScreen extends ConsumerStatefulWidget {
@@ -34,27 +39,23 @@ class _CoachSocialProfileScreenState
   bool _contactBusy = false;
   bool _starBusy = false;
 
-  final Map<String, List<CoachPost>> _postsByTab = {
-    'images': [],
-    'videos': [],
-  };
-  final Map<String, bool> _loadingTab = {
-    'images': false,
-    'videos': false,
-  };
-  final Map<String, bool> _hasMore = {
-    'images': true,
-    'videos': true,
-  };
-  final Map<String, int> _page = {
-    'images': 0,
-    'videos': 0,
-  };
+  List<CoachPost> _posts = const [];
+  bool _loadingPosts = false;
+  bool _hasMorePosts = true;
+  int _postsPage = 0;
+
+  List<SharedMeal> _meals = const [];
+  bool _loadingMeals = false;
+  bool _mealsLoaded = false;
+
+  List<Event> _events = const [];
+  bool _loadingEvents = false;
+  bool _eventsLoaded = false;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(_onTabChanged);
     _bootstrap();
   }
@@ -66,13 +67,15 @@ class _CoachSocialProfileScreenState
     super.dispose();
   }
 
-  String get _activeTab => _tabController.index == 0 ? 'images' : 'videos';
-
   void _onTabChanged() {
     if (_tabController.indexIsChanging) return;
-    final tab = _activeTab;
-    if (_postsByTab[tab]!.isEmpty && !_loadingTab[tab]!) {
-      _loadPosts(tab, reset: true);
+    switch (_tabController.index) {
+      case 1:
+        if (!_mealsLoaded && !_loadingMeals) _loadMeals();
+        break;
+      case 2:
+        if (!_eventsLoaded && !_loadingEvents) _loadEvents();
+        break;
     }
   }
 
@@ -80,6 +83,10 @@ class _CoachSocialProfileScreenState
     setState(() {
       _loading = true;
       _error = null;
+      _mealsLoaded = false;
+      _eventsLoaded = false;
+      _meals = const [];
+      _events = const [];
     });
     try {
       final profile =
@@ -89,7 +96,12 @@ class _CoachSocialProfileScreenState
         _profile = profile;
         _loading = false;
       });
-      await _loadPosts('images', reset: true);
+      await _loadPosts(reset: true);
+      if (_tabController.index == 1) {
+        await _loadMeals();
+      } else if (_tabController.index == 2) {
+        await _loadEvents();
+      }
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -99,32 +111,83 @@ class _CoachSocialProfileScreenState
     }
   }
 
-  Future<void> _loadPosts(String tab, {bool reset = false}) async {
-    if (_loadingTab[tab] == true) return;
-    if (!reset && _hasMore[tab] != true) return;
+  Future<void> _loadPosts({bool reset = false}) async {
+    if (_loadingPosts) return;
+    if (!reset && !_hasMorePosts) return;
 
-    setState(() => _loadingTab[tab] = true);
+    setState(() => _loadingPosts = true);
     try {
-      final nextPage = reset ? 1 : (_page[tab]! + 1);
+      final nextPage = reset ? 1 : (_postsPage + 1);
       final page = await ref.read(coachesRepositoryProvider).listPosts(
             coachId: widget.coachId,
-            tab: tab,
+            tab: 'all',
             page: nextPage,
           );
       if (!mounted) return;
       setState(() {
-        if (reset) {
-          _postsByTab[tab] = page.items;
-        } else {
-          _postsByTab[tab] = [..._postsByTab[tab]!, ...page.items];
-        }
-        _page[tab] = page.page;
-        _hasMore[tab] = page.hasMore;
-        _loadingTab[tab] = false;
+        _posts = reset ? page.items : [..._posts, ...page.items];
+        _postsPage = page.page;
+        _hasMorePosts = page.hasMore;
+        _loadingPosts = false;
       });
     } catch (_) {
       if (!mounted) return;
-      setState(() => _loadingTab[tab] = false);
+      setState(() => _loadingPosts = false);
+    }
+  }
+
+  Future<void> _loadMeals() async {
+    final profile = _profile;
+    if (profile == null || _loadingMeals) return;
+    setState(() => _loadingMeals = true);
+    try {
+      final data = await ref
+          .read(sharedMealsRepositoryProvider)
+          .getPublicProfile(profile.userId);
+      final meals = (data['meals'] as List?)
+              ?.whereType<Map>()
+              .map((e) => SharedMeal.fromJson(Map<String, dynamic>.from(e)))
+              .toList() ??
+          const <SharedMeal>[];
+      if (!mounted) return;
+      setState(() {
+        _meals = meals;
+        _mealsLoaded = true;
+        _loadingMeals = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _mealsLoaded = true;
+        _loadingMeals = false;
+      });
+    }
+  }
+
+  Future<void> _loadEvents() async {
+    final profile = _profile;
+    if (profile == null || _loadingEvents) return;
+    setState(() => _loadingEvents = true);
+    try {
+      final raw = await ref
+          .read(eventsRepositoryProvider)
+          .getEventsByUser(profile.userId);
+      final events = raw
+          .whereType<Map>()
+          .map((e) => Event.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
+      if (!mounted) return;
+      setState(() {
+        _events = events;
+        _eventsLoaded = true;
+        _loadingEvents = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _eventsLoaded = true;
+        _loadingEvents = false;
+      });
     }
   }
 
@@ -187,13 +250,12 @@ class _CoachSocialProfileScreenState
     }
   }
 
-  void _openPost(CoachPost post, String tab) {
-    final posts = _postsByTab[tab]!;
-    final index = posts.indexWhere((p) => p.id == post.id);
+  void _openPost(CoachPost post) {
+    final index = _posts.indexWhere((p) => p.id == post.id);
     context.push(
       RoutePaths.coachPostViewer,
       extra: {
-        'posts': posts,
+        'posts': _posts,
         'index': index < 0 ? 0 : index,
         'isOwner': _profile?.isOwner ?? false,
         'coachName': _profile?.name,
@@ -296,11 +358,15 @@ class _CoachSocialProfileScreenState
                           tabs: [
                             Tab(
                               icon: const Icon(LucideIcons.layoutGrid, size: 20),
-                              text: t('coach_tab_images'),
+                              text: t('coach_tab_posts'),
                             ),
                             Tab(
-                              icon: const Icon(LucideIcons.clapperboard, size: 20),
-                              text: t('coach_tab_videos'),
+                              icon: const Icon(LucideIcons.utensils, size: 20),
+                              text: t('coach_tab_meals'),
+                            ),
+                            Tab(
+                              icon: const Icon(LucideIcons.calendar, size: 20),
+                              text: t('coach_tab_events'),
                             ),
                           ],
                         ),
@@ -313,23 +379,25 @@ class _CoachSocialProfileScreenState
                     children: [
                       _PostsGrid(
                         t: t,
-                        posts: _postsByTab['images']!,
-                        loading: _loadingTab['images']!,
+                        posts: _posts,
+                        loading: _loadingPosts,
                         isOwner: profile.isOwner,
-                        emptyTitle: t('coach_posts_empty_images'),
+                        emptyTitle: t('coach_posts_empty'),
                         onCreate: profile.isOwner ? _openCreatePost : null,
-                        onOpen: (p) => _openPost(p, 'images'),
-                        onLoadMore: () => _loadPosts('images'),
+                        onOpen: _openPost,
+                        onLoadMore: () => _loadPosts(),
                       ),
-                      _PostsGrid(
+                      _MealsList(
                         t: t,
-                        posts: _postsByTab['videos']!,
-                        loading: _loadingTab['videos']!,
-                        isOwner: profile.isOwner,
-                        emptyTitle: t('coach_posts_empty_videos'),
-                        onCreate: profile.isOwner ? _openCreatePost : null,
-                        onOpen: (p) => _openPost(p, 'videos'),
-                        onLoadMore: () => _loadPosts('videos'),
+                        meals: _meals,
+                        loading: _loadingMeals,
+                        emptyTitle: t('coach_meals_empty'),
+                      ),
+                      _EventsList(
+                        t: t,
+                        events: _events,
+                        loading: _loadingEvents,
+                        emptyTitle: t('coach_events_empty'),
                       ),
                     ],
                   ),
@@ -739,6 +807,183 @@ class _PostsGrid extends StatelessWidget {
           );
         },
       ),
+    );
+  }
+}
+
+
+class _MealsList extends StatelessWidget {
+  final String Function(String) t;
+  final List<SharedMeal> meals;
+  final bool loading;
+  final String emptyTitle;
+
+  const _MealsList({
+    required this.t,
+    required this.meals,
+    required this.loading,
+    required this.emptyTitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading && meals.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (meals.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(
+            emptyTitle,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ),
+      );
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+      itemCount: meals.length,
+      itemBuilder: (context, index) {
+        final meal = meals[index];
+        return _CoachMealTile(
+          meal: meal,
+          onTap: () {
+            HapticFeedback.selectionClick();
+            showSharedMealSheet(context, meal);
+          },
+        );
+      },
+    );
+  }
+}
+
+class _CoachMealTile extends StatelessWidget {
+  final SharedMeal meal;
+  final VoidCallback onTap;
+
+  const _CoachMealTile({required this.meal, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: SizedBox(
+                width: 72,
+                height: 72,
+                child: meal.imageUrl != null && meal.imageUrl!.isNotEmpty
+                    ? CachedFoodImage(
+                        imageUrl: meal.imageUrl,
+                        fit: BoxFit.cover,
+                        memCacheWidth: 216,
+                      )
+                    : ColoredBox(
+                        color: AppColors.surfaceMuted,
+                        child: Icon(
+                          LucideIcons.utensils,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    meal.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${meal.calories} kcal · P ${meal.protein} · C ${meal.carbs} · F ${meal.fat}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(LucideIcons.chevronRight, size: 18, color: AppColors.textSecondary),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EventsList extends StatelessWidget {
+  final String Function(String) t;
+  final List<Event> events;
+  final bool loading;
+  final String emptyTitle;
+
+  const _EventsList({
+    required this.t,
+    required this.events,
+    required this.loading,
+    required this.emptyTitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading && events.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (events.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(
+            emptyTitle,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ),
+      );
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+      itemCount: events.length,
+      itemBuilder: (context, index) {
+        final event = events[index];
+        return EventCard(
+          event: event,
+          onTap: () {
+            HapticFeedback.selectionClick();
+            context.push('/events/detail/${event.id}');
+          },
+        );
+      },
     );
   }
 }
