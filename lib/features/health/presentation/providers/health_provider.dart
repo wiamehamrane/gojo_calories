@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../data/health_repository.dart';
 import '../../data/health_service.dart';
 import '../../data/health_storage.dart';
 import '../../data/models/health_sync_data.dart';
@@ -38,13 +39,23 @@ class HealthSyncState {
 class HealthSyncNotifier extends Notifier<HealthSyncState> {
   late final HealthService _service;
   late final HealthStorage _storage;
+  late final HealthRepository _repository;
 
   @override
   HealthSyncState build() {
     _service = HealthService();
     _storage = HealthStorage();
+    _repository = HealthRepository();
     _bootstrap();
     return HealthSyncState(data: const HealthSyncData());
+  }
+
+  Future<void> _pushToServer(HealthSyncData data) async {
+    try {
+      await _repository.uploadToday(data);
+    } catch (_) {
+      // Local health sync still works if upload fails.
+    }
   }
 
   Future<void> _bootstrap() async {
@@ -100,6 +111,7 @@ class HealthSyncNotifier extends Notifier<HealthSyncState> {
       await _service.connect();
       final synced = await _service.syncToday();
       await _storage.save(synced);
+      await _pushToServer(synced);
       state = state.copyWith(
         data: synced,
         isLoading: false,
@@ -123,6 +135,7 @@ class HealthSyncNotifier extends Notifier<HealthSyncState> {
     try {
       final synced = await _service.syncToday();
       await _storage.save(synced);
+      await _pushToServer(synced);
       state = state.copyWith(
         data: synced,
         isLoading: false,

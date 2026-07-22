@@ -6,12 +6,15 @@ class ShareRepository {
     return Map<String, dynamic>.from(res.data as Map);
   }
 
-  Future<Map<String, dynamic>> invite({String? email}) async {
+  Future<Map<String, dynamic>> invite({
+    String? email,
+    required List<String> scopes,
+  }) async {
     final res = await ApiClient.instance.post(
       'shares/invite',
       data: {
         if (email != null && email.trim().isNotEmpty) 'email': email.trim(),
-        'scopes': ['nutrition', 'exercises'],
+        'scopes': scopes,
       },
     );
     return Map<String, dynamic>.from(res.data as Map);
@@ -79,5 +82,31 @@ class ShareRepository {
     return (res.data as List)
         .map((e) => Map<String, dynamic>.from(e as Map))
         .toList();
+  }
+
+  Future<List<Map<String, dynamic>>> getClientProgressPhotos(
+    String ownerId, {
+    String? date,
+  }) async {
+    final res = await ApiClient.instance.get(
+      'shares/$ownerId/progress-photos',
+      queryParameters: {
+        if (date != null && date.isNotEmpty) 'date': date,
+      },
+    );
+    return (res.data as List)
+        .map((e) => Map<String, dynamic>.from(e as Map))
+        .toList();
+  }
+
+  Future<Map<String, dynamic>> getClientHealth(
+    String ownerId, {
+    required String date,
+  }) async {
+    final res = await ApiClient.instance.get(
+      'shares/$ownerId/health',
+      queryParameters: {'date': date},
+    );
+    return Map<String, dynamic>.from(res.data as Map);
   }
 }

@@ -464,6 +464,20 @@ try:
         """))
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_user_follows_follower_id ON user_follows (follower_id);"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_user_follows_following_id ON user_follows (following_id);"))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS health_days (
+                id VARCHAR(36) PRIMARY KEY,
+                user_id VARCHAR(36) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                day DATE NOT NULL,
+                steps INTEGER,
+                active_calories INTEGER,
+                weight_kg FLOAT,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT uq_health_days_user_day UNIQUE (user_id, day)
+            );
+        """))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_health_days_user_id ON health_days (user_id);"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_health_days_day ON health_days (day);"))
         # Ensure daily_stats has all expected columns
         conn.execute(text("""
             DO $$ BEGIN

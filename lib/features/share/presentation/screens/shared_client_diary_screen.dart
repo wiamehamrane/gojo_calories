@@ -12,15 +12,18 @@ import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_shadows.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/error_handler.dart';
+import '../../../../core/widgets/cached_food_image.dart';
 
 class SharedClientDiaryScreen extends ConsumerStatefulWidget {
   final String ownerId;
   final String displayName;
+  final List<String> scopes;
 
   const SharedClientDiaryScreen({
     super.key,
     required this.ownerId,
     required this.displayName,
+    this.scopes = const ['nutrition', 'exercises'],
   });
 
   @override
@@ -36,6 +39,13 @@ class _SharedClientDiaryScreenState
   Map<String, dynamic>? _stats;
   List<Map<String, dynamic>> _meals = [];
   List<Map<String, dynamic>> _exercises = [];
+  List<Map<String, dynamic>> _bodyPhotos = [];
+  Map<String, dynamic>? _health;
+
+  bool get _hasNutrition => widget.scopes.contains('nutrition');
+  bool get _hasExercises => widget.scopes.contains('exercises');
+  bool get _hasHealthSync => widget.scopes.contains('health_sync');
+  bool get _hasBodyJournal => widget.scopes.contains('body_journal');
 
   String get _dateStr => DateFormat('yyyy-MM-dd').format(_date);
   int get _tzOffset => -DateTime.now().timeZoneOffset.inMinutes;
@@ -64,26 +74,58 @@ class _SharedClientDiaryScreenState
     });
     try {
       final repo = ref.read(shareRepositoryProvider);
-      final stats = await repo.getClientStats(
-        widget.ownerId,
-        date: _dateStr,
-        tzOffset: _tzOffset,
-      );
-      final meals = await repo.getClientHistory(
-        widget.ownerId,
-        date: _dateStr,
-        tzOffset: _tzOffset,
-      );
-      final exercises = await repo.getClientExercises(
-        widget.ownerId,
-        date: _dateStr,
-        tzOffset: _tzOffset,
-      );
+      Map<String, dynamic>? stats;
+      List<Map<String, dynamic>> meals = const [];
+      List<Map<String, dynamic>> exercises = const [];
+      List<Map<String, dynamic>> photos = const [];
+      Map<String, dynamic>? health;
+
+      if (_hasNutrition) {
+        stats = await repo.getClientStats(
+          widget.ownerId,
+          date: _dateStr,
+          tzOffset: _tzOffset,
+        );
+        meals = await repo.getClientHistory(
+          widget.ownerId,
+          date: _dateStr,
+          tzOffset: _tzOffset,
+        );
+      }
+      if (_hasExercises) {
+        exercises = await repo.getClientExercises(
+          widget.ownerId,
+          date: _dateStr,
+          tzOffset: _tzOffset,
+        );
+      }
+      if (_hasHealthSync) {
+        try {
+          health = await repo.getClientHealth(
+            widget.ownerId,
+            date: _dateStr,
+          );
+        } catch (_) {
+          health = null;
+        }
+      }
+      if (_hasBodyJournal) {
+        try {
+          photos = await repo.getClientProgressPhotos(
+            widget.ownerId,
+            date: _dateStr,
+          );
+        } catch (_) {
+          photos = const [];
+        }
+      }
       if (!mounted) return;
       setState(() {
         _stats = stats;
         _meals = meals;
         _exercises = exercises;
+        _bodyPhotos = photos;
+        _health = health;
         _loading = false;
       });
     } catch (e) {
@@ -202,65 +244,109 @@ class _SharedClientDiaryScreenState
                         onNext: () => _shiftDay(1),
                         onTap: _pickDate,
                       ),
-                      const SizedBox(height: 16),
-                      _CaloriesCard(
-                        consumed: cal,
-                        budget: calBudget,
-                        label: t('calories_label'),
-                        leftLabel: t('left'),
-                        overLabel: t('over_goal'),
-                      ),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _MacroMini(
-                              name: t('macro_protein'),
-                              consumed: protein,
-                              target: proteinTarget,
-                              color: AppColors.protein,
+                      if (_hasNutrition) ...[
+                        const SizedBox(height: 16),
+                        _CaloriesCard(
+                          consumed: cal,
+                          budget: calBudget,
+                          label: t('calories_label'),
+                          leftLabel: t('left'),
+                          overLabel: t('over_goal'),
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _MacroMini(
+                                name: t('macro_protein'),
+                                consumed: protein,
+                                target: proteinTarget,
+                                color: AppColors.protein,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: _MacroMini(
-                              name: t('macro_carbs'),
-                              consumed: carbs,
-                              target: carbsTarget,
-                              color: AppColors.carbs,
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: _MacroMini(
+                                name: t('macro_carbs'),
+                                consumed: carbs,
+                                target: carbsTarget,
+                                color: AppColors.carbs,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: _MacroMini(
-                              name: t('macro_fats'),
-                              consumed: fat,
-                              target: fatTarget,
-                              color: AppColors.fats,
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: _MacroMini(
+                                name: t('macro_fats'),
+                                consumed: fat,
+                                target: fatTarget,
+                                color: AppColors.fats,
+                              ),
                             ),
+                          ],
+                        ),
+                        const SizedBox(height: 28),
+                        _SectionLabel(t('share_meals')),
+                        const SizedBox(height: 10),
+                        if (_meals.isEmpty)
+                          _EmptyState(
+                            icon: LucideIcons.utensils,
+                            text: t('share_no_meals'),
+                          )
+                        else
+                          ..._meals.map((m) => _MealCard(meal: m)),
+                      ],
+                      if (_hasExercises) ...[
+                        const SizedBox(height: 24),
+                        _SectionLabel(t('share_workouts')),
+                        const SizedBox(height: 10),
+                        if (_exercises.isEmpty)
+                          _EmptyState(
+                            icon: LucideIcons.dumbbell,
+                            text: t('share_no_workouts'),
+                          )
+                        else
+                          ..._exercises.map((e) => _WorkoutCard(exercise: e)),
+                      ],
+                      if (_hasHealthSync) ...[
+                        const SizedBox(height: 24),
+                        _SectionLabel(t('share_health_sync')),
+                        const SizedBox(height: 10),
+                        _HealthSyncCard(
+                          steps: (_health?['steps'] as num?)?.toInt(),
+                          activeCalories:
+                              (_health?['active_calories'] as num?)?.toInt(),
+                          weightKg: (_health?['weight_kg'] as num?)?.toDouble(),
+                          stepsLabel: t('steps'),
+                          activeLabel: t('active_cal'),
+                          emptyLabel: t('share_no_health'),
+                        ),
+                      ],
+                      if (_hasBodyJournal) ...[
+                        const SizedBox(height: 24),
+                        _SectionLabel(t('share_body_journal')),
+                        const SizedBox(height: 10),
+                        if (_bodyPhotos.isEmpty)
+                          _EmptyState(
+                            icon: LucideIcons.images,
+                            text: t('share_no_body_photos'),
+                          )
+                        else
+                          _BodyJournalDay(
+                            photos: _bodyPhotos,
+                            poseLabel: (pose) {
+                              switch (pose) {
+                                case 'left':
+                                  return t('share_pose_left');
+                                case 'right':
+                                  return t('share_pose_right');
+                                case 'back':
+                                  return t('share_pose_back');
+                                default:
+                                  return t('share_pose_front');
+                              }
+                            },
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 28),
-                      _SectionLabel(t('share_meals')),
-                      const SizedBox(height: 10),
-                      if (_meals.isEmpty)
-                        _EmptyState(
-                          icon: LucideIcons.utensils,
-                          text: t('share_no_meals'),
-                        )
-                      else
-                        ..._meals.map((m) => _MealCard(meal: m)),
-                      const SizedBox(height: 24),
-                      _SectionLabel(t('share_workouts')),
-                      const SizedBox(height: 10),
-                      if (_exercises.isEmpty)
-                        _EmptyState(
-                          icon: LucideIcons.dumbbell,
-                          text: t('share_no_workouts'),
-                        )
-                      else
-                        ..._exercises.map((e) => _WorkoutCard(exercise: e)),
+                      ],
                     ],
                   ),
                 ),
@@ -478,6 +564,95 @@ class _MacroMini extends StatelessWidget {
   }
 }
 
+class _HealthSyncCard extends StatelessWidget {
+  final int? steps;
+  final int? activeCalories;
+  final double? weightKg;
+  final String stepsLabel;
+  final String activeLabel;
+  final String emptyLabel;
+
+  const _HealthSyncCard({
+    required this.steps,
+    required this.activeCalories,
+    required this.weightKg,
+    required this.stepsLabel,
+    required this.activeLabel,
+    required this.emptyLabel,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hasData =
+        steps != null || activeCalories != null || weightKg != null;
+    if (!hasData) {
+      return _EmptyState(
+        icon: LucideIcons.heartPulse,
+        text: emptyLabel,
+      );
+    }
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        boxShadow: AppShadows.cardShadow,
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _HealthMetric(
+              icon: LucideIcons.footprints,
+              value: '${steps ?? 0}',
+              label: stepsLabel,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _HealthMetric(
+              icon: LucideIcons.flame,
+              value: '${activeCalories ?? 0}',
+              label: activeLabel,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HealthMetric extends StatelessWidget {
+  final IconData icon;
+  final String value;
+  final String label;
+
+  const _HealthMetric({
+    required this.icon,
+    required this.value,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Icon(icon, size: 18, color: AppColors.primaryMid),
+        const SizedBox(height: 6),
+        Text(value, style: AppTextStyles.bodyBold.copyWith(fontSize: 18)),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: AppTextStyles.bodyRegular.copyWith(
+            fontSize: 12,
+            color: AppColors.textSecondary,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _SectionLabel extends StatelessWidget {
   final String text;
   const _SectionLabel(this.text);
@@ -517,6 +692,89 @@ class _EmptyState extends StatelessWidget {
             style: AppTextStyles.bodyRegular,
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _BodyJournalDay extends StatelessWidget {
+  final List<Map<String, dynamic>> photos;
+  final String Function(String pose) poseLabel;
+
+  const _BodyJournalDay({
+    required this.photos,
+    required this.poseLabel,
+  });
+
+  static const _order = ['front', 'left', 'right', 'back'];
+
+  @override
+  Widget build(BuildContext context) {
+    final byPose = <String, Map<String, dynamic>>{};
+    for (final p in photos) {
+      final pose = (p['pose'] as String?)?.toLowerCase() ?? 'front';
+      byPose.putIfAbsent(pose, () => p);
+    }
+    final ordered = [
+      for (final pose in _order)
+        if (byPose.containsKey(pose)) byPose[pose]!,
+      ...photos.where((p) {
+        final pose = (p['pose'] as String?)?.toLowerCase();
+        return pose == null || !_order.contains(pose);
+      }),
+    ];
+
+    return SizedBox(
+      height: 160,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: ordered.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 10),
+        itemBuilder: (context, i) {
+          final photo = ordered[i];
+          final url = photo['image_url'] as String? ?? '';
+          final pose = (photo['pose'] as String?) ?? 'front';
+          return Container(
+            width: 110,
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.border),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: CachedFoodImage(
+                    imageUrl: url,
+                    fit: BoxFit.cover,
+                    memCacheWidth: 280,
+                    placeholder: ColoredBox(color: AppColors.surfaceMuted),
+                    errorWidget: Center(
+                      child: Icon(
+                        LucideIcons.imageOff,
+                        color: AppColors.inactive,
+                      ),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Text(
+                    poseLabel(pose),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }

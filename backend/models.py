@@ -132,6 +132,26 @@ class WeighIn(Base):
     
     user = relationship("User", back_populates="weigh_ins")
 
+
+class HealthDay(Base):
+    """Daily Health Sync snapshot (steps / active calories) for sharing."""
+
+    __tablename__ = "health_days"
+    __table_args__ = (
+        UniqueConstraint("user_id", "day", name="uq_health_days_user_day"),
+    )
+
+    id = Column(String(36), primary_key=True, default=generate_uuid, index=True)
+    user_id = Column(
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    day = Column(Date, nullable=False, index=True)
+    steps = Column(Integer, nullable=True)
+    active_calories = Column(Integer, nullable=True)
+    weight_kg = Column(Float, nullable=True)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+
 class Group(Base):
     __tablename__ = "groups"
     
