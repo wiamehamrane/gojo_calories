@@ -183,6 +183,18 @@ def posts_count(db, coach_id: str) -> int:
     )
 
 
+def is_starred(db, user_id: str, coach_id: str) -> bool:
+    return (
+        db.query(models.CoachStar)
+        .filter(
+            models.CoachStar.user_id == user_id,
+            models.CoachStar.coach_id == coach_id,
+        )
+        .first()
+        is not None
+    )
+
+
 def serialize_social_profile(
     db,
     coach: models.Coach,
@@ -199,6 +211,7 @@ def serialize_social_profile(
             "followers_count": follower_count(db, coach.user_id),
             "following_count": following_count(db, coach.user_id),
             "is_following": is_following(db, viewer.id, coach.user_id),
+            "is_starred": is_starred(db, viewer.id, coach.id),
             "is_owner": viewer.id == coach.user_id,
         }
     )

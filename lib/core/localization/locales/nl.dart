@@ -86,6 +86,12 @@ const Map<String, String> nl = {
   'starred_meals_empty_message':
       'Tik op de ster bij een gedeelde maaltijd om die hier te bewaren.',
   'starred_meals_load_error': 'Favoriete maaltijden laden mislukt',
+  'starred_coaches': 'Favoriete coaches',
+  'view_starred_coaches': 'Favoriete coaches bekijken',
+  'starred_coaches_empty_title': 'Nog geen favoriete coaches',
+  'starred_coaches_empty_message':
+      'Tik op de ster op een coachprofiel om ze hier op te slaan.',
+  'starred_coaches_load_error': 'Favoriete coaches laden mislukt',
   'star': 'Favoriet',
   'starred': 'Favoriet',
   'referral_tagline': 'Verwijs een vriend en verdien \$1',

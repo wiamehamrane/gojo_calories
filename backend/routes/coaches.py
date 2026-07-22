@@ -392,6 +392,45 @@ async def create_my_coach_post(
     return coach_service.serialize_post(post)
 
 
+class CoachPostCaptionUpdate(BaseModel):
+    caption: Optional[str] = None
+
+
+@router.patch("/me/posts/{post_id}")
+def update_my_coach_post(
+    post_id: str,
+    body: CoachPostCaptionUpdate,
+    user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    coach = _get_own_coach(db, user.id)
+    if not coach:
+        raise HTTPException(status_code=404, detail="Coach profile not found")
+
+    post = (
+        db.query(models.CoachPost)
+        .options(joinedload(models.CoachPost.media))
+        .filter(
+            models.CoachPost.id == post_id,
+            models.CoachPost.coach_id == coach.id,
+        )
+        .first()
+    )
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+
+    post.caption = (body.caption or "").strip() or None
+    db.commit()
+    db.refresh(post)
+    post = (
+        db.query(models.CoachPost)
+        .options(joinedload(models.CoachPost.media))
+        .filter(models.CoachPost.id == post.id)
+        .first()
+    )
+    return coach_service.serialize_post(post)
+
+
 @router.delete("/me/posts/{post_id}")
 def delete_my_coach_post(
     post_id: str,
@@ -463,11 +502,38 @@ def _list_coach_posts(
     }
 
 
+@router.get("/me/starred")
+def list_starred_coaches(
+    user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Coaches the current user has starred, newest stars first."""
+    rows = (
+        db.query(models.Coach)
+        .options(joinedload(models.Coach.user))
+        .join(models.CoachStar, models.CoachStar.coach_id == models.Coach.id)
+        .join(models.User, models.Coach.user_id == models.User.id)
+        .filter(models.CoachStar.user_id == user.id)
+        .order_by(models.CoachStar.created_at.desc())
+        .limit(100)
+        .all()
+    )
+    return {
+        "items": [
+            {
+                **coach_service.serialize_public(coach, coach.user),
+                "is_starred": True,
+            }
+            for coach in rows
+            if coach.user is not None
+        ]
+    }
+
+
 @router.get("/search")
 def search_coaches(
     lat: float = Query(..., ge=-90, le=90),
     lng: float = Query(..., ge=-180, le=180),
-    radius_km: float = Query(25, gt=0, le=500),
     specialty: Optional[str] = Query(None),
     gender: Optional[str] = Query(None),
     page: int = Query(1, ge=1),
@@ -475,6 +541,7 @@ def search_coaches(
     user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    """Return all active coaches, nearest first (relative to lat/lng)."""
     del user
     gender_filter = _normalize_gender(gender) if gender else None
     specialty_filter = (specialty or "").strip().lower() or None
@@ -503,8 +570,6 @@ def search_coaches(
         distance = coach_service.haversine_km(
             lat, lng, float(coach.latitude), float(coach.longitude)
         )
-        if distance > radius_km:
-            continue
         matched.append((coach, distance))
 
     matched.sort(key=lambda item: item[1])
@@ -590,6 +655,34 @@ def get_coach_public(
     ):
         raise HTTPException(status_code=404, detail="Coach not found")
     return coach_service.serialize_public(coach, coach.user)
+
+
+@router.post("/{coach_id}/star")
+def toggle_star_coach(
+    coach_id: str,
+    user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    coach = _get_coach_for_viewer(db, coach_id, user)
+    if coach.user_id == user.id:
+        raise HTTPException(status_code=400, detail="You cannot star your own profile")
+
+    existing = (
+        db.query(models.CoachStar)
+        .filter(
+            models.CoachStar.user_id == user.id,
+            models.CoachStar.coach_id == coach.id,
+        )
+        .first()
+    )
+    if existing:
+        db.delete(existing)
+        db.commit()
+        return {"ok": True, "is_starred": False}
+
+    db.add(models.CoachStar(user_id=user.id, coach_id=coach.id))
+    db.commit()
+    return {"ok": True, "is_starred": True}
 
 
 @router.post("/{coach_id}/contact")

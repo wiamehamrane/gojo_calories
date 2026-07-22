@@ -38,8 +38,8 @@ class CoachPostViewerScreen extends ConsumerStatefulWidget {
 
 class _CoachPostViewerScreenState extends ConsumerState<CoachPostViewerScreen> {
   late final List<CoachPost> _posts;
-  bool _didDelete = false;
-  bool _deleting = false;
+  bool _didMutate = false;
+  bool _busy = false;
 
   @override
   void initState() {
@@ -47,8 +47,69 @@ class _CoachPostViewerScreenState extends ConsumerState<CoachPostViewerScreen> {
     _posts = [...widget.posts];
   }
 
+  Future<void> _editCaption(CoachPost post) async {
+    if (!widget.isOwner || _busy) return;
+    final lang = ref.read(localeProvider);
+    String t(String k) => Translations.t(lang, k);
+    final controller = TextEditingController(text: post.caption ?? '');
+
+    final saved = await showDialog<String?>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(t('coach_post_edit_caption_title')),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            maxLines: 5,
+            minLines: 2,
+            maxLength: 500,
+            decoration: InputDecoration(
+              hintText: t('coach_post_caption_hint'),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(t('cancel')),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, controller.text),
+              child: Text(t('coach_post_save_caption')),
+            ),
+          ],
+        );
+      },
+    );
+    controller.dispose();
+    if (saved == null || !mounted) return;
+
+    final nextCaption = saved.trim();
+    final prevCaption = (post.caption ?? '').trim();
+    if (nextCaption == prevCaption) return;
+
+    setState(() => _busy = true);
+    try {
+      final updated = await ref
+          .read(coachesRepositoryProvider)
+          .updatePostCaption(post.id, nextCaption.isEmpty ? null : nextCaption);
+      if (!mounted) return;
+      setState(() {
+        _didMutate = true;
+        _busy = false;
+        final i = _posts.indexWhere((p) => p.id == post.id);
+        if (i >= 0) _posts[i] = updated;
+      });
+      AppMessage.success(context, t('coach_post_caption_updated'));
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      AppMessage.error(context, t('coach_post_caption_update_failed'));
+    }
+  }
+
   Future<void> _deletePost(CoachPost post) async {
-    if (!widget.isOwner || _deleting) return;
+    if (!widget.isOwner || _busy) return;
     final lang = ref.read(localeProvider);
     String t(String k) => Translations.t(lang, k);
 
@@ -71,14 +132,14 @@ class _CoachPostViewerScreenState extends ConsumerState<CoachPostViewerScreen> {
     );
     if (confirmed != true || !mounted) return;
 
-    setState(() => _deleting = true);
+    setState(() => _busy = true);
     try {
       await ref.read(coachesRepositoryProvider).deletePost(post.id);
       if (!mounted) return;
       AppMessage.success(context, t('coach_post_deleted'));
       setState(() {
-        _didDelete = true;
-        _deleting = false;
+        _didMutate = true;
+        _busy = false;
         _posts.removeWhere((p) => p.id == post.id);
       });
       if (_posts.isEmpty) {
@@ -86,7 +147,7 @@ class _CoachPostViewerScreenState extends ConsumerState<CoachPostViewerScreen> {
       }
     } catch (_) {
       if (!mounted) return;
-      setState(() => _deleting = false);
+      setState(() => _busy = false);
       AppMessage.error(context, t('coach_post_delete_failed'));
     }
   }
@@ -104,7 +165,7 @@ class _CoachPostViewerScreenState extends ConsumerState<CoachPostViewerScreen> {
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) context.pop(_didDelete);
+        if (!didPop) context.pop(_didMutate);
       },
       child: Scaffold(
         backgroundColor: AppColors.background,
@@ -112,7 +173,7 @@ class _CoachPostViewerScreenState extends ConsumerState<CoachPostViewerScreen> {
           backgroundColor: AppColors.background,
           surfaceTintColor: Colors.transparent,
           leading: IconButton(
-            onPressed: () => context.pop(_didDelete),
+            onPressed: () => context.pop(_didMutate),
             icon: const Icon(LucideIcons.arrowLeft),
           ),
           title: Text(
@@ -133,13 +194,14 @@ class _CoachPostViewerScreenState extends ConsumerState<CoachPostViewerScreen> {
                 itemBuilder: (context, index) {
                   final post = _posts[index];
                   return _FeedPostCard(
-                    key: ValueKey(post.id),
+                    key: ValueKey('${post.id}-${post.caption}'),
                     t: t,
                     lang: lang,
                     post: post,
                     coachName: widget.coachName,
                     coachAvatarUrl: widget.coachAvatarUrl,
                     isOwner: widget.isOwner,
+                    onEditCaption: () => _editCaption(post),
                     onDelete: () => _deletePost(post),
                   );
                 },
@@ -156,6 +218,7 @@ class _FeedPostCard extends StatefulWidget {
   final String? coachName;
   final String? coachAvatarUrl;
   final bool isOwner;
+  final VoidCallback onEditCaption;
   final VoidCallback onDelete;
 
   const _FeedPostCard({
@@ -166,6 +229,7 @@ class _FeedPostCard extends StatefulWidget {
     required this.coachName,
     required this.coachAvatarUrl,
     required this.isOwner,
+    required this.onEditCaption,
     required this.onDelete,
   });
 
@@ -254,9 +318,24 @@ class _FeedPostCardState extends State<_FeedPostCard> {
                     color: AppColors.textPrimary,
                   ),
                   onSelected: (value) {
+                    if (value == 'edit') widget.onEditCaption();
                     if (value == 'delete') widget.onDelete();
                   },
                   itemBuilder: (context) => [
+                    PopupMenuItem(
+                      value: 'edit',
+                      child: Row(
+                        children: [
+                          Icon(
+                            LucideIcons.pencil,
+                            size: 16,
+                            color: AppColors.textPrimary,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(t('coach_post_edit_caption')),
+                        ],
+                      ),
+                    ),
                     PopupMenuItem(
                       value: 'delete',
                       child: Row(

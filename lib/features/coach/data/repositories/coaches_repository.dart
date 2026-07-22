@@ -10,7 +10,6 @@ class CoachesRepository {
   Future<CoachSearchPage> search({
     required double lat,
     required double lng,
-    double radiusKm = 25,
     String? specialty,
     String? gender,
     int page = 1,
@@ -21,7 +20,6 @@ class CoachesRepository {
       queryParameters: {
         'lat': lat,
         'lng': lng,
-        'radius_km': radiusKm,
         'page': page,
         'page_size': pageSize,
         if (specialty != null && specialty.isNotEmpty) 'specialty': specialty,
@@ -64,6 +62,22 @@ class CoachesRepository {
   Future<CoachSocialProfile> getSocial(String coachId) async {
     final res = await ApiClient.instance.get('coaches/$coachId/social');
     return CoachSocialProfile.fromJson(Map<String, dynamic>.from(res.data as Map));
+  }
+
+  Future<bool> toggleStar(String coachId) async {
+    final res = await ApiClient.instance.post('coaches/$coachId/star');
+    final data = Map<String, dynamic>.from(res.data as Map);
+    return data['is_starred'] as bool? ?? false;
+  }
+
+  Future<List<Coach>> listStarred() async {
+    final res = await ApiClient.instance.get('coaches/me/starred');
+    final data = Map<String, dynamic>.from(res.data as Map);
+    final raw = data['items'] as List? ?? const [];
+    return raw
+        .whereType<Map>()
+        .map((e) => Coach.fromJson(Map<String, dynamic>.from(e)))
+        .toList();
   }
 
   Future<CoachPostPage> listPosts({
@@ -145,6 +159,14 @@ class CoachesRepository {
 
   Future<void> deletePost(String postId) async {
     await ApiClient.instance.delete('coaches/me/posts/$postId');
+  }
+
+  Future<CoachPost> updatePostCaption(String postId, String? caption) async {
+    final res = await ApiClient.instance.patch(
+      'coaches/me/posts/$postId',
+      data: {'caption': caption},
+    );
+    return CoachPost.fromJson(Map<String, dynamic>.from(res.data as Map));
   }
 }
 

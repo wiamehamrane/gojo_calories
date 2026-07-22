@@ -86,6 +86,12 @@ const Map<String, String> ko = {
   'starred_meals_empty_title': '즐겨찾는 식사가 없습니다',
   'starred_meals_empty_message': '공유된 식사의 별을 탭하여 여기에 저장하세요.',
   'starred_meals_load_error': '즐겨찾는 식사를 불러올 수 없습니다',
+  'starred_coaches': '즐겨찾는 코치',
+  'view_starred_coaches': '즐겨찾는 코치 보기',
+  'starred_coaches_empty_title': '즐겨찾는 코치가 아직 없습니다',
+  'starred_coaches_empty_message':
+      '코치 프로필의 별을 탭하면 여기에 저장됩니다.',
+  'starred_coaches_load_error': '즐겨찾는 코치를 불러올 수 없습니다',
   'star': '즐겨찾기',
   'starred': '즐겨찾기됨',
   'referral_tagline': '친구를 추천하고 \$1 적립',

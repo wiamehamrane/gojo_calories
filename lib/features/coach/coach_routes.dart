@@ -11,6 +11,7 @@ import 'presentation/screens/coach_hub_screen.dart';
 import 'presentation/screens/coach_post_viewer_screen.dart';
 import 'presentation/screens/coach_social_profile_screen.dart';
 import 'presentation/screens/create_coach_post_screen.dart';
+import 'presentation/screens/starred_coaches_screen.dart';
 
 List<RouteBase> get coachRoutes => [
       GoRoute(
@@ -19,6 +20,14 @@ List<RouteBase> get coachRoutes => [
         pageBuilder: (context, state) => smoothPushPage(
           state: state,
           child: const CoachDiscoverScreen(),
+        ),
+      ),
+      GoRoute(
+        path: RoutePaths.starredCoaches,
+        parentNavigatorKey: rootNavigatorKey,
+        pageBuilder: (context, state) => smoothPushPage(
+          state: state,
+          child: const StarredCoachesScreen(),
         ),
       ),
       GoRoute(

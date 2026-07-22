@@ -56,6 +56,21 @@ class CoachPost {
   bool get isBeforeAfter => postType == 'before_after';
   bool get isImage => postType == 'image';
 
+  CoachPost copyWith({
+    String? caption,
+    bool clearCaption = false,
+    List<CoachPostMedia>? media,
+  }) {
+    return CoachPost(
+      id: id,
+      coachId: coachId,
+      postType: postType,
+      caption: clearCaption ? null : (caption ?? this.caption),
+      createdAt: createdAt,
+      media: media ?? this.media,
+    );
+  }
+
   CoachPostMedia? get coverMedia {
     if (media.isEmpty) return null;
     final sorted = [...media]..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
@@ -124,6 +139,7 @@ class CoachSocialProfile {
   final int followersCount;
   final int followingCount;
   final bool isFollowing;
+  final bool isStarred;
   final bool isOwner;
 
   const CoachSocialProfile({
@@ -139,6 +155,7 @@ class CoachSocialProfile {
     this.followersCount = 0,
     this.followingCount = 0,
     this.isFollowing = false,
+    this.isStarred = false,
     this.isOwner = false,
   });
 
@@ -147,6 +164,7 @@ class CoachSocialProfile {
     int? followersCount,
     int? followingCount,
     bool? isFollowing,
+    bool? isStarred,
   }) {
     return CoachSocialProfile(
       id: id,
@@ -161,6 +179,7 @@ class CoachSocialProfile {
       followersCount: followersCount ?? this.followersCount,
       followingCount: followingCount ?? this.followingCount,
       isFollowing: isFollowing ?? this.isFollowing,
+      isStarred: isStarred ?? this.isStarred,
       isOwner: isOwner,
     );
   }
@@ -187,6 +206,7 @@ class CoachSocialProfile {
       followersCount: json['followers_count'] as int? ?? 0,
       followingCount: json['following_count'] as int? ?? 0,
       isFollowing: json['is_following'] as bool? ?? false,
+      isStarred: json['is_starred'] as bool? ?? false,
       isOwner: json['is_owner'] as bool? ?? false,
     );
   }

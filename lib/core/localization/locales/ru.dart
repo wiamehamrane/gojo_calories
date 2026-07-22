@@ -87,6 +87,12 @@ const Map<String, String> ru = {
   'starred_meals_empty_message':
       'Нажмите на звёздочку у общего блюда, чтобы сохранить его здесь.',
   'starred_meals_load_error': 'Не удалось загрузить избранные блюда',
+  'starred_coaches': 'Избранные тренеры',
+  'view_starred_coaches': 'Смотреть избранных тренеров',
+  'starred_coaches_empty_title': 'Пока нет избранных тренеров',
+  'starred_coaches_empty_message':
+      'Нажмите на звезду в профиле тренера, чтобы сохранить его здесь.',
+  'starred_coaches_load_error': 'Не удалось загрузить избранных тренеров',
   'star': 'В избранное',
   'starred': 'В избранном',
   'referral_tagline': 'Пригласите друга и получите \$1',

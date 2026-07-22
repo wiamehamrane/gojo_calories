@@ -86,6 +86,12 @@ const Map<String, String> ar = {
   'starred_meals_empty_message':
       'اضغط على النجمة على وجبة مشتركة لحفظها هنا.',
   'starred_meals_load_error': 'تعذر تحميل الوجبات المميزة',
+  'starred_coaches': 'المدربون المميزون',
+  'view_starred_coaches': 'عرض المدربين المميزين',
+  'starred_coaches_empty_title': 'لا يوجد مدربون مميزون بعد',
+  'starred_coaches_empty_message':
+      'اضغط على النجمة في ملف المدرب لحفظه هنا.',
+  'starred_coaches_load_error': 'تعذر تحميل المدربين المميزين',
   'star': 'تمييز',
   'starred': 'مميزة',
   'referral_tagline': 'ادعُ صديقاً واكسب \$1',

@@ -168,6 +168,19 @@ class ProfileScreen extends ConsumerWidget {
               ),
 
               const SizedBox(height: 20),
+              _SectionLabel(t('starred_coaches')),
+
+              _GroupedListCard(
+                rows: [
+                  _SettingsRow(
+                    icon: Icons.star_rounded,
+                    label: t('view_starred_coaches'),
+                    onTap: () => context.push(RoutePaths.starredCoaches),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 20),
               _SectionLabel('Coaching'),
               _CoachPromoCard(
                 isCoach: isCoach,

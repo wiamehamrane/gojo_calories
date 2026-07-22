@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/di/repository_providers.dart';
 import '../../../../core/localization/locale_provider.dart';
@@ -30,7 +31,8 @@ class _CoachSocialProfileScreenState
   CoachSocialProfile? _profile;
   String? _error;
   bool _loading = true;
-  bool _followBusy = false;
+  bool _contactBusy = false;
+  bool _starBusy = false;
 
   final Map<String, List<CoachPost>> _postsByTab = {
     'images': [],
@@ -119,9 +121,6 @@ class _CoachSocialProfileScreenState
         _page[tab] = page.page;
         _hasMore[tab] = page.hasMore;
         _loadingTab[tab] = false;
-        if (_profile != null && tab == 'images' && reset) {
-          // Keep header posts_count authoritative from social endpoint.
-        }
       });
     } catch (_) {
       if (!mounted) return;
@@ -129,31 +128,55 @@ class _CoachSocialProfileScreenState
     }
   }
 
-  Future<void> _toggleFollow() async {
+  Future<void> _toggleStar() async {
     final profile = _profile;
-    if (profile == null || profile.isOwner || _followBusy) return;
-    setState(() => _followBusy = true);
+    if (profile == null || profile.isOwner || _starBusy) return;
+
+    setState(() => _starBusy = true);
     HapticFeedback.selectionClick();
     try {
-      final repo = ref.read(followsRepositoryProvider);
-      final result = profile.isFollowing
-          ? await repo.unfollow(profile.userId)
-          : await repo.follow(profile.userId);
+      final starred =
+          await ref.read(coachesRepositoryProvider).toggleStar(profile.id);
       if (!mounted) return;
       setState(() {
-        _profile = profile.copyWith(
-          isFollowing: result.following,
-          followersCount: result.followersCount,
-        );
-        _followBusy = false;
+        _profile = profile.copyWith(isStarred: starred);
+        _starBusy = false;
       });
     } catch (_) {
       if (!mounted) return;
-      setState(() => _followBusy = false);
+      setState(() => _starBusy = false);
       AppMessage.error(
         context,
-        Translations.t(ref.read(localeProvider), 'coach_follow_failed'),
+        Translations.t(ref.read(localeProvider), 'coach_star_failed'),
       );
+    }
+  }
+
+  Future<void> _contactCoach() async {
+    if (_contactBusy) return;
+    final lang = ref.read(localeProvider);
+    String t(String k) => Translations.t(lang, k);
+
+    setState(() => _contactBusy = true);
+    HapticFeedback.selectionClick();
+    try {
+      final contact =
+          await ref.read(coachesRepositoryProvider).contact(widget.coachId);
+      final url = contact.whatsappUrl?.trim();
+      if (url == null || url.isEmpty) {
+        throw Exception('no whatsapp');
+      }
+      final uri = Uri.parse(url);
+      final launched =
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!launched && mounted) {
+        AppMessage.error(context, t('coaches_contact_failed'));
+      }
+    } catch (_) {
+      if (!mounted) return;
+      AppMessage.error(context, t('coaches_contact_failed'));
+    } finally {
+      if (mounted) setState(() => _contactBusy = false);
     }
   }
 
@@ -226,6 +249,21 @@ class _CoachSocialProfileScreenState
                         ),
                       ),
                       actions: [
+                        if (!profile.isOwner)
+                          IconButton(
+                            tooltip: profile.isStarred
+                                ? t('coach_unstar')
+                                : t('coach_star'),
+                            onPressed: _starBusy ? null : _toggleStar,
+                            icon: Icon(
+                              profile.isStarred
+                                  ? Icons.star_rounded
+                                  : LucideIcons.star,
+                              color: profile.isStarred
+                                  ? const Color(0xFFF5B301)
+                                  : AppColors.textPrimary,
+                            ),
+                          ),
                         if (profile.isOwner)
                           IconButton(
                             onPressed: _openCreatePost,
@@ -237,8 +275,8 @@ class _CoachSocialProfileScreenState
                       child: _ProfileHeader(
                         t: t,
                         profile: profile,
-                        followBusy: _followBusy,
-                        onFollow: _toggleFollow,
+                        contactBusy: _contactBusy,
+                        onContact: _contactCoach,
                         onDetails: () => context.push(
                           RoutePaths.coachAboutPath(profile.id),
                         ),
@@ -303,8 +341,8 @@ class _CoachSocialProfileScreenState
 class _ProfileHeader extends StatelessWidget {
   final String Function(String) t;
   final CoachSocialProfile profile;
-  final bool followBusy;
-  final VoidCallback onFollow;
+  final bool contactBusy;
+  final VoidCallback onContact;
   final VoidCallback onDetails;
   final VoidCallback onEdit;
   final VoidCallback onCreate;
@@ -312,8 +350,8 @@ class _ProfileHeader extends StatelessWidget {
   const _ProfileHeader({
     required this.t,
     required this.profile,
-    required this.followBusy,
-    required this.onFollow,
+    required this.contactBusy,
+    required this.onContact,
     required this.onDetails,
     required this.onEdit,
     required this.onCreate,
@@ -329,73 +367,45 @@ class _ProfileHeader extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 40,
-                backgroundColor: AppColors.primaryLight,
-                backgroundImage: profile.avatarUrl != null &&
-                        profile.avatarUrl!.isNotEmpty
+          CircleAvatar(
+            radius: 48,
+            backgroundColor: AppColors.primaryLight,
+            backgroundImage:
+                profile.avatarUrl != null && profile.avatarUrl!.isNotEmpty
                     ? NetworkImage(profile.avatarUrl!)
                     : null,
-                child: profile.avatarUrl == null || profile.avatarUrl!.isEmpty
-                    ? Text(
-                        initial,
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.primaryDark,
-                        ),
-                      )
-                    : null,
-              ),
-              const SizedBox(width: 20),
-              Expanded(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _Stat(value: profile.postsCount, label: t('coach_stat_posts')),
-                    _Stat(
-                      value: profile.followersCount,
-                      label: t('coach_stat_followers'),
+            child: profile.avatarUrl == null || profile.avatarUrl!.isEmpty
+                ? Text(
+                    initial,
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.primaryDark,
                     ),
-                    _Stat(
-                      value: profile.followingCount,
-                      label: t('coach_stat_following'),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            name,
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w800,
-              color: AppColors.textPrimary,
-            ),
+                  )
+                : null,
           ),
           if (profile.bio?.trim().isNotEmpty == true) ...[
-            const SizedBox(height: 4),
+            const SizedBox(height: 14),
             Text(
               profile.bio!,
-              maxLines: 3,
+              textAlign: TextAlign.center,
+              maxLines: 4,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 13,
-                height: 1.35,
+                fontSize: 13.5,
+                height: 1.4,
                 color: AppColors.textPrimary,
               ),
             ),
           ],
           if (profile.city?.trim().isNotEmpty == true ||
               profile.specialties.isNotEmpty) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             Wrap(
+              alignment: WrapAlignment.center,
               spacing: 6,
               runSpacing: 6,
               children: [
@@ -410,10 +420,10 @@ class _ProfileHeader extends StatelessWidget {
               ],
             ),
           ],
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              if (profile.isOwner) ...[
+          const SizedBox(height: 16),
+          if (profile.isOwner)
+            Row(
+              children: [
                 Expanded(
                   child: _ActionButton(
                     label: t('coach_edit_profile'),
@@ -423,32 +433,13 @@ class _ProfileHeader extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Expanded(
+                  flex: 2,
                   child: _ActionButton(
                     label: t('coach_create_post'),
                     onTap: onCreate,
                     filled: true,
                   ),
                 ),
-              ] else ...[
-                Expanded(
-                  child: _ActionButton(
-                    label: profile.isFollowing
-                        ? t('coach_unfollow')
-                        : t('coach_follow'),
-                    onTap: followBusy ? null : onFollow,
-                    filled: !profile.isFollowing,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _ActionButton(
-                    label: t('coach_view_details'),
-                    onTap: onDetails,
-                    filled: false,
-                  ),
-                ),
-              ],
-              if (profile.isOwner) ...[
                 const SizedBox(width: 8),
                 SizedBox(
                   height: 44,
@@ -466,42 +457,66 @@ class _ProfileHeader extends StatelessWidget {
                   ),
                 ),
               ],
-            ],
-          ),
+            )
+          else
+            Row(
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: SizedBox(
+                    height: 48,
+                    child: FilledButton.icon(
+                      onPressed: contactBusy ? null : onContact,
+                      icon: contactBusy
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(LucideIcons.messageCircle, size: 18),
+                      label: Text(
+                        t('coaches_contact_title'),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 14,
+                        ),
+                      ),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.primaryDark,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                SizedBox(
+                  height: 48,
+                  child: OutlinedButton(
+                    onPressed: onDetails,
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      t('coach_view_details'),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
         ],
       ),
-    );
-  }
-}
-
-class _Stat extends StatelessWidget {
-  final int value;
-  final String label;
-
-  const _Stat({required this.value, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(
-          '$value',
-          style: TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.w800,
-            color: AppColors.textPrimary,
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: AppColors.textSecondary,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ],
     );
   }
 }

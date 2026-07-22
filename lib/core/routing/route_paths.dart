@@ -31,6 +31,7 @@ abstract final class RoutePaths {
   static const profileClan = '/profile/clan';
   static const profileShare = '/profile/share';
   static const coaches = '/coaches';
+  static const starredCoaches = '/coaches/starred';
   static const coachDetail = '/coaches/:id';
   static const coachAbout = '/coaches/:id/about';
   static const coachHub = '/profile/coach';

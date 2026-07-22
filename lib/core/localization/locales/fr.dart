@@ -86,6 +86,12 @@ const Map<String, String> fr = {
   'starred_meals_empty_message':
       'Appuyez sur l’étoile d’un repas partagé pour l’enregistrer ici.',
   'starred_meals_load_error': 'Impossible de charger les repas favoris',
+  'starred_coaches': 'Coachs favoris',
+  'view_starred_coaches': 'Voir les coachs favoris',
+  'starred_coaches_empty_title': 'Aucun coach favori',
+  'starred_coaches_empty_message':
+      'Appuyez sur l’étoile d’un profil coach pour l’enregistrer ici.',
+  'starred_coaches_load_error': 'Impossible de charger les coachs favoris',
   'star': 'Favori',
   'starred': 'Favori',
   'referral_tagline': 'Parrainez un ami et gagnez 1\$',

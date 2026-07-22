@@ -643,3 +643,24 @@ class UserFollow(Base):
 
     follower = relationship("User", foreign_keys=[follower_id])
     following = relationship("User", foreign_keys=[following_id])
+
+
+class CoachStar(Base):
+    """User favorite/star on a coach profile."""
+
+    __tablename__ = "coach_stars"
+    __table_args__ = (
+        UniqueConstraint("user_id", "coach_id", name="uq_coach_stars_user_coach"),
+    )
+
+    id = Column(String(36), primary_key=True, default=generate_uuid, index=True)
+    user_id = Column(
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    coach_id = Column(
+        String(36), ForeignKey("coaches.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    user = relationship("User")
+    coach = relationship("Coach")

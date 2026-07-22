@@ -86,6 +86,12 @@ const Map<String, String> ja = {
   'starred_meals_empty_title': 'お気に入りの食事はまだありません',
   'starred_meals_empty_message': '共有された食事の星マークをタップして、ここに保存してください。',
   'starred_meals_load_error': 'お気に入りの食事を読み込めませんでした',
+  'starred_coaches': 'お気に入りのコーチ',
+  'view_starred_coaches': 'お気に入りのコーチを見る',
+  'starred_coaches_empty_title': 'お気に入りのコーチはまだありません',
+  'starred_coaches_empty_message':
+      'コーチのプロフィールの星をタップすると、ここに保存されます。',
+  'starred_coaches_load_error': 'お気に入りのコーチを読み込めませんでした',
   'star': 'お気に入り',
   'starred': 'お気に入り済み',
   'referral_tagline': '友達を紹介して\$1を獲得',

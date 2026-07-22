@@ -14,7 +14,6 @@ class CoachDiscoverState {
   final double? latitude;
   final double? longitude;
   final String? locationLabel;
-  final double radiusKm;
   final String? specialty;
   final String? gender;
 
@@ -28,7 +27,6 @@ class CoachDiscoverState {
     this.latitude,
     this.longitude,
     this.locationLabel,
-    this.radiusKm = 25,
     this.specialty,
     this.gender,
   });
@@ -46,7 +44,6 @@ class CoachDiscoverState {
     double? latitude,
     double? longitude,
     String? locationLabel,
-    double? radiusKm,
     String? specialty,
     bool clearSpecialty = false,
     String? gender,
@@ -62,7 +59,6 @@ class CoachDiscoverState {
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
       locationLabel: locationLabel ?? this.locationLabel,
-      radiusKm: radiusKm ?? this.radiusKm,
       specialty: clearSpecialty ? null : (specialty ?? this.specialty),
       gender: clearGender ? null : (gender ?? this.gender),
     );
@@ -143,10 +139,6 @@ class CoachDiscoverNotifier extends Notifier<CoachDiscoverState> {
     );
   }
 
-  void setRadiusKm(double value) {
-    state = state.copyWith(radiusKm: value);
-  }
-
   void setSpecialty(String? specialty) {
     if (specialty == null || specialty.isEmpty) {
       state = state.copyWith(clearSpecialty: true);
@@ -182,7 +174,6 @@ class CoachDiscoverNotifier extends Notifier<CoachDiscoverState> {
       final page = await ref.read(coachesRepositoryProvider).search(
             lat: state.latitude!,
             lng: state.longitude!,
-            radiusKm: state.radiusKm,
             specialty: state.specialty,
             gender: state.gender,
             page: nextPage,

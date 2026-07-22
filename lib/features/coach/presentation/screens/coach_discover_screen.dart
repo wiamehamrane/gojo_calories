@@ -104,7 +104,6 @@ class _CoachDiscoverScreenState extends ConsumerState<CoachDiscoverScreen> {
     var count = 0;
     if (state.specialty != null) count++;
     if (state.gender != null) count++;
-    if (state.radiusKm.round() != 25) count++;
     return count;
   }
 
@@ -189,8 +188,6 @@ class _CoachDiscoverScreenState extends ConsumerState<CoachDiscoverScreen> {
                 },
                 onUseGps: () => _onUseGps(),
                 onPickManual: _pickManualLocation,
-                onRadiusChanged: (v) =>
-                    ref.read(coachDiscoverProvider.notifier).setRadiusKm(v),
                 onSpecialtyChanged: (v) =>
                     ref.read(coachDiscoverProvider.notifier).setSpecialty(v),
                 onGenderChanged: (v) =>
@@ -325,7 +322,6 @@ class _FilterBar extends StatelessWidget {
   final VoidCallback onToggle;
   final VoidCallback onUseGps;
   final VoidCallback onPickManual;
-  final ValueChanged<double> onRadiusChanged;
   final ValueChanged<String?> onSpecialtyChanged;
   final ValueChanged<String?> onGenderChanged;
   final VoidCallback onApply;
@@ -339,7 +335,6 @@ class _FilterBar extends StatelessWidget {
     required this.onToggle,
     required this.onUseGps,
     required this.onPickManual,
-    required this.onRadiusChanged,
     required this.onSpecialtyChanged,
     required this.onGenderChanged,
     required this.onApply,
@@ -403,7 +398,7 @@ class _FilterBar extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            '$_summaryLocation · ${state.radiusKm.round()} km',
+                            _summaryLocation,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
@@ -466,7 +461,6 @@ class _FilterBar extends StatelessWidget {
                             t: t,
                             onUseGps: onUseGps,
                             onPickManual: onPickManual,
-                            onRadiusChanged: onRadiusChanged,
                             onSpecialtyChanged: onSpecialtyChanged,
                             onGenderChanged: onGenderChanged,
                           ),
@@ -503,7 +497,6 @@ class _FilterDetails extends StatelessWidget {
   final String Function(String) t;
   final VoidCallback onUseGps;
   final VoidCallback onPickManual;
-  final ValueChanged<double> onRadiusChanged;
   final ValueChanged<String?> onSpecialtyChanged;
   final ValueChanged<String?> onGenderChanged;
 
@@ -512,7 +505,6 @@ class _FilterDetails extends StatelessWidget {
     required this.t,
     required this.onUseGps,
     required this.onPickManual,
-    required this.onRadiusChanged,
     required this.onSpecialtyChanged,
     required this.onGenderChanged,
   });
@@ -555,47 +547,6 @@ class _FilterDetails extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              Text(
-                t('coaches_distance_label'),
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              const Spacer(),
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 180),
-                child: Text(
-                  '${state.radiusKm.round()} km',
-                  key: ValueKey(state.radiusKm.round()),
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.primaryDark,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          SliderTheme(
-            data: SliderTheme.of(context).copyWith(
-              activeTrackColor: AppColors.primaryDark,
-              inactiveTrackColor: AppColors.border,
-              thumbColor: AppColors.primaryDark,
-              overlayColor: AppColors.primary.withValues(alpha: 0.12),
-              trackHeight: 3,
-            ),
-            child: Slider(
-              value: state.radiusKm.clamp(5, 100),
-              min: 5,
-              max: 100,
-              divisions: 19,
-              onChanged: onRadiusChanged,
-            ),
-          ),
           Text(
             t('coaches_specialty'),
             style: TextStyle(

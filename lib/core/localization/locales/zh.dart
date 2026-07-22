@@ -86,6 +86,12 @@ const Map<String, String> zh = {
   'starred_meals_empty_title': '暂无收藏餐食',
   'starred_meals_empty_message': '点击共享餐食上的星标即可保存到此。',
   'starred_meals_load_error': '无法加载收藏餐食',
+  'starred_coaches': '收藏教练',
+  'view_starred_coaches': '查看收藏教练',
+  'starred_coaches_empty_title': '暂无收藏教练',
+  'starred_coaches_empty_message':
+      '点击教练资料页上的星标即可保存在此。',
+  'starred_coaches_load_error': '无法加载收藏教练',
   'star': '收藏',
   'starred': '已收藏',
   'referral_tagline': '推荐好友，赚取 \$1',

@@ -86,6 +86,12 @@ const Map<String, String> de = {
   'starred_meals_empty_title': 'Noch keine favorisierten Mahlzeiten',
   'starred_meals_empty_message': 'Tippe auf den Stern bei einer geteilten Mahlzeit, um sie hier zu speichern.',
   'starred_meals_load_error': 'Favorisierte Mahlzeiten konnten nicht geladen werden',
+  'starred_coaches': 'Markierte Coaches',
+  'view_starred_coaches': 'Markierte Coaches ansehen',
+  'starred_coaches_empty_title': 'Noch keine markierten Coaches',
+  'starred_coaches_empty_message':
+      'Tippe auf den Stern im Coach-Profil, um ihn hier zu speichern.',
+  'starred_coaches_load_error': 'Markierte Coaches konnten nicht geladen werden',
   'star': 'Favorisieren',
   'starred': 'Favorisiert',
   'referral_tagline': 'Freund werben und 1\$ verdienen',
