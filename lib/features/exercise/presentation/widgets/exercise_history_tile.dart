@@ -5,6 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_shadows.dart';
 import '../../../../core/localization/translations.dart';
 import '../../../../core/localization/locale_provider.dart';
+import '../../../../core/widgets/cached_food_image.dart';
 
 IconData exerciseIconForName(String name) {
   final lower = name.toLowerCase();
@@ -15,7 +16,10 @@ IconData exerciseIconForName(String name) {
   }
   if (lower.contains('weight') ||
       lower.contains('lifting') ||
-      lower.contains('musculation')) {
+      lower.contains('musculation') ||
+      lower.contains('press') ||
+      lower.contains('squat') ||
+      lower.contains('deadlift')) {
     return LucideIcons.dumbbell;
   }
   return LucideIcons.flame;
@@ -67,101 +71,233 @@ class ExerciseHistoryTile extends StatelessWidget {
     final name = exercise['name']?.toString() ?? 'Exercise';
     final duration = exercise['duration_minutes'] ?? 0;
     final calories = exercise['calories_burned'] ?? 0;
+    final imageUrl = exercise['image_url']?.toString();
+    final setsSummary = exercise['sets_summary']?.toString();
+    final hasPhoto = imageUrl != null && imageUrl.isNotEmpty;
     final dateLabel = showTimeOnly
         ? formatExerciseTime(exercise['date']?.toString(), lang)
         : formatExerciseDate(exercise['date']?.toString(), lang);
     final durationLabel = Translations.t(lang, 'exercise_duration_mins')
         .replaceAll('{n}', duration.toString());
+    final metaLine = [
+      if (dateLabel.isNotEmpty) dateLabel,
+      durationLabel,
+    ].where((s) => s.isNotEmpty).join(' · ');
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.75)),
         boxShadow: AppShadows.cardShadow,
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        child: Row(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(22),
+        child: Stack(
           children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: AppColors.surfaceMuted,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                exerciseIconForName(name),
-                size: 20,
-                color: AppColors.textPrimary,
+            Positioned(
+              right: -20,
+              top: -24,
+              child: Container(
+                width: 90,
+                height: 90,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.primaryDark.withValues(alpha: 0.08),
+                ),
               ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 14, 8, 14),
+              child: Row(
                 children: [
-                  Text(
-                    name,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
+                  _ExerciseThumb(
+                    imageUrl: hasPhoto ? imageUrl : null,
+                    name: name,
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.textPrimary,
+                            letterSpacing: -0.2,
+                          ),
+                        ),
+                        if (setsSummary != null && setsSummary.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            setsSummary,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ] else if (metaLine.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            metaLine,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: [
+                            _Chip(
+                              icon: LucideIcons.flame,
+                              label: '-$calories kcal',
+                              foreground: AppColors.primaryDark,
+                              background:
+                                  AppColors.primaryDark.withValues(alpha: 0.14),
+                            ),
+                            if (setsSummary != null &&
+                                setsSummary.isNotEmpty &&
+                                metaLine.isNotEmpty)
+                              _Chip(
+                                icon: LucideIcons.clock,
+                                label: metaLine,
+                                foreground: const Color(0xFF34D399),
+                                background: const Color(0xFF34D399)
+                                    .withValues(alpha: 0.14),
+                              ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 3),
-                  Text(
-                    [dateLabel, durationLabel]
-                        .where((s) => s.isNotEmpty)
-                        .join(' · '),
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: AppColors.textSecondary,
+                  if (onDelete != null)
+                    IconButton(
+                      visualDensity: VisualDensity.compact,
+                      padding: EdgeInsets.zero,
+                      constraints:
+                          const BoxConstraints(minWidth: 36, minHeight: 36),
+                      icon: Icon(
+                        LucideIcons.trash2,
+                        size: 18,
+                        color: AppColors.inactive,
+                      ),
+                      onPressed: onDelete,
+                    )
+                  else
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceMuted,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        LucideIcons.chevronRight,
+                        size: 16,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),
-            const SizedBox(width: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  '-$calories',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.primaryDark,
-                  ),
-                ),
-                Text(
-                  'kcal',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-            if (onDelete != null) ...[
-              const SizedBox(width: 4),
-              IconButton(
-                visualDensity: VisualDensity.compact,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                icon: Icon(
-                  LucideIcons.trash2,
-                  size: 18,
-                  color: AppColors.inactive,
-                ),
-                onPressed: onDelete,
-              ),
-            ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ExerciseThumb extends StatelessWidget {
+  final String? imageUrl;
+  final String name;
+
+  const _ExerciseThumb({required this.imageUrl, required this.name});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 68,
+      height: 68,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          colors: [
+            AppColors.primaryDark.withValues(alpha: 0.35),
+            AppColors.primaryLight,
+          ],
+        ),
+      ),
+      padding: const EdgeInsets.all(3),
+      child: ClipOval(
+        child: imageUrl != null && imageUrl!.isNotEmpty
+            ? CachedFoodImage(
+                imageUrl: imageUrl,
+                fit: BoxFit.cover,
+                width: 62,
+                height: 62,
+                memCacheWidth: 186,
+              )
+            : ColoredBox(
+                color: AppColors.surface,
+                child: Icon(
+                  exerciseIconForName(name),
+                  size: 26,
+                  color: AppColors.primaryDark,
+                ),
+              ),
+      ),
+    );
+  }
+}
+
+class _Chip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color foreground;
+  final Color background;
+
+  const _Chip({
+    required this.icon,
+    required this.label,
+    required this.foreground,
+    required this.background,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: foreground),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: foreground,
+            ),
+          ),
+        ],
       ),
     );
   }

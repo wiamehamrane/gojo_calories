@@ -205,6 +205,8 @@ class ExerciseLog(Base):
     name = Column(String, nullable=False)
     duration_minutes = Column(Integer, nullable=False)
     calories_burned = Column(Integer, nullable=False)
+    image_url = Column(String, nullable=True)  # machine / workout photo (S3 key)
+    sets_summary = Column(String, nullable=True)  # e.g. "3 sets · 10, 10, 8 reps"
     date = Column(DateTime, default=datetime.datetime.utcnow)
     log_date = Column(Date, nullable=True, index=True)
     

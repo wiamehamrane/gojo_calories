@@ -1,22 +1,28 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from pydantic import BaseModel
 from typing import List, Optional
 import datetime
+import json
 import logging
 from sqlalchemy import or_, and_
 from database import get_db
 from models import ExerciseLog, DailyStats
 from security import get_current_user_id
+from s3_utils import resolve_media_url
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
 
 class ExerciseCreate(BaseModel):
     name: str
     duration_minutes: int
     calories_burned: int
     local_date: Optional[str] = None
+    image_url: Optional[str] = None
+    sets_summary: Optional[str] = None
+
 
 class ExerciseResponse(BaseModel):
     id: str
@@ -25,14 +31,21 @@ class ExerciseResponse(BaseModel):
     calories_burned: int
     date: datetime.datetime
     log_date: Optional[datetime.date] = None
+    image_url: Optional[str] = None
+    sets_summary: Optional[str] = None
+
 
 class ExerciseAnalyzeRequest(BaseModel):
     description: str
+
 
 class ExerciseAnalyzeResponse(BaseModel):
     name: str
     duration_minutes: int
     calories_burned: int
+    image_url: Optional[str] = None
+    sets_summary: Optional[str] = None
+
 
 def _resolve_log_date(local_date: Optional[str]) -> datetime.date:
     if local_date:
@@ -42,6 +55,7 @@ def _resolve_log_date(local_date: Optional[str]) -> datetime.date:
             pass
     return datetime.datetime.utcnow().date()
 
+
 def _serialize_exercise(ex: ExerciseLog) -> dict:
     return {
         "id": ex.id,
@@ -50,7 +64,29 @@ def _serialize_exercise(ex: ExerciseLog) -> dict:
         "calories_burned": ex.calories_burned,
         "date": ex.date,
         "log_date": ex.log_date.isoformat() if ex.log_date else None,
+        "image_url": resolve_media_url(ex.image_url) if ex.image_url else None,
+        "sets_summary": ex.sets_summary,
     }
+
+
+def _format_sets_summary(sets: list) -> str:
+    if not sets:
+        return ""
+    reps = []
+    for s in sets:
+        if not isinstance(s, dict):
+            continue
+        r = s.get("reps")
+        if r is None:
+            continue
+        try:
+            reps.append(str(int(r)))
+        except (TypeError, ValueError):
+            continue
+    if not reps:
+        return f"{len(sets)} sets"
+    return f"{len(reps)} sets · {', '.join(reps)} reps"
+
 
 @router.post("/analyze", response_model=ExerciseAnalyzeResponse)
 def analyze_exercise_description(
@@ -107,9 +143,139 @@ Schema:
         "calories_burned": calories,
     }
 
+
+@router.post("/analyze/machine", response_model=ExerciseAnalyzeResponse)
+async def analyze_machine_workout(
+    file: UploadFile = File(...),
+    sets_json: str = Form(...),
+    name_hint: Optional[str] = Form(None),
+    current_user_id: str = Depends(get_current_user_id),
+):
+    """Identify gym machine from photo + estimate calories from sets/reps."""
+    from routes.vision import _generate_food_json
+
+    contents = await file.read()
+    if not contents:
+        raise HTTPException(status_code=400, detail="Empty image")
+    if len(contents) > 20 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Image too large")
+
+    try:
+        sets = json.loads(sets_json)
+    except json.JSONDecodeError as exc:
+        raise HTTPException(status_code=422, detail="sets_json must be valid JSON") from exc
+
+    if not isinstance(sets, list) or not sets:
+        raise HTTPException(status_code=422, detail="Provide at least one set")
+
+    cleaned_sets = []
+    for item in sets:
+        if not isinstance(item, dict):
+            continue
+        try:
+            reps = int(item.get("reps") or 0)
+        except (TypeError, ValueError):
+            reps = 0
+        try:
+            weight = float(item.get("weight_kg") or item.get("weight") or 0)
+        except (TypeError, ValueError):
+            weight = 0.0
+        if reps < 1:
+            continue
+        cleaned_sets.append({"reps": reps, "weight_kg": max(0.0, weight)})
+
+    if not cleaned_sets:
+        raise HTTPException(status_code=422, detail="Each set needs at least 1 rep")
+
+    sets_summary = _format_sets_summary(cleaned_sets)
+    hint = (name_hint or "").strip()
+    sets_blob = json.dumps(cleaned_sets)
+
+    prompt = f"""
+You are a fitness and calorie estimation expert for a calorie-tracking app.
+
+The user took a photo of the gym machine or equipment they used for weight lifting.
+They completed these sets (JSON): {sets_blob}
+{"Suggested exercise name from the user: " + hint if hint else ""}
+
+Look at the image to identify the gym machine / equipment and name the exercise from what you see
+(e.g. "Leg Press", "Lat Pulldown", "Cable Row", "Chest Press"). The user often does not know the exercise name —
+prefer the machine visible in the photo over any suggested hint unless the hint clearly matches.
+Use the sets, reps, and any weights to estimate calories burned for a typical adult (~70–80 kg).
+
+Respond ONLY with a raw JSON object. No markdown, no code fences, no explanations.
+
+Rules:
+- "name": short exercise name (prefer the machine/movement visible; use the hint if it clearly matches)
+- "duration_minutes": estimated total time including rest between sets (integer, at least 1)
+- "calories_burned": realistic estimate for this session (integer, at least 1)
+- If the image is not gym equipment / exercise related, still estimate from the sets using the hint or "Weight training"
+
+Schema:
+{{"name": "Leg Press", "duration_minutes": 12, "calories_burned": 95}}
+"""
+
+    mime_type = file.content_type or "image/jpeg"
+    logger.info(
+        "Calling OpenAI machine workout analysis for user %s (%s sets)",
+        current_user_id,
+        len(cleaned_sets),
+    )
+    data, _raw = _generate_food_json(prompt, image_bytes=contents, mime_type=mime_type)
+
+    if data.get("error"):
+        raise HTTPException(
+            status_code=422,
+            detail="Could not analyze this workout photo. Try again.",
+        )
+
+    name = str(data.get("name") or hint or "Weight training").strip() or "Weight training"
+    duration = int(data.get("duration_minutes") or 0)
+    calories = int(data.get("calories_burned") or 0)
+
+    if duration < 1:
+        duration = max(1, len(cleaned_sets) * 2)
+    if calories < 1:
+        raise HTTPException(
+            status_code=422,
+            detail="AI could not estimate calories. Check your sets and try again.",
+        )
+
+    s3_key = None
+    try:
+        from s3_utils import upload_image_to_s3_key
+
+        s3_key = upload_image_to_s3_key(
+            contents,
+            mime_type,
+            prefix="exercise_logs/",
+        )
+    except Exception as s3_err:
+        logger.error("S3 upload error in machine workout: %s", s3_err)
+
+    return {
+        "name": name,
+        "duration_minutes": duration,
+        "calories_burned": calories,
+        "image_url": s3_key,
+        "sets_summary": sets_summary,
+    }
+
+
 @router.post("/", response_model=ExerciseResponse)
 def log_exercise(exercise: ExerciseCreate, current_user_id: str = Depends(get_current_user_id)):
     log_date = _resolve_log_date(exercise.local_date)
+
+    # Prefer storing stable S3 key; strip CDN/presign if a full URL sneaks in.
+    image_key = (exercise.image_url or "").strip() or None
+    if image_key and image_key.startswith("http"):
+        # Keep as-is if we can't reverse; resolve_media_url on read still works for keys.
+        # If it's already a full URL from our CDN, store path after host when possible.
+        from urllib.parse import urlparse
+
+        path = urlparse(image_key).path.lstrip("/")
+        if path.startswith("exercise_logs/") or path.startswith("food_logs/"):
+            image_key = path
 
     with next(get_db()) as db:
         new_exercise = ExerciseLog(
@@ -117,26 +283,31 @@ def log_exercise(exercise: ExerciseCreate, current_user_id: str = Depends(get_cu
             name=exercise.name,
             duration_minutes=exercise.duration_minutes,
             calories_burned=exercise.calories_burned,
+            image_url=image_key,
+            sets_summary=(exercise.sets_summary or "").strip() or None,
             log_date=log_date,
         )
         db.add(new_exercise)
-        
+
         from utils.stats_utils import get_or_create_daily_stats
+
         stat = get_or_create_daily_stats(db, current_user_id, log_date)
         stat.calorie_budget += exercise.calories_burned
-        
+
         db.commit()
         db.refresh(new_exercise)
-        
+
         try:
             from redis_client import redis_db
+
             redis_db.delete(f"stats_{current_user_id}")
             redis_db.delete(f"stats_{current_user_id}_{log_date.isoformat()}")
             redis_db.delete(f"stats_{current_user_id}_latest")
         except Exception:
             pass
-            
+
         return _serialize_exercise(new_exercise)
+
 
 @router.get("/", response_model=List[ExerciseResponse])
 def get_exercises(
@@ -170,10 +341,13 @@ def get_exercises(
         exercises = query.order_by(ExerciseLog.date.desc()).limit(50).all()
         return [_serialize_exercise(ex) for ex in exercises]
 
+
 @router.delete("/{exercise_id}")
 def delete_exercise(exercise_id: str, current_user_id: str = Depends(get_current_user_id)):
     with next(get_db()) as db:
-        ex = db.query(ExerciseLog).filter(ExerciseLog.id == exercise_id, ExerciseLog.user_id == current_user_id).first()
+        ex = db.query(ExerciseLog).filter(
+            ExerciseLog.id == exercise_id, ExerciseLog.user_id == current_user_id
+        ).first()
         if not ex:
             raise HTTPException(status_code=404, detail="Exercise not found")
 
@@ -181,21 +355,25 @@ def delete_exercise(exercise_id: str, current_user_id: str = Depends(get_current
         stat = db.query(DailyStats).filter(
             DailyStats.user_id == current_user_id,
             DailyStats.date >= datetime.datetime.combine(budget_date, datetime.time.min),
-            DailyStats.date < datetime.datetime.combine(budget_date + datetime.timedelta(days=1), datetime.time.min)
+            DailyStats.date
+            < datetime.datetime.combine(
+                budget_date + datetime.timedelta(days=1), datetime.time.min
+            ),
         ).first()
-        
+
         if stat:
             stat.calorie_budget = max(0, stat.calorie_budget - ex.calories_burned)
-            
+
         db.delete(ex)
         db.commit()
-        
+
         try:
             from redis_client import redis_db
+
             redis_db.delete(f"stats_{current_user_id}")
             redis_db.delete(f"stats_{current_user_id}_{budget_date.isoformat()}")
             redis_db.delete(f"stats_{current_user_id}_latest")
         except Exception:
             pass
-            
+
         return {"status": "success"}

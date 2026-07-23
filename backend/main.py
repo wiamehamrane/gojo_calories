@@ -169,6 +169,8 @@ try:
         conn.execute(text("ALTER TABLE food_logs ADD COLUMN IF NOT EXISTS image_url VARCHAR;"))
         conn.execute(text("ALTER TABLE food_logs ADD COLUMN IF NOT EXISTS ingredients JSON;"))
         conn.execute(text("ALTER TABLE exercise_logs ADD COLUMN IF NOT EXISTS log_date DATE;"))
+        conn.execute(text("ALTER TABLE exercise_logs ADD COLUMN IF NOT EXISTS image_url VARCHAR;"))
+        conn.execute(text("ALTER TABLE exercise_logs ADD COLUMN IF NOT EXISTS sets_summary VARCHAR;"))
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS exercise_logs (
                 id VARCHAR(36) PRIMARY KEY,
@@ -176,6 +178,8 @@ try:
                 name VARCHAR NOT NULL,
                 duration_minutes INTEGER NOT NULL,
                 calories_burned INTEGER NOT NULL,
+                image_url VARCHAR,
+                sets_summary VARCHAR,
                 date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 log_date DATE
             );

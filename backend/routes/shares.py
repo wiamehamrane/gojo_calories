@@ -281,6 +281,8 @@ def shared_exercises(
             "calories_burned": ex.calories_burned,
             "date": ex.date.isoformat() if ex.date else None,
             "log_date": ex.log_date.isoformat() if ex.log_date else None,
+            "image_url": resolve_media_url(ex.image_url) if ex.image_url else None,
+            "sets_summary": ex.sets_summary,
         }
         for ex in exercises
     ]
