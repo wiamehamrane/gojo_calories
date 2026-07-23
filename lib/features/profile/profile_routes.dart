@@ -106,6 +106,10 @@ List<RouteBase> get profileRoutes => [
             child: SharedClientDiaryScreen(
               ownerId: id,
               displayName: name,
+              scopes: (extra?['scopes'] as List?)
+                      ?.map((e) => e.toString())
+                      .toList() ??
+                  const ['nutrition', 'exercises'],
             ),
           );
         },

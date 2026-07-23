@@ -89,6 +89,8 @@ class DashboardNotifier extends AsyncNotifier<models.DailyStats> {
     required String name,
     required int durationMinutes,
     required int caloriesBurned,
+    String? imageUrl,
+    String? setsSummary,
   }) async {
     final date = ref.read(selectedDateProvider);
     final localDate =
@@ -99,6 +101,8 @@ class DashboardNotifier extends AsyncNotifier<models.DailyStats> {
           durationMinutes: durationMinutes,
           caloriesBurned: caloriesBurned,
           localDate: localDate,
+          imageUrl: imageUrl,
+          setsSummary: setsSummary,
         );
 
     ref.invalidate(dailyExercisesProvider(date));

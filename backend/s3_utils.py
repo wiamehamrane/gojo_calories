@@ -87,6 +87,23 @@ def upload_image_to_s3(file_bytes: bytes, content_type: str) -> str:
         raise MediaUploadError(f"S3 upload failed: {e}") from e
 
 
+def _extension_for_content_type(content_type: str, default: str = "bin") -> str:
+    mapping = {
+        "image/jpeg": "jpg",
+        "image/jpg": "jpg",
+        "image/png": "png",
+        "image/webp": "webp",
+        "image/gif": "gif",
+        "image/heic": "heic",
+        "image/heif": "heif",
+        "video/mp4": "mp4",
+        "video/quicktime": "mov",
+        "video/webm": "webm",
+        "video/x-m4v": "m4v",
+    }
+    return mapping.get((content_type or "").lower().strip(), default)
+
+
 def upload_image_to_s3_key(file_bytes: bytes, content_type: str, prefix: str = "") -> str:
     """Upload an image and return its stable S3 key (NOT a presigned URL).
 
@@ -94,8 +111,24 @@ def upload_image_to_s3_key(file_bytes: bytes, content_type: str, prefix: str = "
     so image links never expire. Falls back to a local /uploads path only
     when ALLOW_LOCAL_UPLOADS=true or AWS_BUCKET_NAME is unset (local/dev).
     """
+    return upload_media_to_s3_key(
+        file_bytes,
+        content_type,
+        prefix=prefix,
+        default_ext="jpg",
+    )
+
+
+def upload_media_to_s3_key(
+    file_bytes: bytes,
+    content_type: str,
+    prefix: str = "",
+    default_ext: str = "bin",
+) -> str:
+    """Upload any media (image/video) and return a stable S3 key."""
     bucket = os.getenv('AWS_BUCKET_NAME')
-    file_name = f"{prefix}{uuid.uuid4()}.jpg"
+    ext = _extension_for_content_type(content_type, default_ext)
+    file_name = f"{prefix}{uuid.uuid4()}.{ext}"
 
     if not bucket:
         if _allow_local_fallback():
@@ -104,12 +137,12 @@ def upload_image_to_s3_key(file_bytes: bytes, content_type: str, prefix: str = "
 
     s3 = get_s3_client()
     try:
-        logger.info(f"Uploading image to S3 bucket: {bucket}, key: {file_name}")
+        logger.info(f"Uploading media to S3 bucket: {bucket}, key: {file_name}")
         s3.put_object(
             Bucket=bucket,
             Key=file_name,
             Body=file_bytes,
-            ContentType=content_type
+            ContentType=content_type or "application/octet-stream",
         )
         return file_name
     except (NoCredentialsError, ClientError) as e:

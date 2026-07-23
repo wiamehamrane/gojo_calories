@@ -312,6 +312,36 @@ def get_my_events(db: Session = Depends(get_db), current_user: User = Depends(ge
     return result
 
 
+@router.get("/user/{user_id}", response_model=List[EventResponse])
+def get_events_by_user(
+    user_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Events created by a given user (coach / public profile)."""
+    target = db.query(User).filter(User.id == user_id).first()
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    events = (
+        db.query(Event)
+        .filter(Event.creator_id == user_id)
+        .order_by(Event.start_time.desc())
+        .all()
+    )
+
+    is_self = current_user.id == user_id
+    user_gender = (current_user.gender or "").strip().lower()
+    result = []
+    for event in events:
+        if not is_self:
+            event_audience = (event.audience or "mixed").lower()
+            if event_audience != "mixed" and event_audience != user_gender:
+                continue
+        result.append(_serialize_event(event, db, current_user))
+    return result
+
+
 class EventUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None

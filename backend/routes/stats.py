@@ -409,3 +409,86 @@ def log_macro(
         current_user_id=current_user_id,
     )
     return {"status": "success", "consumed": stat.calories_consumed}
+
+
+class HealthSyncUpsert(BaseModel):
+    date: Optional[str] = None  # YYYY-MM-DD local day
+    steps: Optional[int] = None
+    active_calories: Optional[int] = None
+    weight_kg: Optional[float] = None
+
+
+def _parse_health_day(date: Optional[str]) -> dt.date:
+    if date:
+        try:
+            return dt.datetime.strptime(date, "%Y-%m-%d").date()
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail="Invalid date") from e
+    return dt.datetime.utcnow().date()
+
+
+def _serialize_health_day(row: Optional[models.HealthDay], day: dt.date) -> dict:
+    if not row:
+        return {
+            "date": day.isoformat(),
+            "steps": None,
+            "active_calories": None,
+            "weight_kg": None,
+            "updated_at": None,
+        }
+    return {
+        "date": row.day.isoformat() if row.day else day.isoformat(),
+        "steps": row.steps,
+        "active_calories": row.active_calories,
+        "weight_kg": row.weight_kg,
+        "updated_at": row.updated_at.isoformat() if row.updated_at else None,
+    }
+
+
+@router.get("/health")
+def get_health_day(
+    date: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user_id: str = Depends(get_current_user_id),
+):
+    day = _parse_health_day(date)
+    row = (
+        db.query(models.HealthDay)
+        .filter(
+            models.HealthDay.user_id == current_user_id,
+            models.HealthDay.day == day,
+        )
+        .first()
+    )
+    return _serialize_health_day(row, day)
+
+
+@router.put("/health")
+def upsert_health_day(
+    body: HealthSyncUpsert,
+    db: Session = Depends(get_db),
+    current_user_id: str = Depends(get_current_user_id),
+):
+    day = _parse_health_day(body.date)
+    row = (
+        db.query(models.HealthDay)
+        .filter(
+            models.HealthDay.user_id == current_user_id,
+            models.HealthDay.day == day,
+        )
+        .first()
+    )
+    if not row:
+        row = models.HealthDay(user_id=current_user_id, day=day)
+        db.add(row)
+
+    if body.steps is not None:
+        row.steps = max(0, int(body.steps))
+    if body.active_calories is not None:
+        row.active_calories = max(0, int(body.active_calories))
+    if body.weight_kg is not None:
+        row.weight_kg = float(body.weight_kg)
+    row.updated_at = dt.datetime.utcnow()
+    db.commit()
+    db.refresh(row)
+    return _serialize_health_day(row, day)

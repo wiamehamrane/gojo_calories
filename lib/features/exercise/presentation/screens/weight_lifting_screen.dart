@@ -1,75 +1,72 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_text_styles.dart';
-import '../../../../core/theme/app_shadows.dart';
+
+import '../../../../core/di/repository_providers.dart';
 import '../../../../core/localization/locale_provider.dart';
 import '../../../../core/localization/translations.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_shadows.dart';
+import '../../../../core/theme/app_text_styles.dart';
 import '../../../stats/presentation/providers/dashboard_provider.dart';
 
-// ────────────────────────────────────────────────────────────────────────────
-// Data model for a single exercise entry in the session
-// ────────────────────────────────────────────────────────────────────────────
 class _ExerciseEntry {
-  final String name;
+  String name;
   final List<_SetEntry> sets;
   bool expanded;
+  File? imageFile;
+  String? imageKey;
+  String? setsSummary;
+  int? calories;
+  int? durationMinutes;
+  bool analyzing;
+  /// True after the user edits the name (so re-estimate can use it as a hint).
+  bool nameEditedByUser;
+  final TextEditingController nameCtrl;
 
   _ExerciseEntry({
     required this.name,
     required this.sets,
     required this.expanded,
-  });
+    this.imageFile,
+    this.imageKey,
+    this.setsSummary,
+    this.calories,
+    this.durationMinutes,
+    this.analyzing = false,
+    this.nameEditedByUser = false,
+  }) : nameCtrl = TextEditingController(text: name);
+
+  String get setsOverlay {
+    if (setsSummary != null && setsSummary!.isNotEmpty) return setsSummary!;
+    final reps = sets.map((s) => '${s.reps}').join(', ');
+    return '${sets.length} sets · $reps reps';
+  }
+
+  void dispose() {
+    nameCtrl.dispose();
+  }
+
+  void applyAiName(String aiName) {
+    name = aiName;
+    if (!nameEditedByUser) {
+      nameCtrl.text = aiName;
+    }
+  }
 }
 
 class _SetEntry {
   int reps;
-  double weight; // kg
+  double weight;
   bool done;
 
   _SetEntry({this.reps = 10, this.weight = 20.0, required this.done});
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-// Preset exercise names
-// ────────────────────────────────────────────────────────────────────────────
-const _presetExercises = [
-  'Bench Press',
-  'Squat',
-  'Deadlift',
-  'Overhead Press',
-  'Barbell Row',
-  'Pull-Up',
-  'Dumbbell Curl',
-  'Tricep Dip',
-  'Leg Press',
-  'Lat Pulldown',
-  'Cable Row',
-  'Hip Thrust',
-  'Romanian Deadlift',
-  'Incline Bench Press',
-  'Face Pull',
-];
-
-// ────────────────────────────────────────────────────────────────────────────
-// MET-based calorie estimation: ~5.0 METs for moderate weightlifting
-// Formula: Cal = MET × weight_kg × time_hours
-// We estimate total set time as (total sets × avg work + rest × sets)
-// ────────────────────────────────────────────────────────────────────────────
-int _estimateCalories(List<_ExerciseEntry> exercises) {
-  final totalSets = exercises.fold<int>(0, (s, e) => s + e.sets.length);
-  if (totalSets == 0) return 0;
-  const double bodyWeightKg = 75.0; // assumed
-  const double metValue = 5.0;
-  final double minutesTotal =
-      totalSets * 2.5; // ~2.5 min per set including rest
-  return (metValue * bodyWeightKg * (minutesTotal / 60)).round();
-}
-
-// ────────────────────────────────────────────────────────────────────────────
-// Screen
-// ────────────────────────────────────────────────────────────────────────────
 class WeightLiftingScreen extends ConsumerStatefulWidget {
   const WeightLiftingScreen({super.key});
 
@@ -80,14 +77,32 @@ class WeightLiftingScreen extends ConsumerStatefulWidget {
 
 class _WeightLiftingScreenState extends ConsumerState<WeightLiftingScreen> {
   final List<_ExerciseEntry> _exercises = [];
-  bool _saved = false;
+  bool _saving = false;
 
-  void _addExercise(String name) {
+  @override
+  void dispose() {
+    for (final e in _exercises) {
+      e.dispose();
+    }
+    super.dispose();
+  }
+
+  Future<void> _addExerciseFromCamera() async {
+    final picker = ImagePicker();
+    final img = await picker.pickImage(
+      source: ImageSource.camera,
+      maxWidth: 1600,
+      imageQuality: 85,
+      preferredCameraDevice: CameraDevice.rear,
+    );
+    if (img == null || !mounted) return;
+    HapticFeedback.selectionClick();
     setState(() {
       _exercises.add(
         _ExerciseEntry(
-          name: name,
+          name: '',
           expanded: true,
+          imageFile: File(img.path),
           sets: [_SetEntry(done: false)],
         ),
       );
@@ -95,7 +110,10 @@ class _WeightLiftingScreenState extends ConsumerState<WeightLiftingScreen> {
   }
 
   void _removeExercise(int idx) {
-    setState(() => _exercises.removeAt(idx));
+    setState(() {
+      _exercises[idx].dispose();
+      _exercises.removeAt(idx);
+    });
   }
 
   void _addSet(int exerciseIdx) {
@@ -104,6 +122,7 @@ class _WeightLiftingScreenState extends ConsumerState<WeightLiftingScreen> {
       _exercises[exerciseIdx].sets.add(
         _SetEntry(reps: lastSet.reps, weight: lastSet.weight, done: false),
       );
+      _exercises[exerciseIdx].calories = null;
     });
   }
 
@@ -111,29 +130,169 @@ class _WeightLiftingScreenState extends ConsumerState<WeightLiftingScreen> {
     setState(() {
       if (_exercises[exerciseIdx].sets.length > 1) {
         _exercises[exerciseIdx].sets.removeAt(setIdx);
+        _exercises[exerciseIdx].calories = null;
       }
     });
   }
 
-  Future<void> _saveWorkout(String lang) async {
-    final calories = _estimateCalories(_exercises);
-    if (calories == 0) return;
+  Future<void> _pickPhoto(int index, ImageSource source) async {
+    final picker = ImagePicker();
+    final img = await picker.pickImage(
+      source: source,
+      maxWidth: 1600,
+      imageQuality: 85,
+    );
+    if (img == null || !mounted) return;
+    setState(() {
+      _exercises[index].imageFile = File(img.path);
+      _exercises[index].imageKey = null;
+      _exercises[index].calories = null;
+    });
+  }
 
-    final totalSets = _exercises.fold<int>(0, (s, e) => s + e.sets.length);
-    final durationMinutes = (totalSets * 2.5).round().clamp(1, 999);
+  Future<void> _showPhotoSheet(int index) async {
+    final lang = ref.read(localeProvider);
+    String t(String k) => Translations.t(lang, k);
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Icon(LucideIcons.camera, color: AppColors.primary),
+                title: Text(t('wl_take_photo')),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickPhoto(index, ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: Icon(LucideIcons.image, color: AppColors.primary),
+                title: Text(t('wl_choose_gallery')),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickPhoto(index, ImageSource.gallery);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
+  Future<void> _analyzeExercise(int index) async {
+    final entry = _exercises[index];
+    final lang = ref.read(localeProvider);
+    String t(String k) => Translations.t(lang, k);
+
+    if (entry.imageFile == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(t('wl_photo_required'))),
+      );
+      return;
+    }
+    if (entry.sets.every((s) => s.reps < 1)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(t('wl_reps_required'))),
+      );
+      return;
+    }
+
+    setState(() => entry.analyzing = true);
+    HapticFeedback.selectionClick();
     try {
-      await ref.read(dashboardProvider.notifier).logExercise(
-            name:
-                'Weight Lifting (${_exercises.map((e) => e.name).join(', ')})',
-            durationMinutes: durationMinutes,
-            caloriesBurned: calories,
-          );
+      // Only send a name hint if the user corrected/typed one.
+      final typed = entry.nameCtrl.text.trim();
+      final hint = entry.nameEditedByUser && typed.isNotEmpty
+          ? typed
+          : (typed.isNotEmpty && entry.calories != null ? typed : null);
+
+      final result =
+          await ref.read(exerciseRepositoryProvider).analyzeMachineWorkout(
+                image: entry.imageFile!,
+                nameHint: hint,
+                sets: entry.sets
+                    .map((s) => {
+                          'reps': s.reps,
+                          'weight_kg': s.weight,
+                        })
+                    .toList(),
+              );
+      if (!mounted) return;
+      final aiName = (result['name'] as String?)?.trim() ?? '';
+      setState(() {
+        if (aiName.isNotEmpty) {
+          entry.applyAiName(aiName);
+        } else if (entry.nameCtrl.text.trim().isEmpty) {
+          entry.applyAiName(t('wl_unnamed'));
+        }
+        entry.calories = (result['calories_burned'] as num?)?.toInt();
+        entry.durationMinutes =
+            (result['duration_minutes'] as num?)?.toInt() ??
+                (entry.sets.length * 2).clamp(1, 999);
+        entry.setsSummary = result['sets_summary'] as String?;
+        entry.imageKey = result['image_url'] as String?;
+        entry.analyzing = false;
+      });
     } catch (_) {
       if (!mounted) return;
+      setState(() => entry.analyzing = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(Translations.t(lang, 'failed_save_workout')),
+          content: Text(t('wl_analyze_failed')),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
+  }
+
+  Future<void> _saveWorkout() async {
+    final lang = ref.read(localeProvider);
+    String t(String k) => Translations.t(lang, k);
+    if (_saving || _exercises.isEmpty) return;
+
+    for (var i = 0; i < _exercises.length; i++) {
+      final e = _exercises[i];
+      if (e.imageFile == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(t('wl_photo_required'))),
+        );
+        return;
+      }
+      if (e.calories == null) {
+        await _analyzeExercise(i);
+        if (_exercises[i].calories == null) return;
+      }
+    }
+
+    setState(() => _saving = true);
+    try {
+      for (final e in _exercises) {
+        final name = e.nameCtrl.text.trim().isNotEmpty
+            ? e.nameCtrl.text.trim()
+            : (e.name.trim().isNotEmpty ? e.name.trim() : 'Weight training');
+        await ref.read(dashboardProvider.notifier).logExercise(
+              name: name,
+              durationMinutes: e.durationMinutes ?? (e.sets.length * 2),
+              caloriesBurned: e.calories!,
+              imageUrl: e.imageKey,
+              setsSummary: e.setsOverlay,
+            );
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(t('failed_save_workout')),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -141,48 +300,24 @@ class _WeightLiftingScreenState extends ConsumerState<WeightLiftingScreen> {
     }
 
     if (!mounted) return;
-    setState(() => _saved = true);
-
+    final totalCal =
+        _exercises.fold<int>(0, (s, e) => s + (e.calories ?? 0));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          '🏋️ ${Translations.t(lang, 'calories_burned')}: $calories kcal',
-        ),
+        content: Text('${t('calories_burned')}: $totalCal kcal'),
         backgroundColor: AppColors.primaryDark,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
-
-    Future.delayed(const Duration(milliseconds: 600), () {
-      if (mounted) Navigator.of(context).pop();
-    });
-  }
-
-  void _showExercisePicker() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (_) => _ExercisePickerSheet(
-        onSelect: (name) {
-          Navigator.pop(context);
-          _addExercise(name);
-        },
-      ),
-    );
+    Navigator.of(context).pop();
   }
 
   @override
   Widget build(BuildContext context) {
     final lang = ref.watch(localeProvider);
     String t(String k) => Translations.t(lang, k);
-    final estimatedCal = _estimateCalories(_exercises);
-    final totalSets = _exercises.fold<int>(0, (s, e) => s + e.sets.length);
-    final doneSets = _exercises.fold<int>(
-      0,
-      (s, e) => s + e.sets.where((st) => st.done).length,
-    );
+    final totalCal =
+        _exercises.fold<int>(0, (s, e) => s + (e.calories ?? 0));
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -207,11 +342,11 @@ class _WeightLiftingScreenState extends ConsumerState<WeightLiftingScreen> {
             Padding(
               padding: const EdgeInsets.only(right: 8),
               child: TextButton(
-                onPressed: _saved ? null : () => _saveWorkout(lang),
+                onPressed: _saving ? null : _saveWorkout,
                 child: Text(
-                  _saved ? '✓' : t('save'),
+                  _saving ? '…' : t('save'),
                   style: TextStyle(
-                    color: _saved ? AppColors.inactive : AppColors.primary,
+                    color: AppColors.primary,
                     fontWeight: FontWeight.w700,
                     fontSize: 16,
                   ),
@@ -222,111 +357,114 @@ class _WeightLiftingScreenState extends ConsumerState<WeightLiftingScreen> {
       ),
       body: Column(
         children: [
-          // ── Summary Strip ──────────────────────────────────────────────────
-          if (_exercises.isNotEmpty)
-            _buildSummaryStrip(estimatedCal, totalSets, doneSets, lang),
-
-          // ── Exercise List ─────────────────────────────────────────────────
+          if (_exercises.isNotEmpty && totalCal > 0)
+            Container(
+              margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [AppColors.primaryDark, AppColors.primary],
+                ),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(LucideIcons.flame, color: Colors.white, size: 18),
+                  const SizedBox(width: 8),
+                  Text(
+                    '~$totalCal kcal',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           Expanded(
             child: _exercises.isEmpty
-                ? _buildEmptyState(lang)
+                ? _EmptyState(t: t, onScan: _addExerciseFromCamera)
                 : ListView.builder(
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
                     itemCount: _exercises.length,
                     itemBuilder: (ctx, i) => _ExerciseCard(
                       entry: _exercises[i],
-                      index: i,
+                      t: t,
                       onRemove: () => _removeExercise(i),
                       onAddSet: () => _addSet(i),
                       onRemoveSet: (si) => _removeSet(i, si),
-                      onSetChanged: () => setState(() {}),
+                      onChanged: () => setState(() {
+                        _exercises[i].calories = null;
+                      }),
+                      onPickPhoto: () => _showPhotoSheet(i),
+                      onAnalyze: () => _analyzeExercise(i),
+                      onNameEdited: () {
+                        setState(() {
+                          _exercises[i].nameEditedByUser = true;
+                          _exercises[i].name =
+                              _exercises[i].nameCtrl.text.trim();
+                        });
+                      },
                     ),
                   ),
           ),
         ],
       ),
-
-      // ── FAB: Add Exercise ─────────────────────────────────────────────────
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: AppColors.primaryDark,
         foregroundColor: Colors.white,
-        icon: const Icon(LucideIcons.plus, size: 20),
+        icon: const Icon(LucideIcons.camera, size: 20),
         label: Text(
-          'Add Exercise',
+          t('wl_add_exercise'),
           style: const TextStyle(fontWeight: FontWeight.w700),
         ),
-        onPressed: _showExercisePicker,
+        onPressed: _addExerciseFromCamera,
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
+}
 
-  Widget _buildSummaryStrip(int cal, int total, int done, String lang) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [AppColors.primaryDark, AppColors.primary],
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: AppShadows.cardShadow,
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _StripStat(
-            label: Translations.t(lang, 'calories_burned'),
-            value: '~$cal kcal',
-            icon: LucideIcons.flame,
-          ),
-          Container(width: 1, height: 32, color: Colors.white24),
-          _StripStat(
-            label: 'Sets',
-            value: '$done/$total',
-            icon: LucideIcons.check,
-          ),
-          Container(width: 1, height: 32, color: Colors.white24),
-          _StripStat(
-            label: 'Exercises',
-            value: '${_exercises.length}',
-            icon: LucideIcons.dumbbell,
-          ),
-        ],
-      ),
-    );
-  }
+class _EmptyState extends StatelessWidget {
+  final String Function(String) t;
+  final VoidCallback onScan;
 
-  Widget _buildEmptyState(String lang) {
+  const _EmptyState({required this.t, required this.onScan});
+
+  @override
+  Widget build(BuildContext context) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(40),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 90,
-              height: 90,
-              decoration: BoxDecoration(
-                color: AppColors.primaryLight,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                LucideIcons.dumbbell,
-                size: 44,
-                color: AppColors.primary,
+            GestureDetector(
+              onTap: onScan,
+              child: Container(
+                width: 90,
+                height: 90,
+                decoration: BoxDecoration(
+                  color: AppColors.primaryLight,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  LucideIcons.camera,
+                  size: 44,
+                  color: AppColors.primary,
+                ),
               ),
             ),
             const SizedBox(height: 20),
             Text(
-              Translations.t(lang, 'weight_lifting'),
+              t('weight_lifting'),
               style: AppTextStyles.screenTitle.copyWith(fontSize: 22),
             ),
             const SizedBox(height: 10),
             Text(
-              'Tap "Add Exercise" to build your session.\nTrack sets, reps, and weight — then log calories.',
+              t('wl_empty_body'),
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
@@ -342,62 +480,27 @@ class _WeightLiftingScreenState extends ConsumerState<WeightLiftingScreen> {
   }
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-// Summary strip stat widget
-// ────────────────────────────────────────────────────────────────────────────
-class _StripStat extends StatelessWidget {
-  final String label;
-  final String value;
-  final IconData icon;
-
-  const _StripStat({
-    required this.label,
-    required this.value,
-    required this.icon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 18, color: Colors.white),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 15,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        Text(
-          label,
-          style: const TextStyle(color: Colors.white70, fontSize: 11),
-        ),
-      ],
-    );
-  }
-}
-
-// ────────────────────────────────────────────────────────────────────────────
-// Exercise Card (expandable, with set rows)
-// ────────────────────────────────────────────────────────────────────────────
 class _ExerciseCard extends StatefulWidget {
   final _ExerciseEntry entry;
-  final int index;
+  final String Function(String) t;
   final VoidCallback onRemove;
   final VoidCallback onAddSet;
   final void Function(int setIdx) onRemoveSet;
-  final VoidCallback onSetChanged;
+  final VoidCallback onChanged;
+  final VoidCallback onPickPhoto;
+  final VoidCallback onAnalyze;
+  final VoidCallback onNameEdited;
 
   const _ExerciseCard({
     required this.entry,
-    required this.index,
+    required this.t,
     required this.onRemove,
     required this.onAddSet,
     required this.onRemoveSet,
-    required this.onSetChanged,
+    required this.onChanged,
+    required this.onPickPhoto,
+    required this.onAnalyze,
+    required this.onNameEdited,
   });
 
   @override
@@ -429,6 +532,7 @@ class _ExerciseCardState extends State<_ExerciseCard>
   @override
   Widget build(BuildContext context) {
     final entry = widget.entry;
+    final t = widget.t;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -440,72 +544,224 @@ class _ExerciseCardState extends State<_ExerciseCard>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // ── Header ────────────────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 8, 8),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TextField(
+                        controller: entry.nameCtrl,
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.textPrimary,
+                        ),
+                        decoration: InputDecoration(
+                          isDense: true,
+                          border: InputBorder.none,
+                          hintText: t('wl_name_hint'),
+                          hintStyle: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPlaceholder,
+                          ),
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                        textCapitalization: TextCapitalization.words,
+                        onChanged: (_) => widget.onNameEdited(),
+                      ),
+                      Text(
+                        t('wl_name_edit_hint'),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(
+                    LucideIcons.trash2,
+                    size: 18,
+                    color: AppColors.inactive,
+                  ),
+                  onPressed: widget.onRemove,
+                ),
+              ],
+            ),
+          ),
+
+          // Name is above — machine photo with sets/reps/kcal overlay
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: AspectRatio(
+                aspectRatio: 4 / 3,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    if (entry.imageFile != null)
+                      Image.file(entry.imageFile!, fit: BoxFit.cover)
+                    else
+                      ColoredBox(
+                        color: AppColors.surfaceMuted,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              LucideIcons.camera,
+                              size: 36,
+                              color: AppColors.textSecondary,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              t('wl_photo_hint'),
+                              style: TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      child: Container(
+                        padding: const EdgeInsets.fromLTRB(12, 28, 12, 12),
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [Colors.transparent, Colors.black87],
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                entry.setsOverlay,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                            if (entry.calories != null)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 5,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primaryDark,
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Text(
+                                  '${entry.calories} kcal',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    if (entry.analyzing)
+                      ColoredBox(
+                        color: Colors.black45,
+                        child: Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const CircularProgressIndicator(
+                                color: Colors.white,
+                              ),
+                              const SizedBox(height: 10),
+                              Text(
+                                t('wl_analyzing'),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: entry.analyzing ? null : widget.onPickPhoto,
+                    icon: const Icon(LucideIcons.camera, size: 16),
+                    label: Text(t('wl_photo')),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: entry.analyzing ? null : widget.onAnalyze,
+                    icon: entry.analyzing
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(LucideIcons.sparkles, size: 16),
+                    label: Text(t('wl_estimate')),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
           InkWell(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
             onTap: () {
               setState(() => entry.expanded = !entry.expanded);
               entry.expanded ? _ctrl.forward() : _ctrl.reverse();
             },
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
               child: Row(
                 children: [
-                  Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryLight,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Center(
-                      child: Text(
-                        '${widget.index + 1}',
-                        style: TextStyle(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 16,
-                        ),
-                      ),
+                  Text(
+                    t('wl_edit_sets'),
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primary,
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          entry.name,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                        Text(
-                          '${entry.sets.length} set${entry.sets.length != 1 ? 's' : ''}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    icon: Icon(
-                      LucideIcons.trash2,
-                      size: 18,
-                      color: AppColors.inactive,
-                    ),
-                    onPressed: widget.onRemove,
-                  ),
+                  const Spacer(),
                   AnimatedRotation(
                     turns: entry.expanded ? 0 : -0.25,
                     duration: const Duration(milliseconds: 220),
                     child: Icon(
                       LucideIcons.chevronDown,
-                      size: 20,
+                      size: 18,
                       color: AppColors.inactive,
                     ),
                   ),
@@ -514,14 +770,12 @@ class _ExerciseCardState extends State<_ExerciseCard>
             ),
           ),
 
-          // ── Sets Table (animated expand) ──────────────────────────────────
           SizeTransition(
             sizeFactor: _exp,
             child: Column(
               children: [
-                // Header row
                 Padding(
-                  padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                   child: Row(
                     children: [
                       SizedBox(
@@ -537,7 +791,7 @@ class _ExerciseCardState extends State<_ExerciseCard>
                       ),
                       Expanded(
                         child: Text(
-                          'Weight (kg)',
+                          'kg',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 12,
@@ -557,23 +811,10 @@ class _ExerciseCardState extends State<_ExerciseCard>
                           ),
                         ),
                       ),
-                      SizedBox(
-                        width: 52,
-                        child: Text(
-                          'Done',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.inactive,
-                          ),
-                        ),
-                      ),
+                      const SizedBox(width: 52),
                     ],
                   ),
                 ),
-
-                // Set rows
                 ...entry.sets.asMap().entries.map((e) {
                   final si = e.key;
                   final set = e.value;
@@ -584,13 +825,11 @@ class _ExerciseCardState extends State<_ExerciseCard>
                         ? () => widget.onRemoveSet(si)
                         : null,
                     onChanged: () {
-                      widget.onSetChanged();
+                      widget.onChanged();
                       setState(() {});
                     },
                   );
                 }),
-
-                // Add Set button
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 4, 16, 14),
                   child: GestureDetector(
@@ -614,7 +853,7 @@ class _ExerciseCardState extends State<_ExerciseCard>
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            'Add Set',
+                            t('wl_add_set'),
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
@@ -635,9 +874,6 @@ class _ExerciseCardState extends State<_ExerciseCard>
   }
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-// Individual set row with inline editable fields
-// ────────────────────────────────────────────────────────────────────────────
 class _SetRow extends StatefulWidget {
   final int setIndex;
   final _SetEntry set;
@@ -695,7 +931,6 @@ class _SetRowState extends State<_SetRow> {
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
       child: Row(
         children: [
-          // Set number
           SizedBox(
             width: 32,
             child: Text(
@@ -708,8 +943,6 @@ class _SetRowState extends State<_SetRow> {
               ),
             ),
           ),
-
-          // Weight field
           Expanded(
             child: _InlineField(
               controller: _weightCtrl,
@@ -721,8 +954,6 @@ class _SetRowState extends State<_SetRow> {
               },
             ),
           ),
-
-          // Reps field
           Expanded(
             child: _InlineField(
               controller: _repsCtrl,
@@ -734,8 +965,6 @@ class _SetRowState extends State<_SetRow> {
               },
             ),
           ),
-
-          // Done checkbox + remove
           SizedBox(
             width: 52,
             child: Row(
@@ -820,142 +1049,6 @@ class _InlineField extends StatelessWidget {
           contentPadding: const EdgeInsets.symmetric(vertical: 6),
         ),
         onChanged: onChanged,
-      ),
-    );
-  }
-}
-
-// ────────────────────────────────────────────────────────────────────────────
-// Exercise Picker Bottom Sheet
-// ────────────────────────────────────────────────────────────────────────────
-class _ExercisePickerSheet extends StatefulWidget {
-  final void Function(String name) onSelect;
-
-  const _ExercisePickerSheet({required this.onSelect});
-
-  @override
-  State<_ExercisePickerSheet> createState() => _ExercisePickerSheetState();
-}
-
-class _ExercisePickerSheetState extends State<_ExercisePickerSheet> {
-  final _customCtrl = TextEditingController();
-  String _query = '';
-
-  @override
-  void dispose() {
-    _customCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final filtered = _presetExercises
-        .where((e) => e.toLowerCase().contains(_query.toLowerCase()))
-        .toList();
-    final safeBottom = MediaQuery.of(context).viewInsets.bottom;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      padding: EdgeInsets.only(
-        bottom: safeBottom + 16,
-        left: 20,
-        right: 20,
-        top: 8,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Handle
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: AppColors.border,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Title
-          Text(
-            'Choose Exercise',
-            style: TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // Search field
-          Container(
-            decoration: BoxDecoration(
-              color: AppColors.surfaceMuted,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            child: TextField(
-              autofocus: true,
-              decoration: InputDecoration(
-                border: InputBorder.none,
-                hintText: 'Search or type custom…',
-                hintStyle: TextStyle(color: AppColors.textPlaceholder),
-                prefixIcon: Icon(
-                  LucideIcons.search,
-                  size: 18,
-                  color: AppColors.inactive,
-                ),
-                prefixIconConstraints: BoxConstraints(
-                  minWidth: 36,
-                  minHeight: 36,
-                ),
-              ),
-              onChanged: (v) => setState(() => _query = v),
-              onSubmitted: (v) {
-                if (v.trim().isNotEmpty) widget.onSelect(v.trim());
-              },
-            ),
-          ),
-          const SizedBox(height: 10),
-
-          // Preset list (max height)
-          ConstrainedBox(
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.height * 0.4,
-            ),
-            child: ListView.separated(
-              shrinkWrap: true,
-              itemCount: filtered.length,
-              separatorBuilder: (context, index) =>
-                  Divider(height: 1, color: AppColors.border),
-              itemBuilder: (ctx, i) {
-                return ListTile(
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 4,
-                    vertical: 2,
-                  ),
-                  leading: Icon(
-                    LucideIcons.dumbbell,
-                    size: 18,
-                    color: AppColors.primary,
-                  ),
-                  title: Text(
-                    filtered[i],
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  onTap: () => widget.onSelect(filtered[i]),
-                );
-              },
-            ),
-          ),
-        ],
       ),
     );
   }

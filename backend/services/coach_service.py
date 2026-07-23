@@ -1,9 +1,6 @@
-import datetime
 import math
 import re
 from typing import Any, Dict, List, Optional, Tuple
-
-from fastapi import HTTPException
 
 import models
 
@@ -60,119 +57,11 @@ def as_str_list(value: Any) -> List[str]:
     return []
 
 
-def coach_subscription_active(coach: models.Coach, *, allow_skip: bool) -> bool:
-    if allow_skip:
-        return True
-    if not coach.subscription_expires_at:
-        return False
-    return coach.subscription_expires_at > datetime.datetime.utcnow()
-
-
-def get_or_create_coach_row(db, user: models.User) -> models.Coach:
-    coach = (
-        db.query(models.Coach)
-        .filter(models.Coach.user_id == user.id)
-        .first()
-    )
-    if coach:
-        return coach
-    coach = models.Coach(user_id=user.id, is_active=False)
-    db.add(coach)
-    db.flush()
-    return coach
-
-
-def apply_coach_subscription(
-    db,
-    user: models.User,
-    *,
-    product_id: str,
-    plan_id: Optional[str],
-    expires_at: datetime.datetime,
-    is_active: bool,
-    source: str,
-    apple_original_transaction_id: Optional[str] = None,
-    google_order_id: Optional[str] = None,
-    google_purchase_token: Optional[str] = None,
-) -> Dict[str, Any]:
-    """Persist coach IAP state. Does not auto-list the coach (activate still required)."""
-    if apple_original_transaction_id:
-        conflict = (
-            db.query(models.Coach)
-            .filter(
-                models.Coach.apple_original_transaction_id
-                == apple_original_transaction_id,
-                models.Coach.user_id != user.id,
-            )
-            .first()
-        )
-        if conflict:
-            raise HTTPException(
-                status_code=400,
-                detail="This subscription is already associated with another account.",
-            )
-
-    if google_order_id:
-        conflict = (
-            db.query(models.Coach)
-            .filter(
-                models.Coach.google_order_id == google_order_id,
-                models.Coach.user_id != user.id,
-            )
-            .first()
-        )
-        if conflict:
-            raise HTTPException(
-                status_code=400,
-                detail="This subscription is already associated with another account.",
-            )
-
-    coach = get_or_create_coach_row(db, user)
-    coach.subscription_plan = plan_id
-    coach.subscription_expires_at = expires_at
-    coach.subscription_source = source
-    if apple_original_transaction_id:
-        coach.apple_original_transaction_id = apple_original_transaction_id
-    if google_order_id:
-        coach.google_order_id = google_order_id
-    if google_purchase_token:
-        coach.google_purchase_token = google_purchase_token
-
-    if not is_active:
-        coach.is_active = False
-        user.is_coach = False
-
-    coach.updated_at = datetime.datetime.utcnow()
-    db.commit()
-    db.refresh(coach)
-
-    return {
-        "status": "success",
-        "subscription_active": is_active,
-        "expires_at": expires_at.isoformat(),
-        "product_id": product_id,
-        "type": "coach",
-    }
-
-
-def serialize_work(work: models.CoachWork) -> Dict[str, Any]:
-    from s3_utils import resolve_media_url
-
-    return {
-        "id": work.id,
-        "before_url": resolve_media_url(work.before_url),
-        "after_url": resolve_media_url(work.after_url),
-        "caption": work.caption,
-        "created_at": work.created_at.isoformat() if work.created_at else None,
-    }
-
-
 def serialize_public(
     coach: models.Coach,
     user: Optional[models.User] = None,
     *,
     distance_km: Optional[float] = None,
-    include_works: bool = False,
 ) -> Dict[str, Any]:
     from s3_utils import resolve_media_url
 
@@ -197,9 +86,6 @@ def serialize_public(
     }
     if distance_km is not None:
         payload["distance_km"] = round(distance_km, 2)
-    if include_works:
-        works = list(getattr(coach, "works", None) or [])
-        payload["works"] = [serialize_work(w) for w in works]
     return payload
 
 
@@ -208,13 +94,6 @@ def serialize_owner(coach: models.Coach, user: models.User) -> Dict[str, Any]:
     payload.update(
         {
             "phone": coach.phone,
-            "subscription_plan": coach.subscription_plan,
-            "subscription_expires_at": (
-                coach.subscription_expires_at.isoformat()
-                if coach.subscription_expires_at
-                else None
-            ),
-            "subscription_source": coach.subscription_source,
             "user_is_coach": bool(user.is_coach),
             "user_has_paid": bool(user.has_paid),
         }
@@ -237,3 +116,114 @@ def profile_ready_for_activation(coach: models.Coach) -> Tuple[bool, Optional[st
     if coach.latitude is None or coach.longitude is None:
         return False, "Location is required"
     return True, None
+
+
+def serialize_post_media(item: models.CoachPostMedia) -> Dict[str, Any]:
+    from s3_utils import resolve_media_url
+
+    return {
+        "id": item.id,
+        "media_type": item.media_type,
+        "url": resolve_media_url(item.url),
+        "thumbnail_url": (
+            resolve_media_url(item.thumbnail_url) if item.thumbnail_url else None
+        ),
+        "role": item.role,
+        "sort_order": item.sort_order,
+    }
+
+
+def serialize_post(post: models.CoachPost) -> Dict[str, Any]:
+    media = sorted(list(getattr(post, "media", None) or []), key=lambda m: m.sort_order)
+    return {
+        "id": post.id,
+        "coach_id": post.coach_id,
+        "post_type": post.post_type,
+        "caption": post.caption,
+        "created_at": post.created_at.isoformat() if post.created_at else None,
+        "media": [serialize_post_media(m) for m in media],
+    }
+
+
+def follower_count(db, user_id: str) -> int:
+    return (
+        db.query(models.UserFollow)
+        .filter(models.UserFollow.following_id == user_id)
+        .count()
+    )
+
+
+def following_count(db, user_id: str) -> int:
+    return (
+        db.query(models.UserFollow)
+        .filter(models.UserFollow.follower_id == user_id)
+        .count()
+    )
+
+
+def is_following(db, follower_id: str, following_id: str) -> bool:
+    if not follower_id or not following_id or follower_id == following_id:
+        return False
+    return (
+        db.query(models.UserFollow)
+        .filter(
+            models.UserFollow.follower_id == follower_id,
+            models.UserFollow.following_id == following_id,
+        )
+        .first()
+        is not None
+    )
+
+
+def posts_count(db, coach_id: str) -> int:
+    return (
+        db.query(models.CoachPost)
+        .filter(models.CoachPost.coach_id == coach_id)
+        .count()
+    )
+
+
+def is_starred(db, user_id: str, coach_id: str) -> bool:
+    return (
+        db.query(models.CoachStar)
+        .filter(
+            models.CoachStar.user_id == user_id,
+            models.CoachStar.coach_id == coach_id,
+        )
+        .first()
+        is not None
+    )
+
+
+def serialize_social_profile(
+    db,
+    coach: models.Coach,
+    viewer: models.User,
+    *,
+    include_light_info: bool = True,
+) -> Dict[str, Any]:
+    """Instagram-style profile header payload (counts + light info)."""
+    owner = coach.user
+    base = serialize_public(coach, owner)
+    base.update(
+        {
+            "posts_count": posts_count(db, coach.id),
+            "followers_count": follower_count(db, coach.user_id),
+            "following_count": following_count(db, coach.user_id),
+            "is_following": is_following(db, viewer.id, coach.user_id),
+            "is_starred": is_starred(db, viewer.id, coach.id),
+            "is_owner": viewer.id == coach.user_id,
+        }
+    )
+    if not include_light_info:
+        # Keep payload lean if needed later.
+        for key in (
+            "experience_years",
+            "latitude",
+            "longitude",
+            "languages",
+            "coaching_mode",
+            "gender",
+        ):
+            base.pop(key, None)
+    return base

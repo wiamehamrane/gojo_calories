@@ -27,6 +27,10 @@ class _ShareAccessScreenState extends ConsumerState<ShareAccessScreen> {
   final _inviteButtonKey = GlobalKey();
   bool _loading = true;
   bool _submitting = false;
+  bool _shareMeals = true;
+  bool _shareWorkouts = true;
+  bool _shareHealthSync = false;
+  bool _shareBodyProgress = false;
   Map<String, dynamic>? _data;
   String? _error;
 
@@ -83,13 +87,35 @@ class _ShareAccessScreenState extends ConsumerState<ShareAccessScreen> {
 
   Future<void> _invite() async {
     final lang = ref.read(localeProvider);
+    final scopes = <String>[
+      if (_shareMeals) 'nutrition',
+      if (_shareWorkouts) 'exercises',
+      if (_shareHealthSync) 'health_sync',
+      if (_shareBodyProgress) 'body_journal',
+    ];
+    if (scopes.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(Translations.t(lang, 'share_select_one_scope')),
+          backgroundColor: AppColors.danger,
+        ),
+      );
+      return;
+    }
     setState(() => _submitting = true);
     try {
       final result = await ref.read(shareRepositoryProvider).invite(
             email:
                 _emailCtrl.text.trim().isEmpty ? null : _emailCtrl.text.trim(),
+            scopes: scopes,
           );
       _emailCtrl.clear();
+      setState(() {
+        _shareMeals = true;
+        _shareWorkouts = true;
+        _shareHealthSync = false;
+        _shareBodyProgress = false;
+      });
       final link = result['share_link'] as String? ?? '';
       final token = result['token'] as String? ?? '';
       if (link.isNotEmpty) {
@@ -258,7 +284,74 @@ class _ShareAccessScreenState extends ConsumerState<ShareAccessScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 8),
+                      Text(
+                        t('share_choose_what'),
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(t('share_toggle_meals')),
+                        subtitle: Text(
+                          t('share_toggle_meals_desc'),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                        value: _shareMeals,
+                        onChanged: (v) => setState(() => _shareMeals = v),
+                        activeThumbColor: AppColors.primary,
+                      ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(t('share_toggle_workouts')),
+                        subtitle: Text(
+                          t('share_toggle_workouts_desc'),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                        value: _shareWorkouts,
+                        onChanged: (v) => setState(() => _shareWorkouts = v),
+                        activeThumbColor: AppColors.primary,
+                      ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(t('share_toggle_health')),
+                        subtitle: Text(
+                          t('share_toggle_health_desc'),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                        value: _shareHealthSync,
+                        onChanged: (v) => setState(() => _shareHealthSync = v),
+                        activeThumbColor: AppColors.primary,
+                      ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(t('share_toggle_body')),
+                        subtitle: Text(
+                          t('share_toggle_body_desc'),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                        value: _shareBodyProgress,
+                        onChanged: (v) =>
+                            setState(() => _shareBodyProgress = v),
+                        activeThumbColor: AppColors.primary,
+                      ),
+                      const SizedBox(height: 8),
                       FilledButton.icon(
                         key: _inviteButtonKey,
                         onPressed: _submitting ? null : _invite,
@@ -325,6 +418,16 @@ class _ShareAccessScreenState extends ConsumerState<ShareAccessScreen> {
     );
   }
 
+  String _scopeSummary(List<String> scopes, String Function(String) t) {
+    final parts = <String>[];
+    if (scopes.contains('nutrition')) parts.add(t('share_short_meals'));
+    if (scopes.contains('exercises')) parts.add(t('share_short_workouts'));
+    if (scopes.contains('health_sync')) parts.add(t('share_short_health'));
+    if (scopes.contains('body_journal')) parts.add(t('share_short_body'));
+    if (parts.isEmpty) return t('share_active_access');
+    return parts.join(' · ');
+  }
+
   List<Widget> _clientTiles(String Function(String) t) {
     final list = (_data?['as_viewer'] as List?) ?? [];
     final active = list.where((e) => e['status'] == 'active').toList();
@@ -344,6 +447,10 @@ class _ShareAccessScreenState extends ConsumerState<ShareAccessScreen> {
             ? owner['name'] as String
             : (owner['email'] as String? ?? t('share_client'));
         final ownerId = owner['user_id'] as String?;
+        final scopes = (g['scopes'] as List?)
+                ?.map((e) => e.toString())
+                .toList() ??
+            const <String>[];
         return _card(
           child: ListTile(
             contentPadding: EdgeInsets.zero,
@@ -352,13 +459,16 @@ class _ShareAccessScreenState extends ConsumerState<ShareAccessScreen> {
               child: Icon(LucideIcons.user, color: AppColors.primaryDark),
             ),
             title: Text(name, style: const TextStyle(fontWeight: FontWeight.w600)),
-            subtitle: Text(t('share_active_access')),
+            subtitle: Text(_scopeSummary(scopes, t)),
             trailing: const Icon(LucideIcons.chevronRight, size: 18),
             onTap: ownerId == null
                 ? null
                 : () => context.push(
                       RoutePaths.shareClientDiary.replaceFirst(':id', ownerId),
-                      extra: {'name': name},
+                      extra: {
+                        'name': name,
+                        'scopes': scopes,
+                      },
                     ),
           ),
         );
@@ -421,6 +531,10 @@ class _ShareAccessScreenState extends ConsumerState<ShareAccessScreen> {
           ? viewer['name'] as String
           : (viewer['email'] as String? ?? t('share_viewer'));
       final id = g['id'] as String;
+      final scopes = (g['scopes'] as List?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          const <String>[];
       return _card(
         child: ListTile(
           contentPadding: EdgeInsets.zero,
@@ -429,7 +543,7 @@ class _ShareAccessScreenState extends ConsumerState<ShareAccessScreen> {
             child: Icon(LucideIcons.eye, color: AppColors.textSecondary),
           ),
           title: Text(name, style: const TextStyle(fontWeight: FontWeight.w600)),
-          subtitle: Text(t('share_can_see_your_diary')),
+          subtitle: Text(_scopeSummary(scopes, t)),
           trailing: TextButton(
             onPressed: () => _revoke(id),
             child: Text(

@@ -98,6 +98,49 @@ class _ShareAcceptScreenState extends ConsumerState<ShareAcceptScreen> {
     }
   }
 
+  List<Widget> _scopeRows(String Function(String) t) {
+    final raw = (_preview?['scopes'] as List?) ?? const [];
+    final scopes = raw.map((e) => e.toString()).toSet();
+    final rows = <Widget>[];
+    if (scopes.contains('nutrition')) {
+      rows.add(_permRow(LucideIcons.utensils, t('share_scope_nutrition')));
+    }
+    if (scopes.contains('exercises')) {
+      rows.add(_permRow(LucideIcons.dumbbell, t('share_scope_exercises')));
+    }
+    if (scopes.contains('health_sync')) {
+      rows.add(_permRow(LucideIcons.heartPulse, t('share_scope_health_sync')));
+    }
+    if (scopes.contains('body_journal')) {
+      rows.add(_permRow(LucideIcons.images, t('share_scope_body_journal')));
+    }
+    if (rows.isEmpty) {
+      rows.add(_permRow(LucideIcons.eye, t('share_active_access')));
+    }
+    return rows;
+  }
+
+  Widget _permRow(IconData icon, String label) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: AppColors.primaryDark),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final lang = ref.watch(localeProvider);
@@ -147,6 +190,19 @@ class _ShareAcceptScreenState extends ConsumerState<ShareAcceptScreen> {
                         ),
                         textAlign: TextAlign.center,
                       ),
+                      const SizedBox(height: 20),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          t('share_accept_includes'),
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      ..._scopeRows(t),
                       const Spacer(),
                       if (status == 'pending') ...[
                         FilledButton(

@@ -4,12 +4,12 @@ import 'package:dio/dio.dart';
 
 import '../../../../core/network/api_client.dart';
 import '../../domain/models/coach.dart';
+import '../../domain/models/coach_post.dart';
 
 class CoachesRepository {
   Future<CoachSearchPage> search({
     required double lat,
     required double lng,
-    double radiusKm = 25,
     String? specialty,
     String? gender,
     int page = 1,
@@ -20,7 +20,6 @@ class CoachesRepository {
       queryParameters: {
         'lat': lat,
         'lng': lng,
-        'radius_km': radiusKm,
         'page': page,
         'page_size': pageSize,
         if (specialty != null && specialty.isNotEmpty) 'specialty': specialty,
@@ -60,41 +59,114 @@ class CoachesRepository {
     return CoachOwnerProfile.fromJson(Map<String, dynamic>.from(res.data as Map));
   }
 
-  Future<List<CoachWork>> listMyWorks() async {
-    final res = await ApiClient.instance.get('coaches/me/works');
+  Future<CoachSocialProfile> getSocial(String coachId) async {
+    final res = await ApiClient.instance.get('coaches/$coachId/social');
+    return CoachSocialProfile.fromJson(Map<String, dynamic>.from(res.data as Map));
+  }
+
+  Future<bool> toggleStar(String coachId) async {
+    final res = await ApiClient.instance.post('coaches/$coachId/star');
+    final data = Map<String, dynamic>.from(res.data as Map);
+    return data['is_starred'] as bool? ?? false;
+  }
+
+  Future<List<Coach>> listStarred() async {
+    final res = await ApiClient.instance.get('coaches/me/starred');
     final data = Map<String, dynamic>.from(res.data as Map);
     final raw = data['items'] as List? ?? const [];
     return raw
         .whereType<Map>()
-        .map((e) => CoachWork.fromJson(Map<String, dynamic>.from(e)))
+        .map((e) => Coach.fromJson(Map<String, dynamic>.from(e)))
         .toList();
   }
 
-  Future<CoachWork> createWork({
-    required File before,
-    required File after,
-    String? caption,
+  Future<CoachPostPage> listPosts({
+    required String coachId,
+    String tab = 'all',
+    int page = 1,
+    int pageSize = 18,
   }) async {
-    final formData = FormData.fromMap({
-      'before': await MultipartFile.fromFile(
-        before.path,
-        filename: before.path.split('/').last,
-      ),
-      'after': await MultipartFile.fromFile(
-        after.path,
-        filename: after.path.split('/').last,
-      ),
-      if (caption != null && caption.trim().isNotEmpty) 'caption': caption.trim(),
-    });
-    final res = await ApiClient.instance.post(
-      'coaches/me/works',
-      data: formData,
+    final res = await ApiClient.instance.get(
+      'coaches/$coachId/posts',
+      queryParameters: {
+        'tab': tab,
+        'page': page,
+        'page_size': pageSize,
+      },
     );
-    return CoachWork.fromJson(Map<String, dynamic>.from(res.data as Map));
+    return CoachPostPage.fromJson(Map<String, dynamic>.from(res.data as Map));
   }
 
-  Future<void> deleteWork(String workId) async {
-    await ApiClient.instance.delete('coaches/me/works/$workId');
+  Future<CoachPostPage> listMyPosts({
+    String tab = 'all',
+    int page = 1,
+    int pageSize = 18,
+  }) async {
+    final res = await ApiClient.instance.get(
+      'coaches/me/posts',
+      queryParameters: {
+        'tab': tab,
+        'page': page,
+        'page_size': pageSize,
+      },
+    );
+    return CoachPostPage.fromJson(Map<String, dynamic>.from(res.data as Map));
+  }
+
+  Future<CoachPost> createPost({
+    required String postType,
+    required File media,
+    File? after,
+    File? thumbnail,
+    String? caption,
+  }) async {
+    final map = <String, dynamic>{
+      'post_type': postType,
+      if (caption != null && caption.trim().isNotEmpty) 'caption': caption.trim(),
+    };
+
+    if (postType == 'before_after') {
+      if (after == null) {
+        throw ArgumentError('after image is required for before_after posts');
+      }
+      map['before'] = await MultipartFile.fromFile(
+        media.path,
+        filename: media.path.split('/').last,
+      );
+      map['after'] = await MultipartFile.fromFile(
+        after.path,
+        filename: after.path.split('/').last,
+      );
+    } else {
+      map['media'] = await MultipartFile.fromFile(
+        media.path,
+        filename: media.path.split('/').last,
+      );
+      if (thumbnail != null) {
+        map['thumbnail'] = await MultipartFile.fromFile(
+          thumbnail.path,
+          filename: thumbnail.path.split('/').last,
+        );
+      }
+    }
+
+    final res = await ApiClient.instance.post(
+      'coaches/me/posts',
+      data: FormData.fromMap(map),
+    );
+    return CoachPost.fromJson(Map<String, dynamic>.from(res.data as Map));
+  }
+
+  Future<void> deletePost(String postId) async {
+    await ApiClient.instance.delete('coaches/me/posts/$postId');
+  }
+
+  Future<CoachPost> updatePostCaption(String postId, String? caption) async {
+    final res = await ApiClient.instance.patch(
+      'coaches/me/posts/$postId',
+      data: {'caption': caption},
+    );
+    return CoachPost.fromJson(Map<String, dynamic>.from(res.data as Map));
   }
 }
 
@@ -139,9 +211,6 @@ class CoachOwnerProfile {
   final bool isActive;
   final bool userIsCoach;
   final bool userHasPaid;
-  final String? subscriptionPlan;
-  final DateTime? subscriptionExpiresAt;
-  final String? subscriptionSource;
 
   const CoachOwnerProfile({
     required this.id,
@@ -161,16 +230,7 @@ class CoachOwnerProfile {
     this.isActive = false,
     this.userIsCoach = false,
     this.userHasPaid = false,
-    this.subscriptionPlan,
-    this.subscriptionExpiresAt,
-    this.subscriptionSource,
   });
-
-  bool get hasActiveCoachSubscription {
-    final expires = subscriptionExpiresAt;
-    if (expires == null) return false;
-    return expires.isAfter(DateTime.now().toUtc());
-  }
 
   factory CoachOwnerProfile.fromJson(Map<String, dynamic> json) {
     List<String> asList(dynamic value) {
@@ -179,11 +239,6 @@ class CoachOwnerProfile {
           .map((e) => e?.toString().trim() ?? '')
           .where((e) => e.isNotEmpty)
           .toList();
-    }
-
-    DateTime? parseDate(dynamic value) {
-      if (value is! String || value.isEmpty) return null;
-      return DateTime.tryParse(value)?.toUtc();
     }
 
     return CoachOwnerProfile(
@@ -204,9 +259,6 @@ class CoachOwnerProfile {
       isActive: json['is_active'] as bool? ?? false,
       userIsCoach: json['user_is_coach'] as bool? ?? false,
       userHasPaid: json['user_has_paid'] as bool? ?? false,
-      subscriptionPlan: json['subscription_plan'] as String?,
-      subscriptionExpiresAt: parseDate(json['subscription_expires_at']),
-      subscriptionSource: json['subscription_source'] as String?,
     );
   }
 }

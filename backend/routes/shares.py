@@ -30,8 +30,27 @@ class TokenRequest(BaseModel):
 def _scopes_str(scopes: Optional[List[str]]) -> str:
     if not scopes:
         return share_service.DEFAULT_SCOPES
-    cleaned = [s.strip() for s in scopes if s and s.strip()]
-    return ",".join(cleaned) if cleaned else share_service.DEFAULT_SCOPES
+    cleaned = []
+    for s in scopes:
+        if not s or not str(s).strip():
+            continue
+        token = str(s).strip().lower()
+        if token not in share_service.VALID_SCOPES:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Invalid scope: {token}. Allowed: "
+                    "nutrition, exercises, health_sync, body_journal"
+                ),
+            )
+        if token not in cleaned:
+            cleaned.append(token)
+    if not cleaned:
+        raise HTTPException(
+            status_code=400,
+            detail="Select at least one share category",
+        )
+    return ",".join(cleaned)
 
 
 @router.post("/invite")
@@ -262,6 +281,94 @@ def shared_exercises(
             "calories_burned": ex.calories_burned,
             "date": ex.date.isoformat() if ex.date else None,
             "log_date": ex.log_date.isoformat() if ex.log_date else None,
+            "image_url": resolve_media_url(ex.image_url) if ex.image_url else None,
+            "sets_summary": ex.sets_summary,
         }
         for ex in exercises
     ]
+
+
+@router.get("/{owner_id}/progress-photos")
+def shared_progress_photos(
+    owner_id: str,
+    date: Optional[str] = None,
+    user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Body Journal photos for a shared owner (requires body_journal scope)."""
+    share_service.require_active_share(
+        db, viewer_id=user.id, owner_id=owner_id, scope="body_journal"
+    )
+    query = db.query(models.ProgressPhoto).filter(
+        models.ProgressPhoto.user_id == owner_id
+    )
+    if date:
+        try:
+            target = datetime.datetime.strptime(date, "%Y-%m-%d").date()
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid date") from None
+        query = query.filter(models.ProgressPhoto.photo_date == target)
+
+    photos = (
+        query.order_by(
+            models.ProgressPhoto.photo_date.desc(),
+            models.ProgressPhoto.created_at.desc(),
+        )
+        .limit(200)
+        .all()
+    )
+    return [
+        {
+            "id": p.id,
+            "image_url": resolve_media_url(p.image_url),
+            "note": p.note,
+            "pose": p.pose,
+            "photo_date": p.photo_date.isoformat() if p.photo_date else None,
+            "created_at": p.created_at.isoformat() if p.created_at else None,
+        }
+        for p in photos
+    ]
+
+
+@router.get("/{owner_id}/health")
+def shared_health(
+    owner_id: str,
+    date: Optional[str] = None,
+    user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Health Sync snapshot for a shared owner (requires health_sync scope)."""
+    share_service.require_active_share(
+        db, viewer_id=user.id, owner_id=owner_id, scope="health_sync"
+    )
+    if date:
+        try:
+            day = datetime.datetime.strptime(date, "%Y-%m-%d").date()
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid date") from None
+    else:
+        day = datetime.datetime.utcnow().date()
+
+    row = (
+        db.query(models.HealthDay)
+        .filter(
+            models.HealthDay.user_id == owner_id,
+            models.HealthDay.day == day,
+        )
+        .first()
+    )
+    if not row:
+        return {
+            "date": day.isoformat(),
+            "steps": None,
+            "active_calories": None,
+            "weight_kg": None,
+            "updated_at": None,
+        }
+    return {
+        "date": row.day.isoformat() if row.day else day.isoformat(),
+        "steps": row.steps,
+        "active_calories": row.active_calories,
+        "weight_kg": row.weight_kg,
+        "updated_at": row.updated_at.isoformat() if row.updated_at else None,
+    }

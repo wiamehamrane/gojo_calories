@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../../../core/di/repository_providers.dart';
 import '../../../../core/localization/locale_provider.dart';
 import '../../../../core/localization/translations.dart';
 import '../../../../core/routing/route_paths.dart';
@@ -54,13 +55,32 @@ class CoachHubScreen extends ConsumerWidget {
               .slideY(begin: 0.06, curve: Curves.easeOutCubic),
           const SizedBox(height: 12),
           _HubCard(
-            icon: LucideIcons.images,
-            title: t('coach_hub_portfolio'),
-            subtitle: t('coach_hub_portfolio_body'),
-            onTap: () => context.push(RoutePaths.coachPortfolio),
+            icon: LucideIcons.layoutGrid,
+            title: t('coach_hub_social'),
+            subtitle: t('coach_hub_social_body'),
+            onTap: () async {
+              final me = await ref.read(coachesRepositoryProvider).getMe();
+              final id = me.profile?.id;
+              if (!context.mounted) return;
+              if (id == null || id.isEmpty) {
+                context.push(RoutePaths.becomeCoach);
+                return;
+              }
+              context.push(RoutePaths.coachDetailPath(id));
+            },
           )
               .animate()
-              .fadeIn(delay: 120.ms, duration: 320.ms)
+              .fadeIn(delay: 90.ms, duration: 320.ms)
+              .slideY(begin: 0.06, curve: Curves.easeOutCubic),
+          const SizedBox(height: 12),
+          _HubCard(
+            icon: LucideIcons.plus,
+            title: t('coach_create_post'),
+            subtitle: t('coach_hub_create_post_body'),
+            onTap: () => context.push(RoutePaths.coachCreatePost),
+          )
+              .animate()
+              .fadeIn(delay: 110.ms, duration: 320.ms)
               .slideY(begin: 0.06, curve: Curves.easeOutCubic),
         ],
       ),

@@ -14,8 +14,6 @@ const String kYearlyProductId = 'gojo_pro_yearly';
 const String kClanAddonMonthlyId = 'gojo_clan_addon_monthly';
 const String kClanAddonSixMonthId = 'gojo_clan_addon_six_month';
 const String kClanAddonYearlyId = 'gojo_clan_addon_yearly';
-const String kCoachMonthlyProductId = 'gojo_coach_monthly';
-const String kCoachYearlyProductId = 'gojo_coach_yearly';
 
 const Set<String> kProductIds = {
   kMonthlyProductId,
@@ -29,15 +27,9 @@ const Set<String> kClanAddonProductIds = {
   kClanAddonYearlyId,
 };
 
-const Set<String> kCoachProductIds = {
-  kCoachMonthlyProductId,
-  kCoachYearlyProductId,
-};
-
 const Set<String> kAllProductIds = {
   ...kProductIds,
   ...kClanAddonProductIds,
-  ...kCoachProductIds,
 };
 
 const String kAndroidPackageName = 'com.gojocalories.gojocalories';
@@ -78,9 +70,6 @@ class IAPService {
 
   /// Available Pro products fetched from the store.
   List<ProductDetails> products = [];
-
-  /// Available coach subscription products.
-  List<ProductDetails> coachProducts = [];
 
   /// Current purchase flow state.
   final ValueNotifier<IAPStatus> status = ValueNotifier(const IAPStatus());
@@ -202,47 +191,6 @@ class IAPService {
     final response = await _iap.queryProductDetails({productId});
     if (response.productDetails.isEmpty) return null;
     return response.productDetails.first;
-  }
-
-  /// Fetch coach subscription products from the store.
-  Future<List<ProductDetails>> loadCoachProducts() async {
-    status.value = const IAPStatus(state: IAPState.loading);
-    try {
-      final available = await _iap.isAvailable();
-      if (!available) {
-        throw Exception('$_storeName is not available on this device.');
-      }
-
-      final response = await _iap.queryProductDetails(kCoachProductIds);
-      if (response.error != null) {
-        throw Exception(
-          _storeErrorMessage(response.error!.message, response.notFoundIDs),
-        );
-      }
-      if (response.productDetails.isEmpty) {
-        throw Exception(
-          'No coach subscription plans found. '
-          'Create $kCoachMonthlyProductId and $kCoachYearlyProductId in the store.',
-        );
-      }
-
-      coachProducts = response.productDetails.toList()
-        ..sort((a, b) {
-          const order = [kCoachYearlyProductId, kCoachMonthlyProductId];
-          final ai = order.indexOf(a.id);
-          final bi = order.indexOf(b.id);
-          if (ai == -1 && bi == -1) return a.id.compareTo(b.id);
-          if (ai == -1) return 1;
-          if (bi == -1) return -1;
-          return ai.compareTo(bi);
-        });
-
-      status.value = const IAPStatus(state: IAPState.idle);
-      return coachProducts;
-    } catch (e) {
-      status.value = const IAPStatus(state: IAPState.idle);
-      rethrow;
-    }
   }
 
   /// Initiate a subscription purchase.
@@ -376,9 +324,9 @@ class IAPService {
 
       if (response.statusCode == 200 && response.data['status'] == 'success') {
         final type = response.data['type']?.toString();
-        final isAddonOrCoach = type == 'clan_addon' || type == 'coach';
+        final isAddon = type == 'clan_addon';
         final active = response.data['subscription_active'] == true;
-        if (isAddonOrCoach || active) {
+        if (isAddon || active) {
           if (purchase.status == PurchaseStatus.restored) {
             status.value = const IAPStatus(state: IAPState.restored);
           } else {

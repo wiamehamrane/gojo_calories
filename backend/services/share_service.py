@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 import models
 
 DEFAULT_SCOPES = "nutrition,exercises"
+VALID_SCOPES = frozenset({"nutrition", "exercises", "health_sync", "body_journal"})
 INVITE_TTL_DAYS = 14
 SHARE_LINK_BASE = os.getenv(
     "SHARE_LINK_BASE",

@@ -27,14 +27,6 @@ class EnvConfig {
   static bool get isDev => appEnv == 'dev';
   static bool get isProd => !isDev;
 
-  /// Explicit bypass for coach IAP only (`SKIP_COACH_PAYMENT=true` in `.env`).
-  /// Independent from [APP_ENV] — real payment is required unless this is set.
-  static bool get skipCoachPayment {
-    final raw =
-        (dotenv.env['SKIP_COACH_PAYMENT'] ?? 'false').trim().toLowerCase();
-    return raw == 'true' || raw == '1' || raw == 'yes';
-  }
-
   static String get runtimeTarget => _runtimeTarget;
 
   static String get apiBaseUrl => _normalize(_resolveRawApiUrl());

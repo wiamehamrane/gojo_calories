@@ -132,6 +132,26 @@ class WeighIn(Base):
     
     user = relationship("User", back_populates="weigh_ins")
 
+
+class HealthDay(Base):
+    """Daily Health Sync snapshot (steps / active calories) for sharing."""
+
+    __tablename__ = "health_days"
+    __table_args__ = (
+        UniqueConstraint("user_id", "day", name="uq_health_days_user_day"),
+    )
+
+    id = Column(String(36), primary_key=True, default=generate_uuid, index=True)
+    user_id = Column(
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    day = Column(Date, nullable=False, index=True)
+    steps = Column(Integer, nullable=True)
+    active_calories = Column(Integer, nullable=True)
+    weight_kg = Column(Float, nullable=True)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+
 class Group(Base):
     __tablename__ = "groups"
     
@@ -185,6 +205,8 @@ class ExerciseLog(Base):
     name = Column(String, nullable=False)
     duration_minutes = Column(Integer, nullable=False)
     calories_burned = Column(Integer, nullable=False)
+    image_url = Column(String, nullable=True)  # machine / workout photo (S3 key)
+    sets_summary = Column(String, nullable=True)  # e.g. "3 sets · 10, 10, 8 reps"
     date = Column(DateTime, default=datetime.datetime.utcnow)
     log_date = Column(Date, nullable=True, index=True)
     
@@ -533,12 +555,6 @@ class Coach(Base):
     languages = Column(JSON, nullable=True)
     coaching_mode = Column(String, nullable=True)
     is_active = Column(Boolean, default=False, nullable=False)
-    subscription_plan = Column(String, nullable=True)
-    subscription_expires_at = Column(DateTime, nullable=True)
-    subscription_source = Column(String, nullable=True)
-    apple_original_transaction_id = Column(String, nullable=True, index=True)
-    google_order_id = Column(String, nullable=True, index=True)
-    google_purchase_token = Column(String, nullable=True, index=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
 
@@ -548,6 +564,12 @@ class Coach(Base):
         back_populates="coach",
         cascade="all, delete-orphan",
         order_by="CoachWork.created_at.desc()",
+    )
+    posts = relationship(
+        "CoachPost",
+        back_populates="coach",
+        cascade="all, delete-orphan",
+        order_by="CoachPost.created_at.desc()",
     )
 
 
@@ -564,3 +586,83 @@ class CoachWork(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     coach = relationship("Coach", back_populates="works")
+
+
+class CoachPost(Base):
+    """Instagram-style coach feed post (image, video, or before/after carousel)."""
+
+    __tablename__ = "coach_posts"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid, index=True)
+    coach_id = Column(
+        String(36), ForeignKey("coaches.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    post_type = Column(String, nullable=False)  # image | video | before_after
+    caption = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow, index=True)
+
+    coach = relationship("Coach", back_populates="posts")
+    media = relationship(
+        "CoachPostMedia",
+        back_populates="post",
+        cascade="all, delete-orphan",
+        order_by="CoachPostMedia.sort_order",
+    )
+
+
+class CoachPostMedia(Base):
+    __tablename__ = "coach_post_media"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid, index=True)
+    post_id = Column(
+        String(36), ForeignKey("coach_posts.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    media_type = Column(String, nullable=False)  # image | video
+    url = Column(String, nullable=False)  # S3 key or local path
+    thumbnail_url = Column(String, nullable=True)  # preview frame for videos
+    role = Column(String, nullable=True)  # single | before | after
+    sort_order = Column(Integer, nullable=False, default=0)
+
+    post = relationship("CoachPost", back_populates="media")
+
+
+class UserFollow(Base):
+    """Directed follow graph: follower → following (any user, including coaches)."""
+
+    __tablename__ = "user_follows"
+    __table_args__ = (
+        UniqueConstraint("follower_id", "following_id", name="uq_user_follows_pair"),
+    )
+
+    id = Column(String(36), primary_key=True, default=generate_uuid, index=True)
+    follower_id = Column(
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    following_id = Column(
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    follower = relationship("User", foreign_keys=[follower_id])
+    following = relationship("User", foreign_keys=[following_id])
+
+
+class CoachStar(Base):
+    """User favorite/star on a coach profile."""
+
+    __tablename__ = "coach_stars"
+    __table_args__ = (
+        UniqueConstraint("user_id", "coach_id", name="uq_coach_stars_user_coach"),
+    )
+
+    id = Column(String(36), primary_key=True, default=generate_uuid, index=True)
+    user_id = Column(
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    coach_id = Column(
+        String(36), ForeignKey("coaches.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    user = relationship("User")
+    coach = relationship("Coach")

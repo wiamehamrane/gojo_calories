@@ -168,6 +168,19 @@ class ProfileScreen extends ConsumerWidget {
               ),
 
               const SizedBox(height: 20),
+              _SectionLabel(t('starred_coaches')),
+
+              _GroupedListCard(
+                rows: [
+                  _SettingsRow(
+                    icon: Icons.star_rounded,
+                    label: t('view_starred_coaches'),
+                    onTap: () => context.push(RoutePaths.starredCoaches),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 20),
               _SectionLabel('Coaching'),
               _CoachPromoCard(
                 isCoach: isCoach,
@@ -176,7 +189,7 @@ class ProfileScreen extends ConsumerWidget {
                     : t('become_coach_title'),
                 subtitle: isCoach
                     ? t('coach_hub_subtitle')
-                    : t('coach_paywall_headline'),
+                    : t('become_coach_promo_subtitle'),
                 onTap: () => context.push(
                   isCoach ? RoutePaths.coachHub : RoutePaths.becomeCoach,
                 ),
@@ -1137,6 +1150,8 @@ class _ProfileUpdateSheetState extends ConsumerState<_ProfileUpdateSheet> {
   late TextEditingController _phoneCtrl;
   bool _sharePhone = false;
   bool _loading = false;
+  bool _avatarBusy = false;
+  String? _avatarUrl;
 
   @override
   void initState() {
@@ -1145,6 +1160,7 @@ class _ProfileUpdateSheetState extends ConsumerState<_ProfileUpdateSheet> {
     _ageCtrl = TextEditingController(text: widget.user['age']?.toString());
     _phoneCtrl = TextEditingController(text: widget.user['phone']);
     _sharePhone = widget.user['share_phone'] ?? false;
+    _avatarUrl = widget.user['avatar_url'] as String?;
   }
 
   @override
@@ -1170,10 +1186,169 @@ class _ProfileUpdateSheetState extends ConsumerState<_ProfileUpdateSheet> {
     if (mounted) setState(() => _loading = false);
   }
 
+  Future<void> _editAvatar() async {
+    if (_avatarBusy) return;
+    HapticFeedback.selectionClick();
+    final hasAvatar = _avatarUrl != null && _avatarUrl!.isNotEmpty;
+    final action = await showModalBottomSheet<_AvatarSheetAction>(
+      context: context,
+      useRootNavigator: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(0, 8, 0, 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.border,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 20),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Profile photo',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                ListTile(
+                  leading: Icon(
+                    LucideIcons.image,
+                    size: 22,
+                    color: AppColors.textPrimary,
+                  ),
+                  title: const Text(
+                    'Choose from gallery',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  onTap: () =>
+                      Navigator.pop(sheetContext, _AvatarSheetAction.gallery),
+                ),
+                ListTile(
+                  leading: Icon(
+                    LucideIcons.camera,
+                    size: 22,
+                    color: AppColors.textPrimary,
+                  ),
+                  title: const Text(
+                    'Take photo',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  onTap: () =>
+                      Navigator.pop(sheetContext, _AvatarSheetAction.camera),
+                ),
+                if (hasAvatar)
+                  ListTile(
+                    leading: const Icon(
+                      LucideIcons.trash2,
+                      size: 22,
+                      color: AppColors.danger,
+                    ),
+                    title: const Text(
+                      'Remove photo',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.danger,
+                      ),
+                    ),
+                    onTap: () =>
+                        Navigator.pop(sheetContext, _AvatarSheetAction.remove),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    if (action == null || !mounted) return;
+
+    switch (action) {
+      case _AvatarSheetAction.gallery:
+        await _pickAndUploadAvatar(ImageSource.gallery);
+      case _AvatarSheetAction.camera:
+        await _pickAndUploadAvatar(ImageSource.camera);
+      case _AvatarSheetAction.remove:
+        setState(() => _avatarBusy = true);
+        final success =
+            await ref.read(profileProvider.notifier).deleteAvatar();
+        if (!mounted) return;
+        setState(() {
+          _avatarBusy = false;
+          if (success) _avatarUrl = null;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              success ? 'Profile photo removed' : 'Could not remove photo',
+            ),
+            backgroundColor: success ? Colors.green : AppColors.danger,
+          ),
+        );
+    }
+  }
+
+  Future<void> _pickAndUploadAvatar(ImageSource source) async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(
+      source: source,
+      imageQuality: 85,
+      maxWidth: 1200,
+      maxHeight: 1200,
+    );
+    if (pickedFile == null || !mounted) return;
+
+    setState(() => _avatarBusy = true);
+    final success = await ref
+        .read(profileProvider.notifier)
+        .uploadAvatar(File(pickedFile.path));
+    if (!mounted) return;
+
+    final latest = ref.read(profileProvider).asData?.value['avatar_url'];
+    setState(() {
+      _avatarBusy = false;
+      if (success && latest is String) {
+        _avatarUrl = latest;
+      }
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          success ? 'Profile photo updated' : 'Upload failed. Try again.',
+        ),
+        backgroundColor: success ? Colors.green : AppColors.danger,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final lang = ref.watch(localeProvider);
     String t(String k) => Translations.t(lang, k);
+    final hasAvatar = _avatarUrl != null && _avatarUrl!.isNotEmpty;
+
     return Container(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -1187,72 +1362,159 @@ class _ProfileUpdateSheetState extends ConsumerState<_ProfileUpdateSheet> {
       ),
       child: SafeArea(
         top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              t('update_profile'),
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                t('update_profile'),
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _nameCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Name',
-                border: OutlineInputBorder(),
+              const SizedBox(height: 20),
+              Center(
+                child: AppPressable(
+                  scale: 0.94,
+                  onTap: _avatarBusy ? null : _editAvatar,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      CircleAvatar(
+                        radius: 44,
+                        backgroundColor: AppColors.surfaceMuted,
+                        child: ClipOval(
+                          child: hasAvatar
+                              ? CachedFoodImage(
+                                  imageUrl: _avatarUrl,
+                                  width: 88,
+                                  height: 88,
+                                  fit: BoxFit.cover,
+                                  memCacheWidth: 220,
+                                  placeholder: Center(
+                                    child: Icon(
+                                      LucideIcons.user,
+                                      size: 36,
+                                      color: AppColors.inactive,
+                                    ),
+                                  ),
+                                  errorWidget: Center(
+                                    child: Icon(
+                                      LucideIcons.user,
+                                      size: 36,
+                                      color: AppColors.inactive,
+                                    ),
+                                  ),
+                                )
+                              : Icon(
+                                  LucideIcons.user,
+                                  size: 36,
+                                  color: AppColors.inactive,
+                                ),
+                        ),
+                      ),
+                      Positioned(
+                        right: 0,
+                        bottom: 0,
+                        child: Container(
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: AppColors.background,
+                              width: 2,
+                            ),
+                          ),
+                          child: _avatarBusy
+                              ? const Padding(
+                                  padding: EdgeInsets.all(6),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Icon(
+                                  LucideIcons.camera,
+                                  size: 14,
+                                  color: Colors.white,
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _ageCtrl,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Age',
-                border: OutlineInputBorder(),
+              const SizedBox(height: 8),
+              Center(
+                child: Text(
+                  hasAvatar ? 'Change photo' : 'Add photo',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primary,
+                  ),
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _phoneCtrl,
-              keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(
-                labelText: 'Phone Number',
-                hintText: '+1 234 567 890',
-                border: OutlineInputBorder(),
+              const SizedBox(height: 20),
+              TextField(
+                controller: _nameCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Name',
+                  border: OutlineInputBorder(),
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            SwitchListTile(
-              title: Text(t('share_phone_with_friends')),
-              subtitle: Text(t('share_phone_with_friends_desc')),
-              value: _sharePhone,
-              onChanged: (val) => setState(() => _sharePhone = val),
-              activeThumbColor: AppColors.primary,
-              contentPadding: EdgeInsets.zero,
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: _loading ? null : _save,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _ageCtrl,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Age',
+                  border: OutlineInputBorder(),
+                ),
               ),
-              child: _loading
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(color: Colors.white),
-                    )
-                  : Text(t('save_changes')),
-            ),
-            const SizedBox(height: 16),
-          ],
+              const SizedBox(height: 16),
+              TextField(
+                controller: _phoneCtrl,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(
+                  labelText: 'Phone Number',
+                  hintText: '+1 234 567 890',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 8),
+              SwitchListTile(
+                title: Text(t('share_phone_with_friends')),
+                subtitle: Text(t('share_phone_with_friends_desc')),
+                value: _sharePhone,
+                onChanged: (val) => setState(() => _sharePhone = val),
+                activeThumbColor: AppColors.primary,
+                contentPadding: EdgeInsets.zero,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: _loading ? null : _save,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: _loading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(color: Colors.white),
+                      )
+                    : Text(t('save_changes')),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
         ),
       ),
     );

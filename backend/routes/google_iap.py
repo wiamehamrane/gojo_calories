@@ -33,10 +33,8 @@ GOOGLE_PLAY_SCOPES = ["https://www.googleapis.com/auth/androidpublisher"]
 from services.pricing_catalog import (
     ALL_PRODUCT_IDS,
     CLAN_ADDON_PRODUCT_IDS,
-    COACH_PRODUCT_IDS,
     REFERRAL_DURATION_PERIODS,
     REFERRAL_PAY_PERCENT,
-    coach_plan_id_from_product,
     plan_id_from_product,
 )
 from services.clan_service import (
@@ -45,7 +43,6 @@ from services.clan_service import (
     sync_clan_member_access,
 )
 from services.subscription_service import apply_referral_iap_credit
-from services import coach_service
 
 VALID_PRODUCT_IDS = ALL_PRODUCT_IDS
 
@@ -230,19 +227,6 @@ def _unlock_subscription_for_user(
             "type": "clan_addon",
         }
 
-    if product_id in COACH_PRODUCT_IDS:
-        return coach_service.apply_coach_subscription(
-            db,
-            current_user,
-            product_id=product_id,
-            plan_id=coach_plan_id_from_product(product_id),
-            expires_at=expires_at,
-            is_active=is_active,
-            source="google",
-            google_order_id=order_id,
-            google_purchase_token=purchase_token,
-        )
-
     current_user.has_paid = is_active
     current_user.subscription_source = "google"
     current_user.google_order_id = order_id
@@ -333,7 +317,7 @@ def _apply_subscription_update(
     product_id: str,
     notification_type: Optional[int] = None,
 ) -> None:
-    """Re-verify a subscription from an RTDN event and update the user or coach."""
+    """Re-verify a subscription from an RTDN event and update the user."""
     subscription = _verify_purchase_token(purchase_token, product_id)
     is_active, expires_at, order_id, resolved_product_id = _parse_subscription(
         subscription,
@@ -343,34 +327,6 @@ def _apply_subscription_update(
     # Revoked / expired notifications should deactivate immediately.
     if notification_type in (12, 13):  # REVOKED, EXPIRED
         is_active = False
-
-    if resolved_product_id in COACH_PRODUCT_IDS or product_id in COACH_PRODUCT_IDS:
-        coach = db.query(models.Coach).filter(
-            (models.Coach.google_order_id == order_id)
-            | (models.Coach.google_purchase_token == purchase_token)
-        ).first()
-        if not coach:
-            logger.warning(
-                f"Google RTDN: No coach found for order_id={order_id} "
-                f"notification_type={notification_type}"
-            )
-            return
-        user = db.query(models.User).filter(models.User.id == coach.user_id).first()
-        if not user:
-            return
-        coach_service.apply_coach_subscription(
-            db,
-            user,
-            product_id=resolved_product_id,
-            plan_id=coach_plan_id_from_product(resolved_product_id)
-            or coach.subscription_plan,
-            expires_at=expires_at,
-            is_active=is_active,
-            source="google",
-            google_order_id=order_id,
-            google_purchase_token=purchase_token,
-        )
-        return
 
     user = db.query(models.User).filter(
         (models.User.google_order_id == order_id)
